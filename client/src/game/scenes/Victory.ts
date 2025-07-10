@@ -3,6 +3,15 @@
 /* START OF COMPILED CODE */
 
 /* START-USER-IMPORTS */
+
+// Define constant keys for victory assets to avoid naming confusion
+const VICTORY_ASSETS = {
+    VICTORY_TEXT: "victory_text", // Previously "1 (1)"
+    ELO_BANNER: "elo_banner",     // Previously "1"
+    PLATFORM: "victory_platform", // Previously "1 (2)"
+    WLD_DISPLAY: "wld_display",   // Previously "1 (3)"
+};
+
 /* END-USER-IMPORTS */
 
 export default class Victory extends Phaser.Scene {
@@ -37,23 +46,23 @@ export default class Victory extends Phaser.Scene {
         bgClouds_1.scaleX = 2;
         bgClouds_1.scaleY = 2;
 
-        // platform_1
-        const platform_1 = this.add.image(512, 1136, "1 (2)");
+        // platform_1 - Always use our constant keys to avoid conflicts
+        const platform_1 = this.add.image(512, 1136, VICTORY_ASSETS.PLATFORM);
 
         // platform_2
-        const platform_2 = this.add.image(960, 1136, "1 (2)");
+        const platform_2 = this.add.image(960, 1136, VICTORY_ASSETS.PLATFORM);
 
         // platform_3
-        const platform_3 = this.add.image(1392, 1136, "1 (2)");
+        const platform_3 = this.add.image(1392, 1136, VICTORY_ASSETS.PLATFORM);
 
         // eloBanner
-        const eloBanner = this.add.image(960, 848, "1");
+        const eloBanner = this.add.image(960, 848, VICTORY_ASSETS.ELO_BANNER);
 
-        // victoryText
-        const victoryText = this.add.image(960, 128, "1 (1)");
+        // victoryText - Always use our constant key to avoid confusion with "1" vs "1 (1)" 
+        const victoryText = this.add.image(960, 128, VICTORY_ASSETS.VICTORY_TEXT);
 
         // WLD
-        const wLD = this.add.image(960, 416, "1 (3)");
+        const wLD = this.add.image(960, 416, VICTORY_ASSETS.WLD_DISPLAY);
 
         this.bgClouds = bgClouds;
         this.bgClouds_1 = bgClouds_1;
@@ -79,6 +88,23 @@ export default class Victory extends Phaser.Scene {
     /* START-USER-CODE */
 
     // Write your code here
+    
+    preload() {
+        // First, check if any of these textures are already loaded to avoid conflicts
+        if (!this.textures.exists(VICTORY_ASSETS.VICTORY_TEXT)) {
+            // Load correct victory text from Victory folder (not Defeat folder)
+            this.load.image(VICTORY_ASSETS.VICTORY_TEXT, 'assets/11 - Victory/1 (1).png');
+        }
+        if (!this.textures.exists(VICTORY_ASSETS.ELO_BANNER)) {
+            this.load.image(VICTORY_ASSETS.ELO_BANNER, 'assets/11 - Victory/1.png');
+        }
+        if (!this.textures.exists(VICTORY_ASSETS.PLATFORM)) {
+            this.load.image(VICTORY_ASSETS.PLATFORM, 'assets/11 - Victory/1 (2).png');
+        }
+        if (!this.textures.exists(VICTORY_ASSETS.WLD_DISPLAY)) {
+            this.load.image(VICTORY_ASSETS.WLD_DISPLAY, 'assets/11 - Victory/1 (3).png');
+        }
+    }
 
     create() {
         // Play victory sound when the scene starts
@@ -95,8 +121,17 @@ export default class Victory extends Phaser.Scene {
         bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
         bg.setDepth(-1000); // Ensure background is behind everything
 
+        // Create the scene elements using our editor function
         this.editorCreate();
 
+        // Verify that victory text has the correct texture
+        // If not, force it to use our explicitly loaded victory text texture
+        if (this.victoryText && this.victoryText.texture.key !== VICTORY_ASSETS.VICTORY_TEXT) {
+            console.warn("Victory text using incorrect texture. Fixing...");
+            this.victoryText.setTexture(VICTORY_ASSETS.VICTORY_TEXT);
+        }
+
+        // Set initial alpha values to 0 for fade-in animations
         this.eloBanner.setAlpha(0);
         this.platform_1.setAlpha(0);
         this.platform_2.setAlpha(0);
