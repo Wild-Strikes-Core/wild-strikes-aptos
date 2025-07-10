@@ -56,12 +56,40 @@ export class SceneManager {
 
     /**
      * Set up camera to follow a target sprite
+     * @param target - The sprite for the camera to follow
+     * @param options - Optional camera configuration options
      */
-    setupCameraFollow(target: Phaser.Physics.Arcade.Sprite): void {
+    setupCameraFollow(
+        target: Phaser.Physics.Arcade.Sprite, 
+        options?: {
+            deadzone?: Phaser.Geom.Rectangle,
+            lerpX?: number,
+            lerpY?: number
+        }
+    ): void {
         this.followTarget = target;
         
-        // Set up smooth camera follow
-        this.mainCamera.startFollow(target, true, 0.1, 0.1);
+        // Set up smooth camera follow with optional deadzone and smoothing
+        const lerpX = options?.lerpX ?? 0.1;
+        const lerpY = options?.lerpY ?? 0.1;
+        
+        // Set deadzone if provided (area where camera won't scroll until player leaves it)
+        if (options?.deadzone) {
+            this.mainCamera.startFollow(target, true, lerpX, lerpY);
+            this.mainCamera.setDeadzone(
+                options.deadzone.width,
+                options.deadzone.height
+            );
+            
+            // Center the deadzone in the camera view
+            this.mainCamera.setFollowOffset(
+                -(options.deadzone.x + options.deadzone.width/2 - this.mainCamera.width/2),
+                -(options.deadzone.y + options.deadzone.height/2 - this.mainCamera.height/2)
+            );
+        } else {
+            // Default simple follow with smoothing
+            this.mainCamera.startFollow(target, true, lerpX, lerpY);
+        }
         
         // Set camera bounds to prevent going outside the world
         const worldBounds = this.scene.physics.world.bounds;

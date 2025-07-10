@@ -67,8 +67,6 @@ function startMatchTimer(match: Match): void {
       formattedTime: formatTime(match.remainingTime),
     });
     
-    console.log(`Match ${match.roomId} - Time remaining: ${formatTime(match.remainingTime)}`);
-    
     // Check if match should end
     if (match.remainingTime <= 0) {
       // End match due to timeout - determine winner based on health
@@ -77,8 +75,6 @@ function startMatchTimer(match: Match): void {
       
       const player1Health = match.player1.health ?? 100;
       const player2Health = match.player2.health ?? 100;
-      
-      console.log(`Match ${match.roomId} ended - Player 1 health: ${player1Health}, Player 2 health: ${player2Health}`);
       
       if (player1Health > player2Health) {
         winner = match.player1.id;
@@ -102,8 +98,6 @@ function startMatchTimer(match: Match): void {
           player2: player2Health,
         }
       });
-      
-      console.log(`Match ${match.roomId} ended - Winner: ${winner}, Loser: ${loser}`);
       
       // Clean up match
       const matchId = getMatchIdFromRoomId(match.roomId);
@@ -216,7 +210,6 @@ function createMatch(player1Id: string, player2Id: string): Match | null {
 
   // Randomly select a map for this match
   const selectedMap = availableMaps[Math.floor(Math.random() * availableMaps.length)];
-  console.log(`Match ${matchId}: Selected map "${selectedMap.name}" for players ${player1Id} and ${player2Id}`);
 
   // Create match data with initial positions
   const match: Match = {
@@ -248,9 +241,6 @@ function createMatch(player1Id: string, player2Id: string): Match | null {
 
   // Store the match
   MATCHES[matchId] = match;
-  console.log(`Stored match ${matchId} in MATCHES`);
-  console.log(`MATCHES object after storage:`, Object.keys(MATCHES));
-  console.log(`Can retrieve match ${matchId}:`, MATCHES[matchId] !== undefined);
 
   // Add players to the match room
   player1Socket.join(roomId);
@@ -259,10 +249,6 @@ function createMatch(player1Id: string, player2Id: string): Match | null {
   // Set up quick lookup from player ID to match ID
   PLAYER_MATCH.set(player1Id, matchId);
   PLAYER_MATCH.set(player2Id, matchId);
-  
-  console.log(`Setting up PLAYER_MATCH: ${player1Id} -> ${matchId}, ${player2Id} -> ${matchId}`);
-  console.log(`Current PLAYER_MATCH size: ${PLAYER_MATCH.size}`);
-  console.log(`PLAYER_MATCH contents:`, Array.from(PLAYER_MATCH.entries()));
 
   // Start match timer
   startMatchTimer(match);
@@ -298,10 +284,6 @@ function createMatch(player1Id: string, player2Id: string): Match | null {
     formattedTime: formatTime(MATCH_DURATION),
   });
 
-  console.log(
-    `Match #${matchId} started between ${player1Name} (${player1Id}) and ${player2Name} (${player2Id})`
-  );
-
   // Send initial game state immediately
   const initialGameState = {
     player1: {
@@ -331,34 +313,24 @@ function createMatch(player1Id: string, player2Id: string): Match | null {
   player2Socket.emit("yourPlayerId", player2Id);
 
   return match;
-}
-
-// Socket event handlers
+}  // Socket event handlers
 io.on("connection", (socket) => {
-  console.log(`User connected: ${socket.id}`);
-
-  // Add generic event listener for debugging
-  socket.onAny((event, ...args) => {
-    console.log(`Event '${event}' received from ${socket.id}:`, args);
-  });
+  // Connection established - no debug needed for production
 
   socket.on("playerMoved", (data) => {
     const matchId = PLAYER_MATCH.get(socket.id);
 
     if (matchId === undefined) {
-      console.log(`No match found for player ${socket.id} in playerMoved`);
       return;
     }
 
     const match = MATCHES[matchId];
 
     if (!match) {
-      console.log(`Match ${matchId} not found in playerMoved`);
       return;
     }
 
     const currentPlayerId = socket.id;
-    console.log(`Player ${currentPlayerId} moved:`, { x: data.x, y: data.y, velocityX: data.velocityX, velocityY: data.velocityY });
 
     // Update player state based on which player moved
     if (match.player1.id === currentPlayerId) {
@@ -418,24 +390,19 @@ io.on("connection", (socket) => {
     };
 
     // Broadcast to all players in the room
-    console.log(`Broadcasting gameStateUpdate to room ${match.roomId}`);
     io.to(match.roomId).emit("gameStateUpdate", gameState);
   });
 
   socket.on("playerAttacked", (data) => {
-    console.log(`Player ${socket.id} attacked with data:`, data);
-    
     const matchId = PLAYER_MATCH.get(socket.id);
 
     if (matchId === undefined) {
-      console.log(`No match found for player ${socket.id} in playerAttacked`);
       return;
     }
 
     const match = MATCHES[matchId];
 
     if (!match) {
-      console.log(`Match ${matchId} not found in playerAttacked`);
       return;
     }
 
@@ -452,7 +419,6 @@ io.on("connection", (socket) => {
     const attackY = y;
 
     // First, broadcast the attack animation to all players
-    console.log(`Broadcasting attack animation to room ${match.roomId}`);
     io.to(match.roomId).emit("playerAttacked", {
       id: currentPlayerId,
       x: attackX,  // Use calculated attack position
@@ -556,25 +522,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("playerReady", (data) => {
-    console.log(`Player ${socket.id} is ready with data:`, data);
-    console.log(`Current PLAYER_MATCH size: ${PLAYER_MATCH.size}`);
-    console.log(`PLAYER_MATCH contents:`, Array.from(PLAYER_MATCH.entries()));
-    
     const matchId = PLAYER_MATCH.get(socket.id);
-    console.log(`Looking up match for ${socket.id}: ${matchId}`);
-    console.log(`MATCHES object keys:`, Object.keys(MATCHES));
-    console.log(`MATCHES[${matchId}] exists:`, matchId !== undefined && MATCHES[matchId] !== undefined);
 
     if (matchId === undefined) {
-      console.log(`No match found for player ${socket.id}`);
       return;
     }
 
     const match = MATCHES[matchId];
-    console.log(`Match ${matchId} found:`, match !== undefined);
 
     if (!match) {
-      console.log(`Match ${matchId} not found for player ${socket.id}`);
       return;
     }
 
@@ -590,7 +546,6 @@ io.on("connection", (socket) => {
       }
       match.player1.health = 100;
       match.player1.flipX = false; // Player 1 faces right
-      console.log(`Player 1 (${currentPlayerId}) ready at position (${match.player1.x}, ${match.player1.y})`);
     }
 
     if (match.player2.id === currentPlayerId) {
@@ -603,13 +558,10 @@ io.on("connection", (socket) => {
       }
       match.player2.health = 100;
       match.player2.flipX = true; // Player 2 faces left
-      console.log(`Player 2 (${currentPlayerId}) ready at position (${match.player2.x}, ${match.player2.y})`);
     }
 
     // Check if both players are ready
     if (match.player2.connected && match.player1.connected) {
-      console.log(`Both players ready in match ${match.roomId}! Starting game...`);
-      
       const gameState = {
         room: match.roomId,
         selectedMap: match.selectedMap,
@@ -637,10 +589,6 @@ io.on("connection", (socket) => {
 
       io.to(match.roomId).emit("playersConnected", gameState);
       io.to(match.roomId).emit("gameStateUpdate", gameState);
-      
-      console.log(`Game started in match ${match.roomId}!`);
-    } else {
-      console.log(`Waiting for other player in match ${match.roomId}. Player1 connected: ${match.player1.connected}, Player2 connected: ${match.player2.connected}`);
     }
   });
 
@@ -650,7 +598,6 @@ io.on("connection", (socket) => {
     if (matchId !== undefined) {
       const match = MATCHES[matchId];
       if (match) {
-        console.log(`Player ${socket.id} pressed key:`, data);
         // Broadcast key press to other players
         socket.to(match.roomId).emit("opponentKeyPressed", {
           playerId: socket.id,
@@ -666,7 +613,6 @@ io.on("connection", (socket) => {
     if (matchId !== undefined) {
       const match = MATCHES[matchId];
       if (match) {
-        console.log(`Player ${socket.id} released key:`, data);
         // Broadcast key release to other players
         socket.to(match.roomId).emit("opponentKeyReleased", {
           playerId: socket.id,
@@ -683,8 +629,6 @@ io.on("connection", (socket) => {
     if (matchId !== undefined) {
       const match = MATCHES[matchId];
       if (match) {
-        console.log(`Player ${socket.id} state update:`, data);
-        
         // Update the player's state in the match
         if (match.player1.id === socket.id) {
           Object.assign(match.player1, data);
@@ -704,7 +648,6 @@ io.on("connection", (socket) => {
     if (matchId !== undefined) {
       const match = MATCHES[matchId];
       if (match) {
-        console.log(`Player ${socket.id} animation update:`, data);
         // Broadcast animation to other players
         socket.to(match.roomId).emit("opponentAnimationUpdate", {
           playerId: socket.id,
@@ -716,11 +659,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("findMatch", () => {
-    console.log(`Player ${socket.id} is looking for a match`);
-
     // Ensure player is only in waiting list once
     waitingUsers = [...new Set([...waitingUsers, socket.id])];
-    console.log(`Current waiting users: ${waitingUsers.length} - [${waitingUsers.join(', ')}]`);
 
     // Check if we have enough players to start a match
     if (waitingUsers.length >= MAX_PLAYERS_PER_MATCH) {
@@ -729,13 +669,7 @@ io.on("connection", (socket) => {
       const player2 = waitingUsers.shift();
 
       if (player1 && player2) {
-        console.log(`Creating match between ${player1} and ${player2}`);
-        const match = createMatch(player1, player2);
-        if (match) {
-          console.log(`Match created successfully: ${match.roomId}`);
-        } else {
-          console.log(`Failed to create match between ${player1} and ${player2}`);
-        }
+        createMatch(player1, player2);
       }
     }
   });
@@ -761,8 +695,6 @@ io.on("connection", (socket) => {
 
   // Handle disconnections
   socket.on("disconnect", () => {
-    console.log(`Player ${socket.id} disconnected`);
-    
     // Remove from waiting list
     waitingUsers = waitingUsers.filter((user) => user !== socket.id);
     
@@ -780,14 +712,10 @@ io.on("connection", (socket) => {
         PLAYER_MATCH.delete(match.player1.id);
         PLAYER_MATCH.delete(match.player2.id);
         delete MATCHES[matchId];
-        
-        console.log(`Match ${matchId} ended due to player disconnection`);
       }
     }
   });
 });
 
 // Start the server
-server.listen(PORT, () =>
-  console.log(`Socket.IO Server running on port ${PORT}`)
-);
+server.listen(PORT);

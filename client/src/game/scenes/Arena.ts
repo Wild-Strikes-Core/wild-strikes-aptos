@@ -162,6 +162,10 @@ export default class Arena extends Phaser.Scene {
     private selectedMap: { name: string; backgroundKey: string; musicKey: string } | null = null;
     private currentBackgroundMusic: Phaser.Sound.BaseSound | null = null;
 
+    // In the class definition, add these properties to track jumps
+    private jumpCount: number = 0; // Tracks how many jumps have been performed since last touching ground
+    private maxJumps: number = 2; // Maximum number of jumps allowed (1 = normal jump, 2 = double jump)
+
     constructor() {
         super("Arena");
     }
@@ -485,6 +489,9 @@ export default class Arena extends Phaser.Scene {
         
         // Initialize the scene content from the scene editor
         this.editorCreate();
+        
+        // Reset jump count on scene creation
+        this.jumpCount = 0;
         
         // Ensure all UI elements are properly visible and layered
         this.ensureUIElementsVisible();
@@ -1355,7 +1362,22 @@ export default class Arena extends Phaser.Scene {
      */
     private setupCameraFollow(): void {
         if (this.sceneManager && this.MY_PLAYER.sprite) {
-            this.sceneManager.setupCameraFollow(this.MY_PLAYER.sprite);
+            // Set up camera to follow player with deadzone for smoother transitions
+            // This creates a rectangular area where player can move without camera following
+            // Only when player gets near the edge of this deadzone does the camera follow
+            const deadZoneWidth = 200;  // Width of deadzone rectangle
+            const deadZoneHeight = 150; // Height of deadzone rectangle
+            
+            this.sceneManager.setupCameraFollow(this.MY_PLAYER.sprite, {
+                deadzone: new Phaser.Geom.Rectangle(
+                    (this.cameras.main.width - deadZoneWidth) / 2,
+                    (this.cameras.main.height - deadZoneHeight) / 2,
+                    deadZoneWidth,
+                    deadZoneHeight
+                ),
+                lerpX: 0.2, // Smooth horizontal camera movement (0.1 = very smooth, 1 = instant)
+                lerpY: 0.2  // Smooth vertical camera movement
+            });
         }
     }
 
@@ -1474,12 +1496,47 @@ export default class Arena extends Phaser.Scene {
         // Check if player is in air (not on ground)
         const isInAir = !onGround;
         
+        // Jump logic for ground and air jumps
+        if (onGround) {
+            // Reset jump count when on ground
+            this.jumpCount = 0;
+        }
+
         // Jump with space
-        if (this.KEYS.up!.isDown && onGround) {
-            this.MY_PLAYER.sprite?.setVelocityY(-2000)!;
-            // Set jump animation if not attacking
-            if (!this.MY_PLAYER.sprite?.getData('isAttacking')) {
-                currentAnimation = "_Jump";
+        if (Phaser.Input.Keyboard.JustDown(this.KEYS.up!)) {
+            // First jump (from ground)
+            if (onGround) {
+                this.MY_PLAYER.sprite?.setVelocityY(-2000)!;
+                this.jumpCount = 1;
+                // Set jump animation if not attacking
+                if (!this.MY_PLAYER.sprite?.getData('isAttacking')) {
+                    currentAnimation = "_Jump";
+                }
+            } 
+            // Double jump (in air) - perform second jump
+            else if (!onGround && this.jumpCount < this.maxJumps) {
+                this.MY_PLAYER.sprite?.setVelocityY(-2000)!;
+                this.jumpCount++;
+                
+                // Create a small visual effect for double jump (optional)
+                if (this.MY_PLAYER.sprite) {
+                    // Simply flash the player sprite to indicate double jump
+                    this.tweens.add({
+                        targets: this.MY_PLAYER.sprite,
+                        alpha: 0.7,
+                        duration: 100,
+                        yoyo: true,
+                        repeat: 1
+                    });
+                    
+                    // Play a sound effect for double jump if available
+                    // this.sound.play('jump_sound', { volume: 0.5 });
+                }
+                
+                // Set jump animation if not attacking
+                if (!this.MY_PLAYER.sprite?.getData('isAttacking')) {
+                    currentAnimation = "_Jump";
+                }
             }
         }
         
@@ -1502,6 +1559,23 @@ export default class Arena extends Phaser.Scene {
         } else if (!this.MY_PLAYER.sprite?.getData('isAttacking')) {
             this.MY_PLAYER.sprite?.setVelocityX(0)!;
             currentAnimation = "_Idle_Idle";
+        }
+        
+        // Apply camera bounds constraint to prevent player from going too far off-screen
+        // We do this after movement but before animation updates
+        if (this.MY_PLAYER.sprite && this.MY_PLAYER.sprite.active) {
+            // Apply constraint and check if position was modified
+            const wasConstrained = this.constrainPlayerToCameraBounds(this.MY_PLAYER.sprite);
+            
+            // If player was constrained at a boundary, adjust camera immediately
+            // to avoid jarring camera jumps
+            if (wasConstrained && this.sceneManager) {
+                // Force camera to update its position by slightly nudging the target position
+                this.cameras.main.setFollowOffset(
+                    this.cameras.main.followOffset.x,
+                    this.cameras.main.followOffset.y
+                );
+            }
         }
 
         // Only update animation if it's different and not currently attacking
@@ -1553,6 +1627,11 @@ export default class Arena extends Phaser.Scene {
                     animation: shouldUpdateAnimation ? animationToSend : undefined, // Only send animation if needed
                     isRunning: isRunning,
                     isAttacking: isAttacking,
+                    animState: {
+                        doubleJumping: this.jumpCount > 1, // Only true for second jump
+                        onGround: onGround,
+                        jumping: this.jumpCount > 0 && this.MY_PLAYER.sprite.body.velocity.y < 0
+                    }
                 });
                 
                 if (shouldUpdateAnimation) {
@@ -1580,6 +1659,15 @@ export default class Arena extends Phaser.Scene {
             if (this.OTHER_PLAYER.sprite && this.OTHER_PLAYER.sprite.active && this.GAME_STATE.player1.flipX !== undefined) {
                 this.OTHER_PLAYER.sprite.setFlipX(this.GAME_STATE.player1.flipX);
             }
+            
+            // For OTHER_PLAYER, we're more lenient with camera bounds
+            // Only constrain if they go extremely far off-screen
+            if (this.OTHER_PLAYER.sprite && this.OTHER_PLAYER.sprite.active) {
+                // Use lenient constraint that allows player1 to go further off-screen
+                // The constrainPlayerToCameraBounds method handles this automatically now
+                // based on whether it's MY_PLAYER or OTHER_PLAYER
+                this.constrainPlayerToCameraBounds(this.OTHER_PLAYER.sprite);
+            }
         }
 
         if (this.scene.isActive("Arena") && this.GAME_STATE.player2.id != this.socket.id) {
@@ -1591,6 +1679,15 @@ export default class Arena extends Phaser.Scene {
             }
             if (this.OTHER_PLAYER.sprite && this.OTHER_PLAYER.sprite.active && this.GAME_STATE.player2.flipX !== undefined) {
                 this.OTHER_PLAYER.sprite.setFlipX(this.GAME_STATE.player2.flipX);
+            }
+            
+            // For OTHER_PLAYER, we're more lenient with camera bounds
+            // Only constrain if they go extremely far off-screen
+            if (this.OTHER_PLAYER.sprite && this.OTHER_PLAYER.sprite.active) {
+                // Use lenient constraint that allows player2 to go further off-screen
+                // The constrainPlayerToCameraBounds method handles this automatically now
+                // based on whether it's MY_PLAYER or OTHER_PLAYER
+                this.constrainPlayerToCameraBounds(this.OTHER_PLAYER.sprite);
             }
         }
 
@@ -1837,6 +1934,7 @@ export default class Arena extends Phaser.Scene {
         }
         
         // Remove all socket event listeners to prevent memory leaks
+       
         this.socket.off("gameStateUpdate");
         this.socket.off("matchEnded");
         this.socket.off("playerHit");
@@ -1954,14 +2052,14 @@ export default class Arena extends Phaser.Scene {
                 y: undefined,
                 velocityX: 0,
                 velocityY: 0,
-                flipX: true,
                 health: 100,
+                flipX: true,
                 anim: "_Idle_Idle",
                 pastAnim: undefined,
             },
         };
         
-        // Clear position update tracking
+        // // Clear position update tracking
         this.lastPositionUpdate = 0;
         this.lastAnimationUpdate = 0;
         
@@ -2117,7 +2215,7 @@ export default class Arena extends Phaser.Scene {
                 attackHeight: 80,
                 flipX: this.MY_PLAYER.sprite?.flipX || false,
             });
-
+            
             // Play attack animation for local player
             if (this.isSpriteAnimationSafe(this.MY_PLAYER.sprite)) {
                 try {
@@ -2419,8 +2517,36 @@ export default class Arena extends Phaser.Scene {
         
         const barWidth = 60;
         const barHeight = 8;
-        const x = playerSprite.x - barWidth / 2;
-        const y = playerSprite.y - 60; // Above the player head
+
+        // Since the sprite's origin is set to (0,0), we need to calculate the character's
+        // visual center and top position based on the known sprite configuration
+        
+        // Hard-coded values based on sprite configuration in createPlayerSprite
+        // We know the sprite uses scaleX=5, scaleY=5
+        // We know body is set with setOffset(45, 40) and setSize(30, 40)
+        // These values together determine the actual visual position of the character
+        
+        // For precise character center positioning, we need the exact middle of the character's visible body
+        // From looking at the sprite creation code and body settings, we know:
+        // - The body is offset at (45, 40) and has size (30, 40)
+        // - The visual center of the character is at body's center
+        
+        // Calculate center position based on body position and size
+        const bodyOffsetX = playerSprite.body ? playerSprite.body.offset.x : 45;
+        const bodyWidth = playerSprite.body ? playerSprite.body.width : 30;
+        
+        // The visual center is in the middle of the body
+        const characterCenterX = playerSprite.x + (bodyOffsetX + bodyWidth/2) * playerSprite.scaleX;
+        
+        // The top of the character is at the sprite's position plus a small offset
+        // Determined by visual inspection to match the character's head position
+        const characterTopY = playerSprite.y + 5 * playerSprite.scaleY;
+        
+        // Position the health bar horizontally centered over the character
+        const x = characterCenterX - barWidth / 2;
+        
+        // Position the health bar directly above the character's head with a small gap
+        const y = characterTopY - barHeight - 5; // 5px gap
         
         // Clear previous graphics
         backgroundBar.clear();
@@ -2627,9 +2753,143 @@ export default class Arena extends Phaser.Scene {
         }
     }
 
-    // ...existing code...
-}
+    /**
+     * Constrain player position to stay within camera bounds
+     * @param sprite - The player sprite to constrain
+     * @returns - Whether the position was constrained (true) or not (false)
+     */
+    private constrainPlayerToCameraBounds(sprite: Phaser.Physics.Arcade.Sprite): boolean {
+        if (!sprite || !sprite.body) {
+            return false;
+        }
 
+        let positionConstrained = false;
+        
+        // Get camera bounds
+        const camera = this.cameras.main;
+        const worldView = camera.worldView;
+        
+        // Calculate effective sprite dimensions (adjust based on sprite's actual visible area)
+        // The sprite.width/height are the texture dimensions, which may be larger than the visible area
+        // due to the body offset and size settings
+        const spriteWidth = sprite.body.width * sprite.scaleX;
+        const spriteHeight = sprite.body.height * sprite.scaleY;
+        
+        // Calculate body offset (the sprite's physics body may be offset from its origin)
+        const bodyOffsetX = sprite.body.offset.x * sprite.scaleX;
+        const bodyOffsetY = sprite.body.offset.y * sprite.scaleY;
+        
+        // Define different boundary zones - allow players to go slightly off-screen
+        // before constraining them
+        const innerPadding = 20;   // Pixels from edge for soft boundary (players can cross this)
+        const outerPadding = -100;  // Pixels from edge for hard boundary (players cannot cross this)
+                                    // Negative value means players can go off-screen by this amount
+        
+        // Calculate effective display bounds
+        // Soft bounds - visual indicators, no actual constraint
+        const softLeftBound = worldView.x + innerPadding + bodyOffsetX;
+        const softRightBound = worldView.x + worldView.width - spriteWidth - innerPadding;
+        const softTopBound = worldView.y + innerPadding + bodyOffsetY;
+        const softBottomBound = worldView.y + worldView.height - (spriteHeight / 2) - innerPadding;
+        
+        // Hard bounds - actual constraint points where player movement is stopped
+        const hardLeftBound = worldView.x + outerPadding + bodyOffsetX;
+        const hardRightBound = worldView.x + worldView.width - spriteWidth - outerPadding;
+        const hardTopBound = worldView.y + outerPadding + bodyOffsetY;
+        const hardBottomBound = worldView.y + worldView.height - (spriteHeight / 2) - outerPadding;
+        
+        // Store original position for debugging
+        const originalX = sprite.x;
+        const originalY = sprite.y;
+        
+        // Check if this sprite is MY_PLAYER
+        const isMyPlayer = this.MY_PLAYER.sprite === sprite;
+
+        // Apply different constraints based on whether this is MY_PLAYER or OTHER_PLAYER
+        if (isMyPlayer) {
+            // For MY_PLAYER, apply soft constraints when chasing OTHER_PLAYER
+            // but apply hard constraints when OTHER_PLAYER is visible or when at map edges
+            
+            // Calculate distance to OTHER_PLAYER if it exists
+            let otherPlayerVisible = false;
+            if (this.OTHER_PLAYER.sprite && this.OTHER_PLAYER.sprite.active) {
+                // Check if OTHER_PLAYER is within camera view
+                const otherX = this.OTHER_PLAYER.sprite.x;
+                const otherY = this.OTHER_PLAYER.sprite.y;
+                
+                otherPlayerVisible = (
+                    otherX >= worldView.x && 
+                    otherX <= worldView.x + worldView.width &&
+                    otherY >= worldView.y &&
+                    otherY <= worldView.y + worldView.height
+                );
+            }
+            
+            // Apply hard constraints to keep player in bounds
+            // Check horizontal bounds (hard constraints)
+            if (sprite.x < hardLeftBound) {
+                sprite.x = hardLeftBound;
+                sprite.body.velocity.x = 0;
+                positionConstrained = true;
+            } else if (sprite.x > hardRightBound) {
+                sprite.x = hardRightBound;
+                sprite.body.velocity.x = 0;
+                positionConstrained = true;
+            }
+
+            // Check vertical bounds (hard constraints)
+            if (sprite.y < hardTopBound) {
+                sprite.y = hardTopBound;
+                sprite.body.velocity.y = 0;
+                positionConstrained = true;
+            }
+            
+            // Always check bottom bound to prevent falling off the bottom of the screen
+            if (sprite.y > hardBottomBound) {
+                sprite.y = hardBottomBound;
+                // We don't zero out velocity here to allow jumping
+                positionConstrained = true;
+            }
+        } else {
+            // For OTHER_PLAYER, be more lenient with constraints
+            // Only apply constraints when they go too far off screen
+            
+            // Check horizontal bounds (very lenient)
+            if (sprite.x < hardLeftBound - 100) { // Extra 100px allowance
+                sprite.x = hardLeftBound - 100;
+                positionConstrained = true;
+            } else if (sprite.x > hardRightBound + 100) { // Extra 100px allowance
+                sprite.x = hardRightBound + 100;
+                positionConstrained = true;
+            }
+
+            // Check vertical bounds (very lenient)
+            if (sprite.y < hardTopBound - 100) { // Extra 100px allowance
+                sprite.y = hardTopBound - 100;
+                positionConstrained = true;
+            }
+            
+            // Bottom bound check (lenient but still constraining)
+            if (sprite.y > hardBottomBound + 100) { // Extra 100px allowance
+                sprite.y = hardBottomBound + 100;
+                positionConstrained = true;
+            }
+        }
+        
+        // Log position constraints for debugging if position was constrained
+        if (positionConstrained && this.game.config.physics.arcade?.debug) {
+            console.log(`Player ${isMyPlayer ? 'MY_PLAYER' : 'OTHER_PLAYER'} constrained: [${originalX.toFixed(0)}, ${originalY.toFixed(0)}] → [${sprite.x.toFixed(0)}, ${sprite.y.toFixed(0)}]`);
+        }
+        
+        return positionConstrained;
+
+        return positionConstrained;
+    }
+
+    /**
+     * Handle scene pre-destruction
+     */
+}
 /* END OF COMPILED CODE */
 
 // You can write more code here
