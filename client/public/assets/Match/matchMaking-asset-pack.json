@@ -1,0 +1,46 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/Match/01 - Matchmaking/M_btnCancel.png",
+                "type": "image",
+                "key": "M_btnCancel"
+            },
+            {
+                "url": "assets/Match/01 - Matchmaking/M_charONE.png",
+                "type": "image",
+                "key": "M_charONE"
+            },
+            {
+                "url": "assets/Match/01 - Matchmaking/M_charTHREE.png",
+                "type": "image",
+                "key": "M_charTHREE"
+            },
+            {
+                "url": "assets/Match/01 - Matchmaking/M_charTWO.png",
+                "type": "image",
+                "key": "M_charTWO"
+            },
+            {
+                "url": "assets/Match/01 - Matchmaking/M_playerCard.png",
+                "type": "image",
+                "key": "M_playerCard"
+            },
+            {
+                "url": [
+                    "assets/Match/01 - Matchmaking/waiting-music.mp3"
+                ],
+                "type": "audio",
+                "key": "waiting-music"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

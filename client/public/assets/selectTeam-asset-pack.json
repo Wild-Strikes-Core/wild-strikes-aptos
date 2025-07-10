@@ -1,0 +1,50 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/08 - Select Team/8G_btnLEFT.png",
+                "type": "image",
+                "key": "8G_btnLEFT",
+                "normalMap": "client/public/assets/08 - Select Team/8G_btnLEFT.png"
+            },
+            {
+                "url": "assets/08 - Select Team/8G_btnRIGHT.png",
+                "type": "image",
+                "key": "8G_btnRIGHT",
+                "normalMap": "client/public/assets/08 - Select Team/8G_btnRIGHT.png"
+            },
+            {
+                "url": "assets/08 - Select Team/8G_btnSAVE.png",
+                "type": "image",
+                "key": "8G_btnSAVE",
+                "normalMap": "client/public/assets/08 - Select Team/8G_btnSAVE.png"
+            },
+            {
+                "url": "assets/08 - Select Team/8G_containerACTIVE.png",
+                "type": "image",
+                "key": "8G_containerACTIVE",
+                "normalMap": "client/public/assets/08 - Select Team/8G_containerACTIVE.png"
+            },
+            {
+                "url": "assets/08 - Select Team/8G_containerINACTIVE.png",
+                "type": "image",
+                "key": "8G_containerINACTIVE",
+                "normalMap": "client/public/assets/08 - Select Team/8G_containerINACTIVE.png"
+            },
+            {
+                "url": "assets/08 - Select Team/8G_teamTITLE.png",
+                "type": "image",
+                "key": "8G_teamTITLE",
+                "normalMap": "client/public/assets/08 - Select Team/8G_teamTITLE.png"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

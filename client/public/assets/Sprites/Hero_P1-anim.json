@@ -1,0 +1,73 @@
+{
+    "anims": [
+        {
+            "key": "hero_P1-walkHero",
+            "type": "frame",
+            "frames": [
+                {
+                    "key": "Hero_P1",
+                    "frame": 50,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 51,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 52,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 53,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 54,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 55,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 56,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 57,
+                    "duration": 0,
+                    "keyframe": false
+                }
+            ],
+            "frameRate": 24,
+            "skipMissedFrames": true,
+            "repeat": -1,
+            "randomFrame": false
+        }
+    ],
+    "globalTimeScale": 1,
+    "meta": {
+        "app": "Phaser Editor 2D v3",
+        "contentType": "Phaser v3 Animations"
+    },
+    "settings": {
+        "sourceLang": "TYPE_SCRIPT",
+        "esModule": true,
+        "generateCode": true,
+        "outputFolder": "client/public/assets/Sprites"
+    }
+}

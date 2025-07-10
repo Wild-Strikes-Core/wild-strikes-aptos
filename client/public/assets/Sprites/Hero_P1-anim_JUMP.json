@@ -1,0 +1,62 @@
+{
+    "anims": [
+        {
+            "key": "hero_P1-jumpHeroHero",
+            "type": "frame",
+            "frames": [
+                {
+                    "key": "Hero_P1",
+                    "frame": 170,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 171,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 172,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 173,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 174,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 175,
+                    "duration": 0,
+                    "keyframe": false
+                }
+            ],
+            "frameRate": 10,
+            "skipMissedFrames": true,
+            "delay": 2,
+            "repeat": -1,
+            "randomFrame": false
+        }
+    ],
+    "globalTimeScale": 1,
+    "meta": {
+        "app": "Phaser Editor 2D v3",
+        "contentType": "Phaser v3 Animations"
+    },
+    "settings": {
+        "sourceLang": "TYPE_SCRIPT",
+        "esModule": true,
+        "generateCode": true,
+        "outputFolder": "client/public/assets/Sprites"
+    }
+}

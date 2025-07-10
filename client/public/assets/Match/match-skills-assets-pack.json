@@ -1,0 +1,57 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/Match/03- UI/E_skill_icon.png",
+                "type": "image",
+                "key": "E_skill_icon"
+            },
+            {
+                "url": "assets/Match/03- UI/PlayerStats_Container.png",
+                "type": "image",
+                "key": "PlayerStats_Container"
+            },
+            {
+                "url": "assets/Match/03- UI/Q_Skill_Icon.png",
+                "type": "image",
+                "key": "Q_Skill_Icon"
+            },
+            {
+                "url": "assets/Match/03- UI/R_skill_icon.png",
+                "type": "image",
+                "key": "R_skill_icon"
+            },
+            {
+                "url": "assets/Match/03- UI/Skill_Container.png",
+                "type": "image",
+                "key": "Skill_Container"
+            },
+            {
+                "url": "assets/Match/03- UI/Timer_Container_Frames.png",
+                "frameConfig": {
+                    "frameWidth": 360,
+                    "frameHeight": 140,
+                    "startFrame": 0,
+                    "endFrame": 7,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "Timer_Container_Frames"
+            },
+            {
+                "url": "assets/Match/timerAnim.json",
+                "type": "animation",
+                "key": "timerAnim"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}
