@@ -33,6 +33,7 @@
         "dotenv": "^17.2.0",
         "next": "14.2.3",
         "phaser": "^3.88.2",
+        "phaser3-rex-plugins": "^1.80.16",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "socket.io-client": "^4.8.1"
