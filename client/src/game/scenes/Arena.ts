@@ -493,23 +493,82 @@ export default class Arena extends Phaser.Scene {
     private setupControls(): void {}
 
     private createMobileControls(): void {
+        console.log("Creating mobile controls, isMobile:", this.isMobile);
         if (!this.isMobile) return;
 
         // Create a container for all mobile controls
         this.mobileControlsContainer = this.add.container(0, 0);
         this.mobileControlsContainer.setDepth(100); // Ensure controls are above everything
 
-        // Create virtual joystick using Rex UI
-        this.joystick = (this.rexUI as any).add.joystick({
-            x: 150,
-            y: this.cameras.main.height - 150,
-            radius: 60,
-            base: this.add.circle(0, 0, 60, 0x888888, 0.5),
-            thumb: this.add.circle(0, 0, 30, 0x666666, 0.8),
-            dir: '8dir',  // 8-direction support
-            forceMin: 16,
-            enable: true
+        // Create joystick base and thumb
+        const baseSize = 100;
+        const thumbSize = 50;
+        const baseX = 150;
+        const baseY = this.cameras.main.height - 150;
+
+        const base = this.add.circle(baseX, baseY, baseSize / 2, 0x888888, 0.5);
+        const thumb = this.add.circle(baseX, baseY, thumbSize / 2, 0x666666, 0.8);
+
+        // Make thumb interactive and draggable
+        thumb.setInteractive();
+        this.input.setDraggable(thumb);
+
+        // Store initial position
+        const initialX = thumb.x;
+        const initialY = thumb.y;
+        
+        // Track joystick state
+        let isJoystickActive = false;
+        let joystickAngle = 0;
+        let joystickForce = 0;
+
+        this.input.on('dragstart', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+            if (gameObject === thumb) {
+                isJoystickActive = true;
+            }
         });
+
+        this.input.on('drag', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject, dragX: number, dragY: number) => {
+            if (gameObject === thumb) {
+                // Calculate distance from center
+                const distance = Phaser.Math.Distance.Between(baseX, baseY, dragX, dragY);
+                // Calculate angle
+                joystickAngle = Phaser.Math.Angle.Between(baseX, baseY, dragX, dragY);
+                
+                // Limit thumb movement to base radius
+                if (distance <= baseSize / 2) {
+                    thumb.x = dragX;
+                    thumb.y = dragY;
+                } else {
+                    const limitedX = baseX + (baseSize / 2) * Math.cos(joystickAngle);
+                    const limitedY = baseY + (baseSize / 2) * Math.sin(joystickAngle);
+                    thumb.x = limitedX;
+                    thumb.y = limitedY;
+                }
+
+                // Normalize force between 0 and 1
+                joystickForce = Phaser.Math.Clamp(distance / (baseSize / 2), 0, 1);
+            }
+        });
+
+        this.input.on('dragend', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+            if (gameObject === thumb) {
+                // Reset thumb position
+                thumb.x = initialX;
+                thumb.y = initialY;
+                isJoystickActive = false;
+                joystickForce = 0;
+            }
+        });
+
+        // Store joystick state in an object that mimics the Rex UI joystick interface
+        this.joystick = {
+            force: () => joystickForce,
+            angle: () => joystickAngle,
+            isActive: () => isJoystickActive,
+            base: base,
+            thumb: thumb
+        };
 
         // Create attack button container
         const attackCircle = this.add.circle(0, 0, 40, 0xff0000, 0.5);
@@ -565,10 +624,12 @@ export default class Arena extends Phaser.Scene {
     }
 
     create() {
-        // Detect if device is mobile
-        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Detect if device is mobile - check both user agent and touch capability
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                       ('ontouchstart' in window) || 
+                       (navigator.maxTouchPoints > 0);
         
-        console.log("Arena scene starting - initializing...");
+        console.log("Arena scene starting - initializing...", "Mobile:", this.isMobile);
         
         // Initialize the scene content from the scene editor
         this.editorCreate();
@@ -1492,14 +1553,14 @@ export default class Arena extends Phaser.Scene {
 
         // Handle mobile controls if on mobile device
         if (this.isMobile && this.joystick) {
-            // Get joystick force (ranges from 0 to 1)
-            const force = this.joystick.force;
-            // Get joystick angle (in radians)
-            const angle = this.joystick.angle;
+            // Get joystick force and angle
+            const force = this.joystick.force();
+            const angle = this.joystick.angle();
+            const isActive = this.joystick.isActive();
             
-            if (force > 0) {
+            if (isActive && force > 0) {
                 // Convert force and angle to x velocity
-                const baseSpeed = 200;
+                const baseSpeed = 350; // Increased for better mobile control
                 const velocityX = force * baseSpeed * Math.cos(angle);
                 
                 // Apply movement and flip sprite based on joystick direction
@@ -1510,6 +1571,15 @@ export default class Arena extends Phaser.Scene {
                 if (!this.MY_PLAYER.sprite.getData('isAttacking')) {
                     this.MY_PLAYER.sprite.anims.play('_Run', true);
                 }
+
+                // Send movement to server
+                this.socket.emit("playerMoved", {
+                    x: this.MY_PLAYER.sprite.x,
+                    y: this.MY_PLAYER.sprite.y,
+                    velocityX: velocityX,
+                    velocityY: this.MY_PLAYER.sprite.body.velocity.y,
+                    flipX: this.MY_PLAYER.sprite.flipX
+                });
             } else if (!this.MY_PLAYER.sprite.getData('isAttacking')) {
                 // If joystick is not being used and not attacking, stop and idle
                 this.MY_PLAYER.sprite.setVelocityX(0);
