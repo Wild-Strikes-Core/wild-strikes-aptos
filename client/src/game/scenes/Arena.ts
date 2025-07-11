@@ -27,7 +27,6 @@ interface IPlayerState {
     pastAnim?: string;
 }
 export default class Arena extends Phaser.Scene {
-    private rexUI!: any; // Rex UI Plugin reference
     private background!: Phaser.GameObjects.Sprite;
     private background_2!: Phaser.GameObjects.Sprite;
     private background_3!: Phaser.GameObjects.Sprite;
@@ -166,13 +165,6 @@ export default class Arena extends Phaser.Scene {
     // In the class definition, add these properties to track jumps
     private jumpCount: number = 0; // Tracks how many jumps have been performed since last touching ground
     private maxJumps: number = 2; // Maximum number of jumps allowed (1 = normal jump, 2 = double jump)
-
-    // Mobile controls
-    private joystick: any = null;  // Using any for now as the Rex UI types are not available
-    private attackButton: Phaser.GameObjects.Container | null = null;
-    private jumpButton: Phaser.GameObjects.Container | null = null;
-    private isMobile: boolean = false;
-    private mobileControlsContainer: Phaser.GameObjects.Container | null = null;
 
     constructor() {
         super("Arena");
@@ -492,85 +484,8 @@ export default class Arena extends Phaser.Scene {
 
     private setupControls(): void {}
 
-    private createMobileControls(): void {
-        if (!this.isMobile) return;
-
-        // Create a container for all mobile controls
-        this.mobileControlsContainer = this.add.container(0, 0);
-        this.mobileControlsContainer.setDepth(100); // Ensure controls are above everything
-
-        // Create virtual joystick using Rex UI
-        this.joystick = (this.rexUI as any).add.joystick({
-            x: 150,
-            y: this.cameras.main.height - 150,
-            radius: 60,
-            base: this.add.circle(0, 0, 60, 0x888888, 0.5),
-            thumb: this.add.circle(0, 0, 30, 0x666666, 0.8),
-            dir: '8dir',  // 8-direction support
-            forceMin: 16,
-            enable: true
-        });
-
-        // Create attack button container
-        const attackCircle = this.add.circle(0, 0, 40, 0xff0000, 0.5);
-        const attackText = this.add.text(-20, -15, 'ATK', {
-            color: '#ffffff',
-            fontSize: '20px'
-        });
-        this.attackButton = this.add.container(
-            this.cameras.main.width - 150,
-            this.cameras.main.height - 100,
-            [attackCircle, attackText]
-        );
-        this.attackButton.setSize(80, 80);
-        this.attackButton.setInteractive();
-
-        // Create jump button container
-        const jumpCircle = this.add.circle(0, 0, 40, 0x00ff00, 0.5);
-        const jumpText = this.add.text(-20, -15, 'JUMP', {
-            color: '#ffffff',
-            fontSize: '20px'
-        });
-        this.jumpButton = this.add.container(
-            this.cameras.main.width - 80,
-            this.cameras.main.height - 180,
-            [jumpCircle, jumpText]
-        );
-        this.jumpButton.setSize(80, 80);
-        this.jumpButton.setInteractive();
-
-        // Add buttons to the main container
-        this.mobileControlsContainer.add([this.attackButton, this.jumpButton]);
-
-        // Set up button events
-        if (this.attackButton) {
-            this.attackButton.on('pointerdown', () => {
-                this.performAttack();
-            });
-        }
-
-        if (this.jumpButton) {
-            this.jumpButton.on('pointerdown', () => {
-                if (this.MY_PLAYER.sprite && (this.jumpCount < this.maxJumps)) {
-                    this.MY_PLAYER.sprite.setVelocityY(-800);
-                    this.jumpCount++;
-                }
-            });
-        }
-
-        // Ensure mobile controls container stays fixed on screen
-        if (this.mobileControlsContainer) {
-            this.mobileControlsContainer.setScrollFactor(0);
-        }
-    }
-
     create() {
-        // Detect if device is mobile
-        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                       ('ontouchstart' in window) || 
-                       (navigator.maxTouchPoints > 0);
-        
-        console.log("Arena scene starting - initializing...", "Mobile:", this.isMobile);
+        console.log("Arena scene starting - initializing...");
         
         // Initialize the scene content from the scene editor
         this.editorCreate();
@@ -1251,9 +1166,6 @@ export default class Arena extends Phaser.Scene {
         // Background music will be started when we receive server data with selected map
         // Set up shutdown event listener to stop music when scene closes
         this.events.on("shutdown", this.onShutdown, this);
-
-        // Create mobile controls if on mobile
-        this.createMobileControls();
     }
 
     /**
@@ -1488,42 +1400,19 @@ export default class Arena extends Phaser.Scene {
         if (this.isTransitioning || 
             !this.scene || 
             !this.scene.isActive("Arena") || 
-            (!this.KEYS?.left && !this.isMobile) || 
+            !this.KEYS?.left || 
             !this.MY_PLAYER.sprite || 
             !this.MY_PLAYER.sprite.active || 
             !this.MY_PLAYER.sprite.body) {
             return;
         }
 
-        // Handle mobile controls if on mobile device
-        if (this.isMobile && this.joystick) {
-            // Get joystick force (ranges from 0 to 1)
-            const force = this.joystick.force;
-            // Get joystick angle (in radians)
-            const angle = this.joystick.angle;
-            
-            if (force > 0) {
-                // Convert force and angle to x velocity
-                const baseSpeed = 200;
-                const velocityX = force * baseSpeed * Math.cos(angle);
-                
-                // Apply movement and flip sprite based on joystick direction
-                this.MY_PLAYER.sprite.setVelocityX(velocityX);
-                this.MY_PLAYER.sprite.setFlipX(velocityX < 0);
-
-                // Set running animation while moving
-                if (!this.MY_PLAYER.sprite.getData('isAttacking')) {
-                    this.MY_PLAYER.sprite.anims.play('_Run', true);
-                }
-            } else if (!this.MY_PLAYER.sprite.getData('isAttacking')) {
-                // If joystick is not being used and not attacking, stop and idle
-                this.MY_PLAYER.sprite.setVelocityX(0);
-                this.MY_PLAYER.sprite.anims.play('_Idle_Idle', true);
-            }
-        } else {
-            // Use keyboard controls for non-mobile devices
-            // ... rest of existing keyboard control code ...
-        }
+        // Update player manager if it exists (but disable its attack handling)
+        // We'll handle attacks directly since we need custom multiplayer logic
+        // Commenting out PlayerManager update to prevent animation conflicts
+        // if (this.playerManager) {
+        //     this.playerManager.update(time, delta);
+        // }
 
         // Update multiplayer manager
         if (this.multiplayerManager) {
@@ -1874,8 +1763,12 @@ export default class Arena extends Phaser.Scene {
         //     }
         // }
 
+        // Update multiplayer manager
+        // if (this.multiplayerManager) {
+        //     this.multiplayerManager.update(time, delta);
+        // }
+
         // Debug - Periodically check platform colliders every 2 seconds
-       
         // if (time % 2000 < 20) {
         //     // Check if any player is missing a platform collider
         //     let needsColliderRefresh = false;
@@ -2573,7 +2466,7 @@ export default class Arena extends Phaser.Scene {
     }
 
     /**
-     * Update health bars above player sprites
+     * Update health bars above player heads
      */
     private updatePlayerHealthBars(): void {
         // Update player 1 health bar
@@ -2997,7 +2890,7 @@ export default class Arena extends Phaser.Scene {
      * Handle scene pre-destruction
      */
 }
-    /* END OF COMPILED CODE */
+/* END OF COMPILED CODE */
 
 // You can write more code here
 

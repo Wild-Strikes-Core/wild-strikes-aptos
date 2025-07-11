@@ -5,12 +5,29 @@ import { Match } from "./types";
 
 // Constants for configuration
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 const MATCH_DURATION = 120; // 2 minutes in seconds
 const UPDATE_THROTTLE = 50; // milliseconds between position updates
 const MAX_PLAYERS_PER_MATCH = 2;
 
 // Create HTTP server and Socket.IO instance
-const server = createServer();
+const server = createServer((req, res) => {
+  // Basic health check endpoint
+  if (req.url === '/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      activeMatches: Object.keys(MATCHES).length,
+      waitingUsers: waitingUsers.length
+    }));
+    return;
+  }
+  
+  // Return 404 for other routes
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
+});
 
 const io = new Server(server, {
   cors: {
@@ -718,4 +735,34 @@ io.on("connection", (socket) => {
 });
 
 // Start the server
-server.listen(PORT);
+server.listen(PORT, HOST, () => {
+  console.log(`Server running on ${HOST}:${PORT}`);
+});
+
+// Handle server errors
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('Received SIGINT, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
