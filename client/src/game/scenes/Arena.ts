@@ -36,10 +36,6 @@ export default class Arena extends Phaser.Scene {
     private player1STA!: Phaser.GameObjects.Text;
     private p1infoContainer!: Phaser.GameObjects.Image;
     private p2infoContainer!: Phaser.GameObjects.Image;
-    private uiSkillContainer!: Phaser.GameObjects.Image;
-    private uiSkillONE!: Phaser.GameObjects.Image;
-    private uiSkillTWO!: Phaser.GameObjects.Image;
-    private uiSkillTHREE!: Phaser.GameObjects.Image;
     private uiTimer!: Phaser.GameObjects.Sprite;
     private matchTimerText!: Phaser.GameObjects.Text;
     private player1Name!: Phaser.GameObjects.Text;
@@ -295,36 +291,7 @@ export default class Arena extends Phaser.Scene {
         p2infoContainer.alphaBottomRight = 0.8;
         p2infoContainer.setDepth(5); // Ensure UI stays on top
 
-        // skillContainerCTR
-        const skillContainerCTR = this.add.container(16, 912);
-        skillContainerCTR.blendMode = Phaser.BlendModes.SKIP_CHECK;
-        skillContainerCTR.scaleX = 1.1450674740873885;
-        skillContainerCTR.scaleY = 1.1450674740873885;
-        skillContainerCTR.setDepth(8); // Ensure UI stays on top
 
-        // uiSkillContainer
-        const uiSkillContainer = this.add.image(256, 80, "Skill_Container");
-        uiSkillContainer.scaleX = 0.5;
-        uiSkillContainer.scaleY = 0.5;
-        skillContainerCTR.add(uiSkillContainer);
-
-        // uiSkillONE
-        const uiSkillONE = this.add.image(293, 84, "E_skill_icon");
-        uiSkillONE.scaleX = 0.4;
-        uiSkillONE.scaleY = 0.4;
-        skillContainerCTR.add(uiSkillONE);
-
-        // uiSkillTWO
-        const uiSkillTWO = this.add.image(182, 84, "Q_Skill_Icon");
-        uiSkillTWO.scaleX = 0.4;
-        uiSkillTWO.scaleY = 0.4;
-        skillContainerCTR.add(uiSkillTWO);
-
-        // uiSkillTHREE
-        const uiSkillTHREE = this.add.image(405, 84, "R_skill_icon");
-        uiSkillTHREE.scaleX = 0.4;
-        uiSkillTHREE.scaleY = 0.4;
-        skillContainerCTR.add(uiSkillTHREE);
 
         // uiTimer
         const uiTimer = this.add.sprite(
@@ -398,10 +365,6 @@ export default class Arena extends Phaser.Scene {
         this.player1STA = player1STA;
         this.p1infoContainer = p1infoContainer;
         this.p2infoContainer = p2infoContainer;
-        this.uiSkillContainer = uiSkillContainer;
-        this.uiSkillONE = uiSkillONE;
-        this.uiSkillTWO = uiSkillTWO;
-        this.uiSkillTHREE = uiSkillTHREE;
         this.uiTimer = uiTimer;
         this.matchTimerText = matchTimerText;
         this.player1Name = player1Name;
@@ -424,10 +387,6 @@ export default class Arena extends Phaser.Scene {
         console.log("- matchTimerText:", this.matchTimerText);
         console.log("- player1Name:", this.player1Name);
         console.log("- player2Name:", this.player2Name);
-        console.log("- uiSkillContainer:", this.uiSkillContainer);
-        console.log("- uiSkillONE:", this.uiSkillONE);
-        console.log("- uiSkillTWO:", this.uiSkillTWO);
-        console.log("- uiSkillTHREE:", this.uiSkillTHREE);
         console.log("- player1HealthBar:", this.player1HealthBar);
         console.log("- player2HealthBar:", this.player2HealthBar);
     }
@@ -1287,9 +1246,6 @@ export default class Arena extends Phaser.Scene {
             runSpeed: 400,
             jumpSpeed: -2000,
             crouchSpeed: 150,
-            skillE: this.uiSkillONE,
-            skillQ: this.uiSkillTWO,
-            skillR: this.uiSkillTHREE,
             disableAttackHandlers: true // Prevent duplicate attack handling
         });
 
@@ -1301,10 +1257,10 @@ export default class Arena extends Phaser.Scene {
             player2Name: this.player2Name,
             uiTimer: this.uiTimer,
             matchTimerText: this.matchTimerText,
-            uiSkillContainer: this.uiSkillContainer,
-            uiSkillONE: this.uiSkillONE,
-            uiSkillTWO: this.uiSkillTWO,
-            uiSkillTHREE: this.uiSkillTHREE,
+            uiSkillContainer: null as any, // Removed skill container
+            uiSkillONE: null as any, // Removed skill icon
+            uiSkillTWO: null as any, // Removed skill icon
+            uiSkillTHREE: null as any, // Removed skill icon
         });
 
         // Configure camera ignore lists - collect ALL UI elements
@@ -1321,12 +1277,6 @@ export default class Arena extends Phaser.Scene {
             this.player2HealthBarBg,
             ...this.uiManager.getUIElements(), // Get any additional UI elements from the manager
         ];
-
-        // Add the entire skill container to UI elements
-        const skillContainer = this.children.getByName("skillContainerCTR");
-        if (skillContainer) {
-            uiElements.push(skillContainer);
-        }
 
         // Make main camera ignore ALL UI elements
         this.sceneManager.setMainIgnoreUI(uiElements);
@@ -2271,12 +2221,6 @@ export default class Arena extends Phaser.Scene {
         this.player1Name.setAlpha(0);
         this.player2Name.setAlpha(0);
 
-        // Hide skill container
-        const skillContainer = this.children.getByName("skillContainerCTR") as Phaser.GameObjects.Container;
-        if (skillContainer) {
-            skillContainer.setAlpha(0);
-        }
-
         // Hide timer
         this.uiTimer.setAlpha(0);
         this.matchTimerText.setAlpha(0);
@@ -2431,16 +2375,6 @@ export default class Arena extends Phaser.Scene {
 
         // 3. Fade in the UI elements
         this.time.delayedCall(1800, () => {
-            // Skill icons
-            if (skillContainer) {
-                this.tweens.add({
-                    targets: skillContainer,
-                    alpha: 1,
-                    duration: 500,
-                    ease: "Power2",
-                });
-            }
-
             // Timer
             this.tweens.add({
                 targets: [this.uiTimer, this.matchTimerText],
@@ -2670,24 +2604,6 @@ export default class Arena extends Phaser.Scene {
         if (this.p2infoContainer) {
             this.p2infoContainer.setDepth(5);
             this.p2infoContainer.setVisible(true);
-        }
-        
-        // Skill UI elements
-        if (this.uiSkillContainer) {
-            this.uiSkillContainer.setDepth(8);
-            this.uiSkillContainer.setVisible(true);
-        }
-        if (this.uiSkillONE) {
-            this.uiSkillONE.setDepth(8);
-            this.uiSkillONE.setVisible(true);
-        }
-        if (this.uiSkillTWO) {
-            this.uiSkillTWO.setDepth(8);
-            this.uiSkillTWO.setVisible(true);
-        }
-        if (this.uiSkillTHREE) {
-            this.uiSkillTHREE.setDepth(8);
-            this.uiSkillTHREE.setVisible(true);
         }
         
         // Timer elements
