@@ -195,35 +195,29 @@ export class ArenaPlayer {
         // Get world bounds
         const worldBounds = this.scene.physics.world.bounds;
         
-        // Calculate sprite dimensions accounting for scale
-        const spriteWidth = sprite.width * sprite.scaleX;
-        const spriteHeight = sprite.height * sprite.scaleY;
-        
-        // Account for sprite origin (default is 0.5, 0.5 but could be different)
-        const spriteLeftEdge = sprite.x - (spriteWidth * sprite.originX);
-        const spriteRightEdge = spriteLeftEdge + spriteWidth;
-        const spriteTopEdge = sprite.y - (spriteHeight * sprite.originY);
-        const spriteBottomEdge = spriteTopEdge + spriteHeight;
+        // Add some padding (5% of width/height)
+        const paddingX = worldBounds.width * 0.05;
+        const paddingY = worldBounds.height * 0.05;
         
         let wasConstrained = false;
         
         // Left constraint
-        if (spriteLeftEdge < worldBounds.x) {
-            sprite.x = worldBounds.x + (spriteWidth * sprite.originX);
+        if (sprite.x < worldBounds.x + paddingX) {
+            sprite.x = worldBounds.x + paddingX;
             sprite.body.velocity.x = Math.max(0, sprite.body.velocity.x);
             wasConstrained = true;
         }
         
-        // Right constraint - account for sprite width
-        if (spriteRightEdge > worldBounds.width) {
-            sprite.x = worldBounds.width - (spriteWidth * (1 - sprite.originX));
+        // Right constraint
+        if (sprite.x > worldBounds.width - paddingX) {
+            sprite.x = worldBounds.width - paddingX;
             sprite.body.velocity.x = Math.min(0, sprite.body.velocity.x);
             wasConstrained = true;
         }
         
-        // Top constraint
-        if (spriteTopEdge < worldBounds.y) {
-            sprite.y = worldBounds.y + (spriteHeight * sprite.originY);
+        // Top constraint (prevent going too high)
+        if (sprite.y < worldBounds.y + paddingY) {
+            sprite.y = worldBounds.y + paddingY;
             sprite.body.velocity.y = Math.max(0, sprite.body.velocity.y);
             wasConstrained = true;
         }

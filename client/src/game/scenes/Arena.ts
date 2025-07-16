@@ -107,14 +107,8 @@ export default class Arena extends Phaser.Scene {
         this.arenaInput.setupControls();
         this.KEYS = this.arenaInput.getKeys();
         
-        // Important: First set world bounds, then initialize managers that depend on bounds
+        // Set up world bounds based on background
         this.setupWorldBounds();
-        
-        // Initialize managers after world bounds are set
-        this.initializeManagers();
-        
-        // Setup camera follow after managers are initialized
-        this.setupCameraFollow();
 
         console.log("Arena scene initialization completed");
         this.debugGameAssets();
@@ -132,29 +126,19 @@ export default class Arena extends Phaser.Scene {
             const width = bg.width * (bg.scaleX || 1);
             const height = bg.height * (bg.scaleY || 1);
             
-            console.log(`Setting physics world bounds to ${width}x${height}`);
+            console.log(`Setting world bounds to ${width}x${height}`);
             
-            // Set the physics world bounds for collision detection
+            // Set the physics world bounds
             this.physics.world.setBounds(0, 0, width, height);
             
-            // Note: Camera bounds will be set in setupCameraFollow to ensure
-            // proper following behavior, especially at the edges
-            
-            // Debug visualization for bounds (if debug mode is on)
-            if (this.physics.world.drawDebug) {
-                const debugGraphics = this.add.graphics().setDepth(100);
-                debugGraphics.lineStyle(2, 0x00ff00, 1);
-                debugGraphics.strokeRect(0, 0, width, height);
-            }
+            // Set the camera bounds to match
+            this.cameras.main.setBounds(0, 0, width, height);
         } else {
             console.warn("Background sprite not available, using default world bounds");
             
             // Set default bounds if background not available
-            const defaultWidth = 1920;
-            const defaultHeight = 1080;
-            
-            this.physics.world.setBounds(0, 0, defaultWidth, defaultHeight);
-            // Camera bounds will be set in setupCameraFollow
+            this.physics.world.setBounds(0, 0, 1920, 1080);
+            this.cameras.main.setBounds(0, 0, 1920, 1080);
         }
     }
 
@@ -210,7 +194,7 @@ export default class Arena extends Phaser.Scene {
         // Movement with running support
         const isRunning = this.arenaInput.isKeyPressed('shift');
         const baseSpeed = 200;
-        const runSpeed = 450; // Increased from 350 for more noticeable difference to trigger zoom
+        const runSpeed = 350;
         let currentAnimation = "_Idle_Idle";
         
         // Check if player is in air
@@ -567,7 +551,7 @@ export default class Arena extends Phaser.Scene {
             this.arenaBackground.getBackgroundSprites()[0],
             [], // Empty array for tile sprites since we're using regular sprites
             {
-                bestZoom: 1.3, // Reduced from 1.5 to match the SceneManager value
+                bestZoom: 1.5,
                 parallaxFactor: 0.4,
             }
         );
@@ -575,7 +559,7 @@ export default class Arena extends Phaser.Scene {
         // Create the player manager
         this.playerManager = new PlayerManager(this, this.socket, {
             walkSpeed: 200,
-            runSpeed: 450, // Increased from 400 to match the handlePlayerMovement value
+            runSpeed: 400,
             jumpSpeed: -2000,
             crouchSpeed: 150,
             disableAttackHandlers: true
@@ -648,115 +632,24 @@ export default class Arena extends Phaser.Scene {
 
     private setupCameraFollow(): void {
         if (this.sceneManager && this.arenaGameState.getMyPlayer().sprite) {
-            // Get the player sprite to follow
-            const playerSprite = this.arenaGameState.getMyPlayer().sprite!;
-            
-            // Calculate the width of the game world
-            const worldBounds = this.physics.world.bounds;
-            
-            // Create a deadzone to improve camera follow behavior, especially at boundaries
-            // The deadzone is an area around the center of the camera where the player can move
-            // without the camera moving
-            const cameraWidth = this.cameras.main.width;
-            const cameraHeight = this.cameras.main.height;
-            
-            // Create a smaller deadzone for better boundary following
-            // Using a smaller deadzone helps the camera follow the player more closely at edges
-            const deadZoneWidth = cameraWidth * 0.1; // 10% of camera width (further reduced from 15%)
-            const deadZoneHeight = cameraHeight * 0.2; // 20% of camera height (further reduced from 25%)
-            
-            // Increase lerp values for more responsive following, especially horizontally
-            // Higher lerp values mean the camera will follow the player more quickly
-            const horizontalLerp = 0.25; // More responsive horizontal following (increased from 0.15)
-            const verticalLerp = 0.12; // Slightly more responsive vertical following (increased from 0.08)
-            
-            // Start following with the deadzone and improved lerp values
-            this.cameras.main.startFollow(playerSprite, true, horizontalLerp, verticalLerp);
-            this.cameras.main.setDeadzone(deadZoneWidth, deadZoneHeight);
-            
-            // Get the bounds from the setupWorldBounds method
-            const bg = this.arenaBackground.getBackgroundSprite();
-            if (bg) {
-                const width = bg.width * (bg.scaleX || 1);
-                const height = bg.height * (bg.scaleY || 1);
-                
-                // Calculate appropriate camera bounds to ensure full visibility while allowing zoom
-                // A small padding ensures the camera can reach the edges while accommodating zoom effects
-                const paddedWidth = width * 1.02; // 2% extra width (reduced from 5%)
-                const offsetX = (paddedWidth - width) / 2;
-                
-                // Set the camera bounds with minimal padding
-                this.cameras.main.setBounds(-offsetX, 0, paddedWidth, height);
-                
-                // Ensure camera zoom is properly initialized
-                if (this.sceneManager) {
-                    const initialZoom = 1.3; // Match the bestZoom value
-                    this.cameras.main.setZoom(initialZoom);
-                    console.log(`[ZOOM DEBUG] Setting initial camera zoom to ${initialZoom}`);
-                }
-                
-                console.log(`Camera following player with deadzone: ${deadZoneWidth}x${deadZoneHeight}, lerp: ${horizontalLerp}/${verticalLerp}, bounds: ${paddedWidth}x${height}`);
-            } else {
-                // Fallback to world bounds if no background sprite is available
-                this.cameras.main.setBounds(0, 0, worldBounds.width, worldBounds.height);
-            }
+            // SceneManager doesn't have setFollowTarget, use camera directly
+            this.cameras.main.startFollow(this.arenaGameState.getMyPlayer().sprite!);
         }
     }
 
     private updateCameraZoom(): void {
-        if (!this.sceneManager) {
-            console.warn("[ZOOM DEBUG] No SceneManager available");
-            return;
-        }
-        
-        if (!this.arenaGameState.getMyPlayer().sprite) {
-            console.warn("[ZOOM DEBUG] No player sprite available");
-            return;
-        }
-        
-        const myPlayer = this.arenaGameState.getMyPlayer().sprite!;
-        console.log("[ZOOM DEBUG] Starting updateCameraZoom with player:", myPlayer.x, myPlayer.y);
-        
-        if (this.playerManager) {
-            try {
+        if (this.sceneManager && this.arenaGameState.getMyPlayer().sprite) {
+            if (this.playerManager) {
                 // Use PlayerManager's getSpeed method if available
                 const speed = this.playerManager.getSpeed();
                 const runSpeedThreshold = this.playerManager.getRunSpeedThreshold();
-                
-                console.log(`[ZOOM DEBUG] Player speed: ${speed}, threshold: ${runSpeedThreshold}`);
-                
-                // Calculate player position relative to boundaries
-                const worldBounds = this.physics.world.bounds;
-                const spriteWidth = myPlayer.width * myPlayer.scaleX;
-                const spriteLeftEdge = myPlayer.x - (spriteWidth * myPlayer.originX);
-                const spriteRightEdge = spriteLeftEdge + spriteWidth;
-                
-                // Increase boundary buffer for smoother transitions
-                const boundaryBuffer = worldBounds.width * 0.1; // 10% buffer from edges (increased from 5%)
-                
-                const isNearLeftEdge = spriteLeftEdge < boundaryBuffer;
-                const isNearRightEdge = spriteRightEdge > worldBounds.width - boundaryBuffer;
-                
-                console.log(`[ZOOM DEBUG] Near edges: left=${isNearLeftEdge}, right=${isNearRightEdge}, bounds=${worldBounds.width}x${worldBounds.height}`);
-                
-                // Force a zoom effect when running, even near boundaries
-                // This ensures the zoom effect is always visible
-                this.sceneManager.updateCameraZoom(speed, runSpeedThreshold);
-                
-            } catch (error) {
-                console.warn("[ZOOM DEBUG] Error in camera zoom:", error);
-            }
-        } else {
-            // Fallback: calculate speed directly from player sprite
-            const playerBody = myPlayer.body;
-            if (playerBody) {
-                const speed = Math.abs(playerBody.velocity.x);
-                const runSpeedThreshold = 350 * 0.8; // Default run speed threshold
-                
-                console.log(`[ZOOM DEBUG] Using fallback speed calculation: ${speed}, threshold: ${runSpeedThreshold}`);
                 this.sceneManager.updateCameraZoom(speed, runSpeedThreshold);
             } else {
-                console.warn("[ZOOM DEBUG] No player body available for fallback speed calculation");
+                // Fallback: calculate speed directly from player sprite
+                const playerBody = this.arenaGameState.getMyPlayer().sprite!.body;
+                const speed = playerBody ? Math.abs(playerBody.velocity.x) : 0;
+                const runSpeedThreshold = 350 * 0.8; // Default run speed threshold
+                this.sceneManager.updateCameraZoom(speed, runSpeedThreshold);
             }
         }
     }

@@ -4,11 +4,11 @@
 export class SceneManager {
     private scene: Phaser.Scene;
     private background: Phaser.GameObjects.Sprite;
-    private bestZoom: number = 1.3; // Reduced from 1.5 for better visibility
+    private bestZoom: number = 1.5;
     private parallaxFactor: number = 0.4;
     private currentZoom: number = 1;
     private targetZoom: number = 1;
-    private zoomSpeed: number = 0.08; // Increased from 0.05 for faster transitions
+    private zoomSpeed: number = 0.02;
     private followTarget?: Phaser.Physics.Arcade.Sprite;
 
     // UI Camera for fixed UI elements
@@ -40,7 +40,6 @@ export class SceneManager {
         this.currentZoom = this.bestZoom;
         this.targetZoom = this.bestZoom;
         this.mainCamera.setZoom(this.currentZoom);
-        console.log(`[ZOOM DEBUG] Initial zoom set to ${this.currentZoom.toFixed(3)}`);
         
         // Set up parallax scrolling for background
         this.setupParallaxScrolling();
@@ -106,40 +105,18 @@ export class SceneManager {
      * Update camera zoom based on player speed
      */
     updateCameraZoom(playerSpeed: number, runSpeedThreshold: number): void {
-        if (playerSpeed === undefined || runSpeedThreshold === undefined) {
-            // Handle invalid input gracefully
-            console.warn("Invalid input to updateCameraZoom:", { playerSpeed, runSpeedThreshold });
-            return;
-        }
-        
-        // Debug info to track zoom values
-        console.log(`[ZOOM DEBUG] Speed: ${playerSpeed.toFixed(2)}, Threshold: ${runSpeedThreshold.toFixed(2)}, Current zoom: ${this.currentZoom.toFixed(3)}, Target: ${this.targetZoom.toFixed(3)}`);
-        
         // Calculate target zoom based on player speed
         if (playerSpeed > runSpeedThreshold) {
-            // Zoom out when running fast - more pronounced effect
-            // Use a more extreme zoom value for better visibility
-            this.targetZoom = this.bestZoom * 0.65; // More extreme zoom out (changed from 0.75)
-            console.log(`[ZOOM DEBUG] Running fast - zooming out to ${this.targetZoom.toFixed(3)}`);
+            // Zoom out when running fast
+            this.targetZoom = this.bestZoom * 0.8;
         } else {
             // Default zoom when moving slowly or idle
             this.targetZoom = this.bestZoom;
-            console.log(`[ZOOM DEBUG] Normal movement - returning to ${this.targetZoom.toFixed(3)}`);
         }
         
-        // Adjust zoom speed based on whether we're zooming in or out
-        const zoomingOut = this.targetZoom < this.currentZoom;
-        const adaptiveZoomSpeed = zoomingOut ? this.zoomSpeed * 2.0 : this.zoomSpeed; // Faster zoom out (increased from 1.5)
-        
-        // Smoothly interpolate to target zoom with appropriate speed
-        const previousZoom = this.currentZoom;
-        this.currentZoom = Phaser.Math.Linear(this.currentZoom, this.targetZoom, adaptiveZoomSpeed);
-        
-        // Apply zoom only if it's significantly different to avoid flickering
-        if (Math.abs(this.mainCamera.zoom - this.currentZoom) > 0.001) {
-            this.mainCamera.setZoom(this.currentZoom);
-            console.log(`[ZOOM DEBUG] Applied zoom: ${previousZoom.toFixed(3)} -> ${this.currentZoom.toFixed(3)}`);
-        }
+        // Smoothly interpolate to target zoom
+        this.currentZoom = Phaser.Math.Linear(this.currentZoom, this.targetZoom, this.zoomSpeed);
+        this.mainCamera.setZoom(this.currentZoom);
     }
 
     /**
