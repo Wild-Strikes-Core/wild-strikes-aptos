@@ -12,6 +12,12 @@ const MAX_PLAYERS_PER_MATCH = 2;
 
 // Create HTTP server and Socket.IO instance
 const server = createServer((req, res) => {
+  // Allow Socket.IO to handle its own requests
+  if (req.url && req.url.startsWith('/socket.io')) {
+    // Do not respond here – let the Socket.IO listener handle this route
+    return;
+  }
+
   // Basic health check endpoint
   if (req.url === '/health' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
