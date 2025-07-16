@@ -229,10 +229,11 @@ export default class Arena extends Phaser.Scene {
         // Apply camera bounds constraint
         this.arenaPlayer.constrainPlayerToCameraBounds(myPlayer);
 
-        // Update animation if needed
+        // Update animation if needed (but don't override attack animations)
         if (this.arenaPlayer.isSpriteAnimationSafe(myPlayer) && 
             myPlayer.body?.velocity && 
-            this.scene.isActive("Arena")) {
+            this.scene.isActive("Arena") &&
+            !myPlayer.getData('isAttacking')) { // Don't change animations while attacking
             
             const socketId = this.arenaNetworking.getSocketId();
             if (socketId === gameState.player1.id) {
@@ -240,6 +241,7 @@ export default class Arena extends Phaser.Scene {
                     gameState.player1.anim = currentAnimation;
                     try {
                         myPlayer.play(currentAnimation, true);
+                        console.log(`Playing animation: ${currentAnimation}`);
                     } catch (error) {
                         console.error("Failed to play animation:", currentAnimation, error);
                     }
@@ -249,6 +251,7 @@ export default class Arena extends Phaser.Scene {
                     gameState.player2.anim = currentAnimation;
                     try {
                         myPlayer.play(currentAnimation, true);
+                        console.log(`Playing animation: ${currentAnimation}`);
                     } catch (error) {
                         console.error("Failed to play animation:", currentAnimation, error);
                     }
@@ -317,36 +320,43 @@ export default class Arena extends Phaser.Scene {
             const isCurrentlyAttacking = sprite.getData('isAttacking') || false;
             const currentTime = this.time.now;
             
-            // Determine appropriate animation based on velocity
-            let animationToPlay = "_Idle_Idle";
-            
-            // If player is moving horizontally, use Run animation
-            if (playerState.velocityX && Math.abs(playerState.velocityX) > 50) {
-                animationToPlay = "_Run";
+            // Skip animation updates if currently attacking
+            if (isCurrentlyAttacking) {
+                return;
             }
             
-            // If player is moving vertically (falling or jumping), use Jump animation
-            if (playerState.velocityY && playerState.velocityY < -50) {
+            // Determine appropriate animation based on velocity - improved logic
+            let animationToPlay = "_Idle_Idle";
+            
+            // Check if player is actually in air (not just has vertical velocity)
+            const isGrounded = sprite.body && (sprite.body.touching.down || sprite.body.blocked.down);
+            
+            // If player is moving horizontally and grounded, use Run animation
+            if (playerState.velocityX && Math.abs(playerState.velocityX) > 100 && isGrounded) {
+                animationToPlay = "_Run";
+            }
+            // Only use Jump animation if player is actually in air AND moving upward significantly
+            else if (!isGrounded && playerState.velocityY && playerState.velocityY < -200) {
                 animationToPlay = "_Jump";
+            }
+            // For small vertical movements or falling, stay with ground animations
+            else if (playerState.velocityX && Math.abs(playerState.velocityX) > 100) {
+                animationToPlay = "_Run"; // Keep running animation even if slightly in air
             }
             
             // Prevent rapid animation switching
             const timeSinceLastChange = currentTime - (this.arenaGameState.getOtherPlayer().lastAnimationChangeTime || 0);
-            const minimumAnimationTime = 150; // Minimum time between animation changes
+            const minimumAnimationTime = 350; // Increased to reduce stuttering further
             
-            // Debug logging
-            console.log(`Opponent animation update: current=${currentAnim}, calculated=${animationToPlay}, velocityX=${playerState.velocityX}, velocityY=${playerState.velocityY}, attacking=${isCurrentlyAttacking}, timeSince=${timeSinceLastChange}`);
-            
-            // Only change animation if not attacking and enough time has passed
+            // Only change animation if enough time has passed and animation is different
             if (currentAnim !== animationToPlay && 
-                !isCurrentlyAttacking && 
                 timeSinceLastChange > minimumAnimationTime) {
                 
                 try {
-                    console.log(`Playing opponent animation: ${animationToPlay}`);
                     sprite.play(animationToPlay, true);
                     this.arenaGameState.getOtherPlayer().lastAnimationChangeTime = currentTime;
                     this.arenaGameState.getOtherPlayer().lastReceivedAnimation = animationToPlay;
+                    console.log(`Opponent animation: ${currentAnim} → ${animationToPlay}`);
                 } catch (error) {
                     console.error("Failed to play other player animation:", animationToPlay, error);
                 }
@@ -362,16 +372,27 @@ export default class Arena extends Phaser.Scene {
         const myPlayer = this.arenaGameState.getMyPlayer().sprite;
         if (!myPlayer) return;
         
-        // Check attack cooldown first (like in backup)
+        // Check attack cooldown first with enhanced feedback
         if (!this.arenaInput.canAttack()) {
+            const consecutiveAttacks = this.arenaInput.getConsecutiveAttacks();
+            const cooldownProgress = this.arenaInput.getAttackCooldownProgress();
+            console.log(`Attack blocked by cooldown: consecutive=${consecutiveAttacks}, progress=${(cooldownProgress * 100).toFixed(1)}%`);
             return; // Still in cooldown
         }
         
         // Mark attack time
         this.arenaInput.markAttack();
+        this.arenaInput.markAttack();
         
         if (this.arenaPlayer.performAttack(myPlayer)) {
-            this.arenaNetworking.emitPlayerAttack();
+            // Pass player position and direction for accurate hit detection
+            const playerData = {
+                x: myPlayer.x,
+                y: myPlayer.y,
+                flipX: myPlayer.flipX
+            };
+            
+            this.arenaNetworking.emitPlayerAttack(playerData);
             this.arenaAudio.playAttackSound();
         }
     }
@@ -411,25 +432,315 @@ export default class Arena extends Phaser.Scene {
     }
 
     private handlePlayerHit(data: any): void {
-        // Play hit sound
+        console.log("Player hit event received:", data);
+        console.log(`Player ${data.id} hit by ${data.attackerId}, health: ${data.health}`);
+        
+        // Get current player socket ID to determine if this is the current player
+        const socketId = this.arenaNetworking.getSocketId();
+        const isCurrentPlayerHit = data.id === socketId;
+        
+        // Play enhanced hit sounds for better feedback
         this.arenaAudio.playHitSound();
+        this.arenaAudio.playImpactSound();
+        
+        // Play additional dramatic sound if current player is hit
+        if (isCurrentPlayerHit) {
+            this.arenaAudio.playDamageSound();
+            this.arenaAudio.playHeavyHitSound();
+        }
 
         // Update health in game state
         this.arenaGameState.updatePlayerState(data.id, { health: data.health });
+        
+        // Force update game state and UI
+        const myPlayer = this.arenaGameState.getMyPlayer().sprite;
+        const otherPlayer = this.arenaGameState.getOtherPlayer().sprite;
+        const gameState = this.arenaGameState.getGameState();
+        
+        // Log current health states for debugging
+        console.log("Current game state after hit:", {
+            player1Health: gameState.player1.health,
+            player2Health: gameState.player2.health,
+            hitPlayerId: data.id,
+            mySocketId: socketId,
+            isCurrentPlayerHit: isCurrentPlayerHit
+        });
+        
+        this.arenaUI.updatePlayerHealthBars(myPlayer, otherPlayer, gameState, socketId || '');
+        
+        // Visual feedback for hit player with enhanced effects
+        const hitPlayer = isCurrentPlayerHit ? myPlayer : otherPlayer;
+        if (hitPlayer && hitPlayer.active && hitPlayer.scene) {
+            console.log(`Applying enhanced hit effects to ${isCurrentPlayerHit ? 'current player' : 'other player'}`);
+            
+            // Check if this hit caused a knockout (health <= 0)
+            const isKnockout = data.health <= 0;
+            
+            this.applyHitEffects(hitPlayer, isCurrentPlayerHit, isKnockout);
+        } else {
+            console.warn(`Could not apply hit effects - player sprite not available or inactive`);
+        }
+    }
+
+    private applyHitEffects(sprite: Phaser.Physics.Arcade.Sprite, isCurrentPlayer: boolean = false, isKnockout: boolean = false): void {
+        if (!sprite || !sprite.active || !sprite.scene) {
+            console.warn("Cannot apply hit effects: sprite is invalid or inactive");
+            return;
+        }
+
+        // Prevent duplicate hit effects if already in progress
+        if (sprite.getData('hitEffectInProgress')) {
+            console.log("Hit effect already in progress for this sprite, skipping");
+            return;
+        }
+
+        console.log(`Applying hit effects - isCurrentPlayer: ${isCurrentPlayer}, sprite position: (${sprite.x}, ${sprite.y})`);
+
+        // Mark hit effect as in progress
+        sprite.setData('hitEffectInProgress', true);
+
+        // Store original tint for restoration
+        const originalTint = sprite.tint;
+
+        try {
+            // Simple red flash effect only - no position or scale changes
+            const flashColor = isCurrentPlayer ? 0xff4444 : 0xff6666;
+            
+            // Create a gentle flash effect that doesn't interfere with animations
+            const flashTween = this.tweens.add({
+                targets: sprite,
+                tint: flashColor,
+                duration: isCurrentPlayer ? 120 : 100,
+                yoyo: true,
+                repeat: isCurrentPlayer ? 1 : 0,
+                ease: 'Power2',
+                onComplete: () => {
+                    if (sprite && sprite.active) {
+                        sprite.setTint(originalTint);
+                        sprite.setData('hitEffectInProgress', false); // Clear the flag
+                        console.log(`Flash effect completed, tint reset`);
+                    }
+                }
+            });
+
+            // Screen shake effect ONLY for the current player being hit
+            if (isCurrentPlayer) {
+                this.applyScreenShake();
+            }
+
+            // Visual effects that don't affect the sprite directly - only once
+            this.createDamageParticles(sprite.x, sprite.y - 30, isCurrentPlayer);
+            
+            // Show knockout text for both players when knockout happens, otherwise show damage text
+            if (isKnockout) {
+                // Show knockout text for both the hit player and display it prominently
+                this.createDamageText(sprite.x, sprite.y - 50, "KNOCKOUT!", isCurrentPlayer, true);
+            } else {
+                this.createDamageText(sprite.x, sprite.y - 50, "-10", isCurrentPlayer, false);
+            }
+            
+            console.log(`Hit effects applied successfully - only tint and external effects`);
+        } catch (error) {
+            console.error("Error applying hit effects:", error);
+            
+            // Emergency restoration in case of error
+            if (sprite && sprite.active) {
+                sprite.setTint(originalTint);
+                sprite.setData('hitEffectInProgress', false); // Clear the flag
+                console.log("Emergency sprite restoration applied");
+            }
+        }
+    }
+
+    private applyScreenShake(): void {
+        try {
+            const camera = this.cameras.main;
+            const originalZoom = camera.zoom;
+            
+            console.log("Applying subtle screen shake for current player hit");
+            
+            // Gentle camera shake - much reduced intensity
+            camera.shake(200, 0.015, true);
+            
+            // Very slight zoom punch
+            this.tweens.add({
+                targets: camera,
+                zoom: originalZoom * 1.02,
+                duration: 80,
+                yoyo: true,
+                ease: 'Power2'
+            });
+            
+            // Screen flash effect - create a red overlay that quickly fades
+            const screenFlash = this.add.rectangle(
+                camera.width / 2,
+                camera.height / 2,
+                camera.width,
+                camera.height,
+                0xff0000,
+                0.3
+            );
+            screenFlash.setDepth(1000); // Very high depth to appear above everything
+            screenFlash.setScrollFactor(0); // Keep it fixed to camera
+            
+            // Fade out the screen flash quickly
+            this.tweens.add({
+                targets: screenFlash,
+                alpha: 0,
+                duration: 200,
+                ease: 'Power2',
+                onComplete: () => {
+                    screenFlash.destroy();
+                }
+            });
+        } catch (error) {
+            console.error("Error applying screen shake:", error);
+        }
+    }
+
+    private createDamageParticles(x: number, y: number, isCurrentPlayer: boolean = false): void {
+        try {
+            console.log(`Creating damage particles at (${x}, ${y}) for ${isCurrentPlayer ? 'current' : 'other'} player`);
+            
+            // Create more particles for current player hit
+            const particleCount = isCurrentPlayer ? 8 : 5;
+            const particleColor = isCurrentPlayer ? 0xff2222 : 0xff6666;
+            const particleSize = isCurrentPlayer ? 4 : 3;
+            
+            // Create simple damage indicator particles
+            for (let i = 0; i < particleCount; i++) {
+                const particle = this.add.circle(
+                    x + (Math.random() - 0.5) * 40, 
+                    y, 
+                    particleSize, 
+                    particleColor
+                );
+                particle.setDepth(10);
+                
+                // Animate particles with more dramatic effect for current player
+                const spreadX = isCurrentPlayer ? 120 : 100;
+                const spreadY = isCurrentPlayer ? 80 : 60;
+                const duration = isCurrentPlayer ? 800 : 600;
+                
+                this.tweens.add({
+                    targets: particle,
+                    x: particle.x + (Math.random() - 0.5) * spreadX,
+                    y: particle.y - Math.random() * spreadY,
+                    alpha: 0,
+                    scaleX: 0,
+                    scaleY: 0,
+                    duration: duration,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        if (particle && particle.scene) {
+                            particle.destroy();
+                        }
+                    }
+                });
+            }
+            
+            // Add some sparks for current player
+            if (isCurrentPlayer) {
+                this.createSparkEffects(x, y);
+            }
+        } catch (error) {
+            console.error("Error creating damage particles:", error);
+        }
+    }
+    
+    private createSparkEffects(x: number, y: number): void {
+        try {
+            console.log(`Creating spark effects at (${x}, ${y})`);
+            
+            // Create spark-like effects for more dramatic impact
+            for (let i = 0; i < 6; i++) {
+                const spark = this.add.rectangle(
+                    x + (Math.random() - 0.5) * 30,
+                    y + (Math.random() - 0.5) * 20,
+                    2,
+                    8,
+                    0xffff88
+                );
+                spark.setDepth(11);
+                spark.rotation = Math.random() * Math.PI * 2;
+                
+                this.tweens.add({
+                    targets: spark,
+                    x: spark.x + (Math.random() - 0.5) * 60,
+                    y: spark.y - Math.random() * 40,
+                    alpha: 0,
+                    rotation: spark.rotation + (Math.random() - 0.5) * Math.PI,
+                    duration: 400,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        if (spark && spark.scene) {
+                            spark.destroy();
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Error creating spark effects:", error);
+        }
+    }
+    
+    private createDamageText(x: number, y: number, damage: string, isCurrentPlayer: boolean, isKnockout: boolean = false): void {
+        let textColor = isCurrentPlayer ? '#ff3333' : '#ff6666';
+        let fontSize = isCurrentPlayer ? '32px' : '28px';
+        
+        // Special styling for knockout text
+        if (isKnockout) {
+            textColor = '#ff8800'; // Orange color for knockout
+            fontSize = isCurrentPlayer ? '48px' : '42px'; // Larger font for knockout
+        }
+        
+        const damageText = this.add.text(x, y, damage, {
+            fontSize: fontSize,
+            fontFamily: 'Arial',
+            color: textColor,
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: isKnockout ? 4 : 2 // Thicker stroke for knockout
+        });
+        
+        damageText.setDepth(15);
+        damageText.setOrigin(0.5, 0.5);
+        
+        // Enhanced animation for knockout text
+        const animationDuration = isKnockout ? 1500 : 1000;
+        const finalY = isKnockout ? y - 80 : y - 60;
+        const finalScale = isKnockout ? 2.0 : 1.5;
+        
+        // Animate the damage text
+        this.tweens.add({
+            targets: damageText,
+            y: finalY,
+            alpha: 0,
+            scaleX: finalScale,
+            scaleY: finalScale,
+            duration: animationDuration,
+            ease: 'Power2',
+            onComplete: () => {
+                damageText.destroy();
+            }
+        });
+        
+        // No rotation effect for knockout text - removed shaking/rotation completely
     }
 
     private handlePlayerAttacked(data: any): void {
+        console.log("Player attacked event received:", data);
+        
         // Play attack sound
         this.arenaAudio.playAttackSound();
 
         // Show attack animation for other players only
-        const gameState = this.arenaGameState.getGameState();
         const socketId = this.arenaNetworking.getSocketId();
         
-        if (data.id === gameState.player1.id && socketId !== data.id) {
-            this.showAttackAnimation(this.arenaGameState.getOtherPlayer().sprite);
-        } else if (data.id === gameState.player2.id && socketId !== data.id) {
-            this.showAttackAnimation(this.arenaGameState.getOtherPlayer().sprite);
+        // If the player who attacked is not the current player, show the attack animation
+        if (data.id !== socketId) {
+            const otherPlayerSprite = this.arenaGameState.getOtherPlayer().sprite;
+            this.showAttackAnimation(otherPlayerSprite);
         }
     }
 
@@ -655,6 +966,12 @@ export default class Arena extends Phaser.Scene {
     }
 
     private showMatchEndFeedback(data: any): void {
+        // Prevent duplicate feedback
+        if (this.arenaGameState.isTransitioning()) {
+            console.log("Match end feedback already shown, skipping duplicate");
+            return;
+        }
+        
         const endTitle = data.reason === "knockout" ? "KNOCKOUT!" : "TIME UP!";
         const endColor = data.reason === "knockout" ? "#ff8800" : "#ff0000";
         
@@ -680,6 +997,61 @@ export default class Arena extends Phaser.Scene {
         );
         endText.setOrigin(0.5);
         endText.setScrollFactor(0);
+        endText.setDepth(1000);
+        
+        // Add win/lose text below the knockout text
+        let resultText = "";
+        const socketId = this.arenaNetworking.getSocketId();
+        
+        console.log("=== WIN/LOSE TEXT DEBUG ===");
+        console.log("Match end feedback data:", data);
+        console.log("Current socket ID:", socketId);
+        
+        if (data.winner && data.loser) {
+            // Handle both possible data formats:
+            // Format 1: winner/loser are objects with id property
+            // Format 2: winner/loser are just socket ID strings
+            const winnerId = typeof data.winner === 'string' ? data.winner : data.winner.id;
+            const loserId = typeof data.loser === 'string' ? data.loser : data.loser.id;
+            
+            console.log(`Winner ID: ${winnerId}, Loser ID: ${loserId}`);
+            if (winnerId === socketId) {
+                resultText = "YOU WIN!";
+                console.log("Setting result text to: YOU WIN!");
+            } else if (loserId === socketId) {
+                resultText = "YOU LOSE!";
+                console.log("Setting result text to: YOU LOSE!");
+            }
+        } else {
+            resultText = "DRAW!";
+            console.log("Setting result text to: DRAW!");
+        }
+        
+        console.log("Final result text:", resultText);
+        
+        const winLoseText = this.add.text(
+            this.cameras.main.width / 2,
+            this.cameras.main.height / 2 + 30,
+            resultText,
+            {
+                fontFamily: "Arial",
+                fontSize: "48px",
+                color: resultText === "YOU WIN!" ? "#00ff00" : resultText === "YOU LOSE!" ? "#ff4444" : "#ffff00",
+                stroke: "#000000",
+                strokeThickness: 4,
+                shadow: {
+                    offsetX: 2,
+                    offsetY: 2,
+                    color: "#000",
+                    blur: 5,
+                    stroke: true,
+                    fill: true,
+                },
+            }
+        );
+        winLoseText.setOrigin(0.5);
+        winLoseText.setScrollFactor(0);
+        winLoseText.setDepth(1000);
         
         // Flash the screen
         if (data.reason === "knockout") {
@@ -690,15 +1062,60 @@ export default class Arena extends Phaser.Scene {
     }
 
     private handleMatchResult(data: any): void {
+        console.log("=== MATCH RESULT DEBUG ===");
+        console.log("Match result data:", data);
+        
         if (data.winner && data.loser) {
-            console.log(`Winner: ${data.winner.name}, Loser: ${data.loser.name}`);
-            // Handle winner/loser logic
+            // Handle both possible data formats:
+            // Format 1: winner/loser are objects with id and name
+            // Format 2: winner/loser are just socket ID strings
+            const winnerId = typeof data.winner === 'string' ? data.winner : data.winner.id;
+            const loserId = typeof data.loser === 'string' ? data.loser : data.loser.id;
+            const winnerName = typeof data.winner === 'string' ? 'Player' : data.winner.name;
+            const loserName = typeof data.loser === 'string' ? 'Player' : data.loser.name;
+            
+            console.log(`Winner: ${winnerName} (ID: ${winnerId}), Loser: ${loserName} (ID: ${loserId})`);
+            
+            // Determine if current player won or lost
+            const socketId = this.arenaNetworking.getSocketId();
+            console.log(`Current player socket ID: ${socketId}`);
+            const currentPlayerWon = winnerId === socketId;
+            console.log(`Current player won: ${currentPlayerWon}`);
+            
+            // Validate that we have a valid socket ID
+            if (!socketId) {
+                console.error("No socket ID available! Defaulting to GameMenu");
+                this.time.delayedCall(3000, () => {
+                    this.scene.start("GameMenu");
+                });
+                return;
+            }
+            
+            // Transition to appropriate scene after delay
             this.time.delayedCall(3000, () => {
-                this.scene.start("GameMenu");
+                if (currentPlayerWon) {
+                    console.log("=== TRANSITIONING TO VICTORY SCENE ===");
+                    try {
+                        this.scene.start("Victory");
+                    } catch (error) {
+                        console.error("Error starting Victory scene:", error);
+                        console.log("Falling back to GameMenu");
+                        this.scene.start("GameMenu");
+                    }
+                } else {
+                    console.log("=== TRANSITIONING TO DEFEAT SCENE ===");
+                    try {
+                        this.scene.start("Defeat");
+                    } catch (error) {
+                        console.error("Error starting Defeat scene:", error);
+                        console.log("Falling back to GameMenu");
+                        this.scene.start("GameMenu");
+                    }
+                }
             });
         } else {
-            console.log("Match ended in a draw");
-            // Handle draw logic
+            console.log("Match ended in a draw - returning to main menu");
+            // Handle draw logic - return to game menu
             this.time.delayedCall(3000, () => {
                 this.scene.start("GameMenu");
             });
@@ -713,38 +1130,57 @@ export default class Arena extends Phaser.Scene {
         }
         
         try {
-            // Stop any current animation before playing attack (like backup)
+            // Set attacking flag first to prevent interruptions
+            sprite.setData('isAttacking', true);
+            
+            // Stop any current animation before playing attack
             if (sprite.anims.currentAnim) {
                 sprite.anims.stop();
             }
             
-            sprite.play({
-                key: "_Attack2",
-                frameRate: 8,
-                repeat: 0,
-            });
-            
-            // Set a flag to prevent movement animations from overriding attack
-            sprite.setData('isAttacking', true);
-            
             // Clear any existing animation complete listeners to prevent conflicts
             sprite.off('animationcomplete');
             
-            // Clear the flag after animation completes
-            sprite.once('animationcomplete', () => {
-                if (sprite && sprite.active) {
+            // Play attack animation
+            sprite.play({
+                key: "_Attack2",
+                frameRate: 15, // Increased from 12 to 15 for spam attack consistency
+                repeat: 0,
+            });
+            
+            console.log(`Attack animation started for player ${sprite.flipX ? 'left' : 'right'}`);
+            
+            // Handle animation completion
+            sprite.once('animationcomplete', (animation: any, frame: any) => {
+                if (sprite && sprite.active && animation.key === "_Attack2") {
+                    console.log("Attack animation completed, returning to idle");
                     sprite.setData('isAttacking', false);
+                    
+                    // Return to idle animation after attack completes
+                    try {
+                        sprite.play('_Idle_Idle', true);
+                    } catch (error) {
+                        console.warn("Could not play idle animation after attack:", error);
+                    }
                 }
             });
             
             // Fallback timeout to clear attacking flag if animation doesn't complete
-            this.time.delayedCall(500, () => {
-                if (sprite && sprite.active) {
+            this.time.delayedCall(300, () => { // Reduced from 400ms to 300ms for spam attack consistency
+                if (sprite && sprite.active && sprite.getData('isAttacking')) {
+                    console.log("Attack animation timeout - forcing idle state");
                     sprite.setData('isAttacking', false);
+                    try {
+                        sprite.play('_Idle_Idle', true);
+                    } catch (error) {
+                        console.warn("Could not play fallback idle animation:", error);
+                    }
                 }
             });
         } catch (error) {
             console.error("Failed to play attack animation for other player:", error);
+            // Reset attacking state if animation fails
+            sprite.setData('isAttacking', false);
         }
     }
 

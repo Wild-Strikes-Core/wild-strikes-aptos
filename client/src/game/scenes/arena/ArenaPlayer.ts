@@ -120,7 +120,7 @@ export class ArenaPlayer {
             return false;
         }
         
-        // Set attacking flag
+        // Set attacking flag FIRST to prevent movement animations from interfering
         sprite.setData('isAttacking', true);
         
         // Play attack animation with specific parameters like backup
@@ -130,10 +130,15 @@ export class ArenaPlayer {
                 sprite.anims.stop();
             }
             
-            sprite.play({
-                key: "_Attack2",
-                frameRate: 8,
-                repeat: 0,
+            // Add a small delay to ensure the attacking flag is processed before animation starts
+            this.scene.time.delayedCall(10, () => {
+                if (sprite && sprite.active) {
+                    sprite.play({
+                        key: "_Attack2",
+                        frameRate: 15, // Increased from 12 to 15 for rapid spam attacks
+                        repeat: 0,
+                    });
+                }
             });
             
             // Clear any existing animation complete listeners to prevent conflicts
@@ -143,12 +148,14 @@ export class ArenaPlayer {
             sprite.once('animationcomplete', () => {
                 if (sprite && sprite.active) {
                     sprite.setData('isAttacking', false);
+                    console.log("Attack animation completed, clearing attacking flag");
                 }
             });
             
             // Fallback timeout to clear attacking flag if animation doesn't complete
-            this.scene.time.delayedCall(500, () => {
-                if (sprite && sprite.active) {
+            this.scene.time.delayedCall(300, () => { // Reduced from 400ms to 300ms for spam attacks
+                if (sprite && sprite.active && sprite.getData('isAttacking')) {
+                    console.log("Attack animation timeout, clearing attacking flag");
                     sprite.setData('isAttacking', false);
                 }
             });

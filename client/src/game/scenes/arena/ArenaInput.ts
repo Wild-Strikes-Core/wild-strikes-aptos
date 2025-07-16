@@ -4,7 +4,9 @@ export class ArenaInput {
     private attackCallback: () => void;
     private contextMenuHandler: (e: Event) => void;
     private lastAttackTime: number = 0;
-    private attackCooldown: number = 300; // 300ms cooldown between attacks
+    private attackCooldown: number = 150; // Faster for spam attacks: 150ms for rapid fire
+    private consecutiveAttacks: number = 0; // Track consecutive attacks for balanced spam
+    private lastAttackResetTime: number = 0; // Time when consecutive attacks reset
 
     constructor(scene: Phaser.Scene, attackCallback: () => void) {
         this.scene = scene;
@@ -43,15 +45,62 @@ export class ArenaInput {
 
     public canAttack(): boolean {
         const now = this.scene.time.now;
-        return now - this.lastAttackTime >= this.attackCooldown;
+        
+        // Reset consecutive attack counter if enough time has passed
+        if (now - this.lastAttackResetTime > 2000) { // 2 second reset window for spam
+            this.consecutiveAttacks = 0;
+        }
+        
+        // Allow spam attacks but with slight delay increases for balance
+        let currentCooldown = this.attackCooldown;
+        if (this.consecutiveAttacks >= 5) {
+            // After 5 spam attacks, add minimal 25ms extra delay
+            currentCooldown = this.attackCooldown + 25;
+        } else if (this.consecutiveAttacks >= 10) {
+            // After 10 spam attacks, add 50ms extra delay
+            currentCooldown = this.attackCooldown + 50;
+        }
+        
+        return now - this.lastAttackTime >= currentCooldown;
     }
 
     public markAttack(): void {
-        this.lastAttackTime = this.scene.time.now;
+        const now = this.scene.time.now;
+        this.lastAttackTime = now;
+        
+        // Increment consecutive attacks if this attack is within the spam window
+        if (now - this.lastAttackResetTime < 2000) {
+            this.consecutiveAttacks++;
+        } else {
+            this.consecutiveAttacks = 1; // Reset to 1 for this attack
+        }
+        
+        this.lastAttackResetTime = now;
+        
+        console.log(`Spam attack ${this.consecutiveAttacks}: cooldown=${this.attackCooldown + (this.consecutiveAttacks >= 5 ? 25 : 0)}ms`);
     }
 
     public getKeys(): any {
         return this.KEYS;
+    }
+
+    public getAttackCooldownProgress(): number {
+        // Returns a value between 0 and 1 representing cooldown progress
+        const now = this.scene.time.now;
+        const timeSinceAttack = now - this.lastAttackTime;
+        
+        let currentCooldown = this.attackCooldown;
+        if (this.consecutiveAttacks >= 5) {
+            currentCooldown = this.attackCooldown + 25;
+        } else if (this.consecutiveAttacks >= 10) {
+            currentCooldown = this.attackCooldown + 50;
+        }
+        
+        return Math.min(1, timeSinceAttack / currentCooldown);
+    }
+
+    public getConsecutiveAttacks(): number {
+        return this.consecutiveAttacks;
     }
 
     public destroy(): void {

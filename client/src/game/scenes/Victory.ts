@@ -90,23 +90,33 @@ export default class Victory extends Phaser.Scene {
     // Write your code here
     
     preload() {
+        console.log("Victory scene preload() called");
+        
         // First, check if any of these textures are already loaded to avoid conflicts
-        if (!this.textures.exists(VICTORY_ASSETS.VICTORY_TEXT)) {
-            // Load correct victory text from Victory folder (not Defeat folder)
-            this.load.image(VICTORY_ASSETS.VICTORY_TEXT, 'assets/11 - Victory/1 (1).png');
+        try {
+            if (!this.textures.exists(VICTORY_ASSETS.VICTORY_TEXT)) {
+                // Load correct victory text from Victory folder (not Defeat folder)
+                this.load.image(VICTORY_ASSETS.VICTORY_TEXT, 'assets/11 - Victory/1 (1).png');
+            }
+            if (!this.textures.exists(VICTORY_ASSETS.ELO_BANNER)) {
+                this.load.image(VICTORY_ASSETS.ELO_BANNER, 'assets/11 - Victory/1.png');
+            }
+            if (!this.textures.exists(VICTORY_ASSETS.PLATFORM)) {
+                this.load.image(VICTORY_ASSETS.PLATFORM, 'assets/11 - Victory/1 (2).png');
+            }
+            if (!this.textures.exists(VICTORY_ASSETS.WLD_DISPLAY)) {
+                this.load.image(VICTORY_ASSETS.WLD_DISPLAY, 'assets/11 - Victory/1 (3).png');
+            }
+        } catch (error) {
+            console.error("Error in Victory preload:", error);
         }
-        if (!this.textures.exists(VICTORY_ASSETS.ELO_BANNER)) {
-            this.load.image(VICTORY_ASSETS.ELO_BANNER, 'assets/11 - Victory/1.png');
-        }
-        if (!this.textures.exists(VICTORY_ASSETS.PLATFORM)) {
-            this.load.image(VICTORY_ASSETS.PLATFORM, 'assets/11 - Victory/1 (2).png');
-        }
-        if (!this.textures.exists(VICTORY_ASSETS.WLD_DISPLAY)) {
-            this.load.image(VICTORY_ASSETS.WLD_DISPLAY, 'assets/11 - Victory/1 (3).png');
-        }
+        
+        console.log("Victory scene preload() completed");
     }
 
     create() {
+        console.log("=== Victory scene create() called ===");
+        
         // Play victory sound when the scene starts
         try {
             this.sound.play("victory", { volume: 0.8 });
@@ -116,33 +126,65 @@ export default class Victory extends Phaser.Scene {
 
         // Add the main background image first (behind all other elements)
         // Make it responsive to cover the full screen
-        const bg = this.add.image(0, 0, "2G_bg");
-        bg.setOrigin(0, 0);
-        bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-        bg.setDepth(-1000); // Ensure background is behind everything
+        try {
+            const bg = this.add.image(0, 0, "2G_bg");
+            bg.setOrigin(0, 0);
+            bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+            bg.setDepth(-1000); // Ensure background is behind everything
+        } catch (error) {
+            console.warn("Error creating background:", error);
+        }
 
         // Create the scene elements using our editor function
-        this.editorCreate();
+        try {
+            this.editorCreate();
+        } catch (error) {
+            console.error("Error in editorCreate:", error);
+            // If editorCreate fails, create basic victory text
+            const victoryText = this.add.text(
+                this.cameras.main.width / 2,
+                this.cameras.main.height / 2,
+                "VICTORY!",
+                {
+                    fontSize: "120px",
+                    color: "#00ff00",
+                    fontFamily: "Arial",
+                    stroke: "#000000",
+                    strokeThickness: 8
+                }
+            );
+            victoryText.setOrigin(0.5);
+        }
 
         // Verify that victory text has the correct texture
         // If not, force it to use our explicitly loaded victory text texture
         if (this.victoryText && this.victoryText.texture.key !== VICTORY_ASSETS.VICTORY_TEXT) {
             console.warn("Victory text using incorrect texture. Fixing...");
-            this.victoryText.setTexture(VICTORY_ASSETS.VICTORY_TEXT);
+            try {
+                this.victoryText.setTexture(VICTORY_ASSETS.VICTORY_TEXT);
+            } catch (error) {
+                console.warn("Could not set victory texture:", error);
+            }
         }
 
-        // Set initial alpha values to 0 for fade-in animations
-        this.eloBanner.setAlpha(0);
-        this.platform_1.setAlpha(0);
-        this.platform_2.setAlpha(0);
-        this.platform_3.setAlpha(0);
-        this.victoryText.setAlpha(0);
-        this.wLD.setAlpha(0);
+        // Set initial alpha values to 0 for fade-in animations (only if elements exist)
+        try {
+            if (this.eloBanner) this.eloBanner.setAlpha(0);
+            if (this.platform_1) this.platform_1.setAlpha(0);
+            if (this.platform_2) this.platform_2.setAlpha(0);
+            if (this.platform_3) this.platform_3.setAlpha(0);
+            if (this.victoryText) this.victoryText.setAlpha(0);
+            if (this.wLD) this.wLD.setAlpha(0);
+        } catch (error) {
+            console.warn("Error setting alpha values:", error);
+        }
 
         // Set up shutdown event listener to stop music when scene closes
         this.events.on("shutdown", this.onShutdown, this);
 
         this.startAnimationSequence();
+        
+        console.log("=== Victory scene create() completed ===");
     }
 
     private onShutdown(): void {

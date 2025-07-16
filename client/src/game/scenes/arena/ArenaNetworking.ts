@@ -108,8 +108,28 @@ export class ArenaNetworking {
         this.socket.emit("playerMoved", data);
     }
 
-    public emitPlayerAttack(): void {
-        this.socket.emit("playerAttack");
+    public emitPlayerAttack(playerData?: {
+        x: number;
+        y: number;
+        flipX: boolean;
+    }): void {
+        if (playerData) {
+            // Define attack area (in front of the player)
+            const attackWidth = 120;  // Attack reach
+            const attackHeight = 80;  // Attack height
+            
+            // Send attack data to server with position for hit detection
+            this.socket.emit("playerAttacked", {
+                x: playerData.x, 
+                y: playerData.y, 
+                attackWidth, 
+                attackHeight, 
+                flipX: playerData.flipX
+            });
+        } else {
+            // Fallback if player data isn't available
+            this.socket.emit("playerAttacked");
+        }
     }
 
     public getSocketId(): string | undefined {

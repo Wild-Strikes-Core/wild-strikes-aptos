@@ -86,6 +86,8 @@ export default class Defeat extends Phaser.Scene {
     // Write your code here
 
     create() {
+        console.log("=== Defeat scene create() called ===");
+        
         // Play defeat sound when the scene starts
         try {
             this.sound.play("defeat", { volume: 0.8 });
@@ -112,6 +114,8 @@ export default class Defeat extends Phaser.Scene {
         this.events.on("shutdown", this.onShutdown, this);
 
         this.startAnimationSequence();
+        
+        console.log("=== Defeat scene create() completed ===");
     }
 
     private onShutdown(): void {

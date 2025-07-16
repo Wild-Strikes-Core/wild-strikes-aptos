@@ -410,7 +410,8 @@ io.on("connection", (socket) => {
     io.to(match.roomId).emit("gameStateUpdate", gameState);
   });
 
-  socket.on("playerAttacked", (data) => {
+  // Shared attack handler function
+  const handlePlayerAttack = (data: any) => {
     const matchId = PLAYER_MATCH.get(socket.id);
 
     if (matchId === undefined) {
@@ -536,7 +537,11 @@ io.on("connection", (socket) => {
 
     // Broadcast updated game state after attack
     broadcastMatchState(match);
-  });
+  };
+
+  // Handle both event names for compatibility
+  socket.on("playerAttacked", handlePlayerAttack);
+  socket.on("playerAttack", handlePlayerAttack);
 
   socket.on("playerReady", (data) => {
     const matchId = PLAYER_MATCH.get(socket.id);

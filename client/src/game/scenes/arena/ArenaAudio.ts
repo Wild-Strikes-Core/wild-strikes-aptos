@@ -50,9 +50,32 @@ export class ArenaAudio {
     public playAttackSound(): void {
         this.playSound("Attack", 0.6);
     }
+    
+    public playImpactSound(): void {
+        // Play a distinct sound for successful hits
+        this.playSound("impact", 0.7);
+    }
+    
+    public playHeavyHitSound(): void {
+        // Play a more intense hit sound for dramatic effect
+        this.playSound("heavy-hit", 0.8);
+    }
+    
+    public playDamageSound(): void {
+        // Play damage taken sound
+        this.playSound("damage", 0.6);
+    }
 
     public playGameOverSound(): void {
         this.playSound("game-over", 1.0);
+    }
+
+    public playVictorySound(): void {
+        this.playSound("victory", 0.8);
+    }
+
+    public playDefeatSound(): void {
+        this.playSound("defeat", 0.8);
     }
 
     public getCurrentBackgroundMusic(): Phaser.Sound.BaseSound | null {
