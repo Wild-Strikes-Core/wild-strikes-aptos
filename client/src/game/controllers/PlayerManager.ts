@@ -233,14 +233,17 @@ export class PlayerManager {
      * Get player's speed for camera effects
      */
     getSpeed(): number {
-        return Math.abs(this.player.body?.velocity.x || 0);
+        if (!this.player) return 0;
+        if (!this.player.body) return 0;
+        return Math.abs(this.player.body.velocity.x || 0);
     }
     
     /**
      * Get run speed threshold for camera effects
      */
     getRunSpeedThreshold(): number {
-        return this.runSpeed * 0.8;
+        // Lower threshold to 60% of run speed (from 80%) to make zoom effect more common
+        return this.runSpeed * 0.6;
     }
     
     /**
