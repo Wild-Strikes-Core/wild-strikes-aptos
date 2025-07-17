@@ -746,9 +746,11 @@ export default class Arena extends Phaser.Scene {
 
     private handleTimerUpdate(data: any): void {
         console.log("Timer update received:", data);
-        // Check for both possible timer formats
-        const timeToDisplay = data.formattedTime || data.timeLeft || "XX:XX";
-        this.arenaUI.updateTimer(timeToDisplay);
+        if (this.scene.isActive("Arena")) {
+            // Check for both possible timer formats
+            const timeToDisplay = data.formattedTime || data.timeLeft || "XX:XX";
+            this.arenaUI.updateTimer(timeToDisplay);
+        }
     }
 
     private handlePlayersConnected(data: any): void {
