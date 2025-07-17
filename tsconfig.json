@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "baseUrl": ".",
+    "paths": {
+      "@phaser-games/*": ["packages/phaser-games/*"],
+      "@phaser-ui/*": ["packages/phaser-ui/*"],
+      "@socket-client": ["packages/socket-client"],
+      "@aptos-wallet/*": ["packages/aptos-wallet/*"],
+      "@shared/*": ["packages/shared-utils/*"]
+    }
+  }
+}
