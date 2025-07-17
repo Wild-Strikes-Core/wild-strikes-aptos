@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap');
+
+/* Mountains background */
+.mountains-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  z-index: 1;
+  pointer-events: none;
+  object-fit: cover;
+}
+
+/* Overview logo styles */
+.overview-logo {
+  animation: logoShadowBlink 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)) 
+          drop-shadow(0 0 20px rgba(135, 206, 250, 0.4)) 
+          drop-shadow(0 0 30px rgba(0, 191, 255, 0.3));
+}
+
+/* Logo and Play Button styles */
+.logo {
+  margin-bottom: 20px;
+  animation: logoShadowBlink 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)) 
+          drop-shadow(0 0 20px rgba(135, 206, 250, 0.4)) 
+          drop-shadow(0 0 30px rgba(0, 191, 255, 0.3));
+}
+
+.hero-tagline {
+  color: white;
+  font-family: 'Silkscreen', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 30px;
+  line-height: 1.4;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 1),
+               0 0 10px rgba(255, 255, 255, 0.3),
+               0 0 20px rgba(255, 255, 255, 0.1);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.hero-tagline .highlight {
+  color: #FFD84E;
+  font-weight: 700;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 1),
+               0 0 10px rgba(255, 216, 78, 0.6),
+               0 0 20px rgba(255, 216, 78, 0.4),
+               0 0 30px rgba(255, 216, 78, 0.2);
+}
+
+.play-button {
+  /* margin-top: 2rem; */
+  cursor: pointer;
+  transition: transform 0.2s;
+  animation: playButtonPulse 2s ease-in-out infinite;
+}
+
+.play-button:hover {
+  transform: scale(1.05);
+  animation-play-state: paused;
+}
+
+.overview-avatars {
+  position: relative;
+  min-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  flex: 0 0 auto;
+  padding: 20px;
+}
+
+/* .avatar {
+  position: absolute;
+  transition: transform 0.3s;
+}
+
+.avatar-lower {
+  bottom: 0;
+  left: 0;
+  transform: translateY(30px);
+}
+
+.avatar-higher {
+  top: 0;
+  right: 0;
+} */
+
+@keyframes logoShadowBlink {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3)) 
+            drop-shadow(0 0 10px rgba(135, 206, 250, 0.2)) 
+            drop-shadow(0 0 15px rgba(0, 191, 255, 0.1));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7)) 
+            drop-shadow(0 0 30px rgba(135, 206, 250, 0.6)) 
+            drop-shadow(0 0 45px rgba(0, 191, 255, 0.5));
+  }
+}
+
+@keyframes playButtonPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+}
+
+/* Overview star background */
+.overview-star-bg {
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Gameplay section star background - ensure it's visible */
+.gameplay-star-bg {
+  object-fit: cover;
+  z-index: 2 !important;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.gameplay-section .star-bg {
+  object-fit: cover;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.8;
+}

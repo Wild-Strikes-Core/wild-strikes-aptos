@@ -1,0 +1,41 @@
+/* Navbar styles */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* background: rgba(255, 255, 255, 0.1); */
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  font-family: 'Silkscreen', monospace;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  letter-spacing: 1px;
+}
+
+.navbar a:hover {
+  color: #ffd700; /* Gold color on hover */
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+}
+
+.navbar a.active {
+  color: #ffd700; /* Gold highlight for active section */
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 1),
+               0 0 16px rgba(255, 215, 0, 0.8),
+               0 0 24px rgba(255, 215, 0, 0.6);
+}

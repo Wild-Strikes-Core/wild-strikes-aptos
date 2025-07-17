@@ -1,0 +1,53 @@
+/* Star background styles and animation */
+.star-bg {
+  display: none !important;
+}
+
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("/stars.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 2;
+  pointer-events: none;
+  animation: starBlink 5s infinite alternate;
+}
+
+@keyframes starBlink {
+  0% { 
+    opacity: 0.6; 
+    filter: hue-rotate(0deg) brightness(1.5) saturate(2);
+    box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 60px #ff00ff;
+  }
+  20% { 
+    opacity: 0.8; 
+    filter: hue-rotate(72deg) brightness(1.8) saturate(2.5);
+    box-shadow: 0 0 25px #00ffff, 0 0 50px #00ffff, 0 0 75px #00ffff;
+  }
+  40% { 
+    opacity: 1; 
+    filter: hue-rotate(144deg) brightness(2) saturate(3);
+    box-shadow: 0 0 30px #00ff00, 0 0 60px #00ff00, 0 0 90px #00ff00;
+  }
+  60% { 
+    opacity: 0.8; 
+    filter: hue-rotate(216deg) brightness(1.8) saturate(2.5);
+    box-shadow: 0 0 25px #ffff00, 0 0 50px #ffff00, 0 0 75px #ffff00;
+  }
+  80% { 
+    opacity: 0.7; 
+    filter: hue-rotate(288deg) brightness(1.6) saturate(2.2);
+    box-shadow: 0 0 22px #ff8000, 0 0 45px #ff8000, 0 0 68px #ff8000;
+  }
+  100% { 
+    opacity: 0.6; 
+    filter: hue-rotate(360deg) brightness(1.5) saturate(2);
+    box-shadow: 0 0 20px #ff0080, 0 0 40px #ff0080, 0 0 60px #ff0080;
+  }
+}
