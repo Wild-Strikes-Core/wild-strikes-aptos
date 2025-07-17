@@ -1,0 +1,11 @@
+{
+  "extends": "../../apps/client/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "../../",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../shared/**/*", "../web3/**/*"]
+} 
