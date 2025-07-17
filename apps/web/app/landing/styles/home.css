@@ -25,7 +25,7 @@ html, body {
 .container {
   height: 100vh;
   width: 100vw;
-  background-image: url("/bg-1.png");
+  background-image: url("/assets/Website Page/bg-1.png");
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
@@ -47,7 +47,7 @@ html, body {
 
 /* Game overview section */
 .game-overview {
-  background-image: url("/bg-2.png");
+  background-image: url("/assets/Website Page/bg-2.png");
   background-size: cover;
   background-position: center;
   padding: 120px 60px;
@@ -112,7 +112,7 @@ html, body {
 .gameplay-section {
   position: relative;
   width: 100%;
-  padding: 100px 0;
+  padding: 120px 40px;
   background-color: #000;
   overflow: hidden;
   display: flex;
@@ -137,12 +137,33 @@ html, body {
   font-size: 48px;
   font-weight: 700;
   color: #FFD84E;
-  margin-bottom: 40px;
+  margin-bottom: 80px;
   text-shadow: 2px 2px 0px rgba(0, 0, 0, 1),
                0 0 10px rgba(255, 216, 78, 0.6),
                0 0 20px rgba(255, 216, 78, 0.4);
   image-rendering: pixelated;
   letter-spacing: 2px;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  max-width: 2000px;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  margin: 0 auto;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  transform: scale(1.5);
+  transform-origin: center;
 }
 
 .gameplay-video {
@@ -302,6 +323,221 @@ html, body {
     filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))
             drop-shadow(0 0 15px rgba(255, 216, 78, 0.3));
     transform: scale(1.05);
+  }
+}
+
+/* RESPONSIVE STYLES */
+
+/* Large desktop styles */
+@media (min-width: 1400px) {
+  .video-container {
+    max-width: 2200px;
+  }
+  
+  .gameplay-content h2 {
+    font-size: 56px;
+    margin-bottom: 50px;
+  }
+  
+  .gameplay-section {
+    padding: 140px 60px;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .video-container {
+    max-width: 2000px;
+  }
+  
+  .gameplay-content h2 {
+    font-size: 52px;
+    margin-bottom: 45px;
+  }
+  
+  .gameplay-section {
+    padding: 130px 50px;
+  }
+}
+
+/* Tablet styles */
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 20px;
+  }
+  
+  .hero-tagline {
+    font-size: 28px;
+  }
+  
+  .game-overview {
+    padding: 80px 40px;
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .overview-text {
+    max-width: 100%;
+    margin-bottom: 40px;
+  }
+  
+  .overview-text h2 {
+    font-size: 40px;
+  }
+  
+  .overview-avatars {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .floating-earth, .floating-mars {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
+  
+  .hero-tagline {
+    font-size: 24px;
+    line-height: 1.3;
+    margin-bottom: 20px;
+  }
+  
+  .play-button {
+    width: 150px;
+    height: 60px;
+  }
+  
+  .game-overview {
+    padding: 60px 20px;
+  }
+  
+  .overview-text h2 {
+    font-size: 32px;
+    margin-bottom: 20px;
+  }
+  
+  .overview-text em {
+    font-size: 16px;
+  }
+  
+  .overview-text p {
+    font-size: 14px;
+  }
+  
+  .overview-logo {
+    width: 250px;
+    height: auto;
+  }
+  
+  .game-features {
+    padding: 80px 20px;
+  }
+  
+  .features-content h2 {
+    font-size: 32px;
+    margin-bottom: 40px;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 0 10px;
+  }
+  
+  .feature-item {
+    padding: 20px 15px;
+  }
+  
+  .feature-item h3 {
+    font-size: 16px;
+  }
+  
+  .feature-item p {
+    font-size: 12px;
+  }
+  
+  .gameplay-section {
+    padding: 60px 20px;
+  }
+  
+  .gameplay-content h2 {
+    font-size: 32px;
+    margin-bottom: 30px;
+  }
+  
+  .floating-earth {
+    bottom: 20px;
+    left: 20px;
+    width: 80px;
+    height: 80px;
+  }
+  
+  .floating-mars {
+    top: 20px;
+    right: 20px;
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/* Small mobile styles */
+@media (max-width: 480px) {
+  .hero-tagline {
+    font-size: 20px;
+    padding: 0 10px;
+  }
+  
+  .play-button {
+    width: 120px;
+    height: 50px;
+  }
+  
+  .overview-text h2 {
+    font-size: 28px;
+  }
+  
+  .overview-text em {
+    font-size: 14px;
+  }
+  
+  .overview-text p {
+    font-size: 12px;
+  }
+  
+  .overview-logo {
+    width: 200px;
+  }
+  
+  .features-content h2 {
+    font-size: 28px;
+  }
+  
+  .feature-item h3 {
+    font-size: 14px;
+  }
+  
+  .feature-item p {
+    font-size: 11px;
+  }
+  
+  .gameplay-content h2 {
+    font-size: 28px;
+  }
+  
+  .floating-earth, .floating-mars {
+    width: 60px;
+    height: 60px;
   }
 }
 

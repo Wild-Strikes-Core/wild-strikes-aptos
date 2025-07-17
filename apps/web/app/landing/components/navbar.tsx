@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import "@/styles/home.css";
+import "../styles/home.css";
 
 export default function Navbar() {
   const [activeSection, setActiveSection] = useState("home");

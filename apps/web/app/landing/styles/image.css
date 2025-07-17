@@ -143,3 +143,68 @@
   pointer-events: none;
   opacity: 0.8;
 }
+
+/* RESPONSIVE STYLES FOR IMAGES */
+
+/* Tablet styles */
+@media (max-width: 1024px) {
+  .hero-tagline {
+    font-size: 28px;
+  }
+  
+  .play-button {
+    width: 180px;
+    height: 70px;
+  }
+  
+  .overview-logo {
+    width: 300px;
+    height: auto;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .hero-tagline {
+    font-size: 24px;
+    line-height: 1.3;
+    margin-bottom: 20px;
+    padding: 0 10px;
+  }
+  
+  .play-button {
+    width: 150px;
+    height: 60px;
+  }
+  
+  .overview-logo {
+    width: 250px;
+    height: auto;
+  }
+  
+  .mountains-bg {
+    height: 150px;
+  }
+}
+
+/* Small mobile styles */
+@media (max-width: 480px) {
+  .hero-tagline {
+    font-size: 20px;
+    padding: 0 5px;
+  }
+  
+  .play-button {
+    width: 120px;
+    height: 50px;
+  }
+  
+  .overview-logo {
+    width: 200px;
+    height: auto;
+  }
+  
+  .mountains-bg {
+    height: 120px;
+  }
+}
