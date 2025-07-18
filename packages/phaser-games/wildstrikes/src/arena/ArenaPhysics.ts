@@ -1,6 +1,6 @@
 export class ArenaPhysics {
     private scene: Phaser.Scene;
-    private platform!: Phaser.Physics.Arcade.Image;
+    private platformRect!: Phaser.GameObjects.Rectangle;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -8,83 +8,50 @@ export class ArenaPhysics {
 
     public createPlatforms(): void {
         console.log("Creating platforms...");
-        
-        // Create the main platform
-        this.platform = this.scene.physics.add.staticImage(48, 1088, "M_playerCard");
-        this.platform.scaleX = 5;
-        this.platform.alpha = 0.1;
-        this.platform.alphaTopLeft = 0.1;
-        this.platform.alphaTopRight = 0.1;
-        this.platform.alphaBottomLeft = 0.1;
-        this.platform.alphaBottomRight = 0.1;
-        
-        if (this.platform.body) {
-            this.platform.body.pushable = false;
-            this.platform.body.immovable = true;
-            this.platform.body.setSize(830, 171, false);
-        }
-        
-        console.log("Platform created:", this.platform);
-        
-        // Additional platform configuration from backup
-        this.configurePlatform();
-    }
 
-    private configurePlatform(): void {
-        if (this.platform) {
-            console.log("Platform found, configuring...");
-            this.platform.setOrigin(0.5, 0); // Center origin horizontally
-            this.platform.setImmovable(true);
+        // Create an invisible static body to act as the ground. This is more
+        // reliable than using and configuring a static image.
+        const platformWidth = this.scene.cameras.main.width * 2; // ensure wide
+        const platformHeight = 60;
+        const platformY = this.scene.cameras.main.height - platformHeight / 2;
+        const platformX = this.scene.cameras.main.width / 2;
 
-            // Adjust platform to match camera width with extra safety margin
-            const cameraWidth = this.scene.cameras.main.width;
-            const safetyMargin = 400; // Extra width on each side
-            const totalWidth = cameraWidth + safetyMargin * 2;
+        // Create an invisible rectangle graphics object
+        this.platformRect = this.scene.add.rectangle(
+            platformX,
+            platformY,
+            platformWidth,
+            platformHeight,
+            0x000000,
+            0 // fully transparent
+        );
+        // Add static physics body
+        this.scene.physics.add.existing(this.platformRect, true);
 
-            // Update both display width and physics body size
-            this.platform.displayWidth = totalWidth;
-            if (this.platform.body) {
-                (this.platform.body as Phaser.Physics.Arcade.StaticBody).width =
-                    totalWidth;
-                this.platform.body.setSize(
-                    totalWidth,
-                    this.platform.body.height,
-                    false
-                );
-            }
-
-            // Position platform in the center of the camera view
-            this.platform.x = cameraWidth / 2;
-
-            // Ensure platform is enabled for physics
-            if (this.platform.body) {
-                this.platform.body.enable = true;
-            }
-
-            console.log(
-                `Platform configured: width=${totalWidth}, position=(${this.platform.x}, ${this.platform.y})`
-            );
-        } else {
-            console.error("Platform not found in createPlatforms");
-        }
+        console.log(
+            `Invisible platform created at (${platformX}, ${platformY}) size ${platformWidth}x${platformHeight}`
+        );
     }
 
     public addPlatformCollider(sprite: Phaser.Physics.Arcade.Sprite): void {
-        if (this.platform && sprite && sprite.body) {
+        if (this.platformRect && sprite && sprite.body) {
             // Remove any existing colliders first to prevent duplicates
             this.scene.physics.world.colliders
                 .getActive()
                 .filter(
                     (collider) =>
                         (collider.object1 === sprite &&
-                            collider.object2 === this.platform) ||
-                        (collider.object1 === this.platform &&
+                            collider.object2 === this.platformRect.body) ||
+                        (collider.object1 === this.platformRect.body &&
                             collider.object2 === sprite)
                 )
                 .forEach((collider) => collider.destroy());
 
             // Add a fresh collider
-            const collider = this.scene.physics.add.collider(sprite, this.platform);
+            const collider = this.scene.physics.add.collider(
+                sprite,
+                this.platformRect
+            );
 
             // Store reference to help with debugging
             sprite.setData("platformCollider", collider);
@@ -99,8 +66,8 @@ export class ArenaPhysics {
         }
     }
 
-    public getPlatform(): Phaser.Physics.Arcade.Image {
-        return this.platform;
+    public getPlatform(): Phaser.GameObjects.Rectangle {
+        return this.platformRect;
     }
 
     public setupPhysicsDebug(enabled: boolean = false): void {
@@ -112,8 +79,8 @@ export class ArenaPhysics {
     }
 
     public destroy(): void {
-        if (this.platform) {
-            this.platform.destroy();
+        if (this.platformRect) {
+            this.platformRect.destroy();
         }
     }
 }

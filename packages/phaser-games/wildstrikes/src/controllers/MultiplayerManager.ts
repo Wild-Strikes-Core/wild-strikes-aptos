@@ -14,6 +14,10 @@ export class MultiplayerManager {
     private positionUpdateInterval: number = 50;
     private lastPositionUpdate: number = 0;
 
+    // Cache input objects to avoid recreating every frame
+    private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
+    private attackKey: Phaser.Input.Keyboard.Key;
+
     private inputSeq: number = 0;
 
     constructor(
@@ -30,6 +34,10 @@ export class MultiplayerManager {
         this.myPlayer = myPlayer;
         this.platform = config.platform;
         this.positionUpdateInterval = config.positionUpdateInterval || 50;
+
+        // Initialize input references once
+        this.cursors = this.scene.input.keyboard!.createCursorKeys();
+        this.attackKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     }
 
     /**
@@ -64,17 +72,15 @@ export class MultiplayerManager {
         if (!this.myPlayer || !this.socket) return;
 
         // Determine directional input (-1,0,1)
-        const cursors = this.scene.input.keyboard!.createCursorKeys();
         let dirX: -1 | 0 | 1 = 0;
-        if (cursors.left!.isDown) dirX = -1;
-        else if (cursors.right!.isDown) dirX = 1;
+        if (this.cursors.left!.isDown) dirX = -1;
+        else if (this.cursors.right!.isDown) dirX = 1;
 
-        const jump = Phaser.Input.Keyboard.JustDown(cursors.up!);
-        const run = cursors.shift!.isDown;
+        const jump = Phaser.Input.Keyboard.JustDown(this.cursors.up!);
+        const run = this.cursors.shift!.isDown;
 
-        // TODO attack key mapping (use space for now)
-        const attackKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        const attack = Phaser.Input.Keyboard.JustDown(attackKey);
+        // Attack key uses cached reference
+        const attack = Phaser.Input.Keyboard.JustDown(this.attackKey);
 
         this.socket.emit(SOCKET_EVENTS.PLAYER_INPUT, {
             seq: this.inputSeq++,
