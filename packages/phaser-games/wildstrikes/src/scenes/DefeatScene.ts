@@ -3,6 +3,12 @@
 /* START OF COMPILED CODE */
 
 /* START-USER-IMPORTS */
+// Define constant keys for defeat assets to avoid naming confusion
+const DEFEAT_ASSETS = {
+    DEFEAT_TEXT: "defeat_text", // Previously "1 (4)"
+    ELO_BANNER: "elo_banner",   // Previously "1"
+    PLATFORM: "defeat_platform", // Previously "1 (2)"
+};
 /* END-USER-IMPORTS */
 
 export default class Defeat extends Phaser.Scene {
@@ -16,68 +22,68 @@ export default class Defeat extends Phaser.Scene {
 
     editorCreate(): void {
         // bgClouds
-        const bgClouds = this.add.tileSprite(
+        const topClouds = this.add.tileSprite(
             920,
             284,
             1029,
             242,
             "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview"
         );
-        bgClouds.blendMode = Phaser.BlendModes.HUE;
-        bgClouds.scaleX = 2;
-        bgClouds.scaleY = 2;
-        bgClouds.tintTopLeft = 6096904;
-        bgClouds.tintTopRight = 7997962;
-        bgClouds.tintBottomLeft = 7014151;
-        bgClouds.tintBottomRight = 5965061;
+        topClouds.blendMode = Phaser.BlendModes.HUE;
+        topClouds.scaleX = 2;
+        topClouds.scaleY = 2;
+        topClouds.tintTopLeft = 6096904;
+        topClouds.tintTopRight = 7997962;
+        topClouds.tintBottomLeft = 7014151;
+        topClouds.tintBottomRight = 5965061;
 
         // bgClouds_1
-        const bgClouds_1 = this.add.tileSprite(
+        const bottomClouds = this.add.tileSprite(
             952,
             1068,
             1029,
             242,
             "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview"
         );
-        bgClouds_1.blendMode = Phaser.BlendModes.COLOR;
-        bgClouds_1.scaleX = 2;
-        bgClouds_1.scaleY = 2;
-        bgClouds_1.tintTopLeft = 8325385;
-        bgClouds_1.tintTopRight = 5702917;
-        bgClouds_1.tintBottomLeft = 8717830;
-        bgClouds_1.tintBottomRight = 4850178;
+        bottomClouds.blendMode = Phaser.BlendModes.COLOR;
+        bottomClouds.scaleX = 2;
+        bottomClouds.scaleY = 2;
+        bottomClouds.tintTopLeft = 8325385;
+        bottomClouds.tintTopRight = 5702917;
+        bottomClouds.tintBottomLeft = 8717830;
+        bottomClouds.tintBottomRight = 4850178;
 
         // platform_1
-        const platform_1 = this.add.image(528, 1136, "1 (2)");
+        const leftPlatform = this.add.image(528, 1136, DEFEAT_ASSETS.PLATFORM);
 
         // platform_2
-        const platform_2 = this.add.image(960, 1136, "1 (2)");
+        const middlePlatform = this.add.image(960, 1136, DEFEAT_ASSETS.PLATFORM);
 
         // platform_3
-        const platform_3 = this.add.image(1408, 1136, "1 (2)");
+        const rightPlatform = this.add.image(1408, 1136, DEFEAT_ASSETS.PLATFORM);
 
         // eloBanner
-        const eloBanner = this.add.image(960, 848, "1");
+        const eloBanner = this.add.image(960, 848, DEFEAT_ASSETS.ELO_BANNER);
 
         // defeatText
-        const defeatText = this.add.image(960, 128, "1 (4)");
+        const defeatText = this.add.image(960, 128, DEFEAT_ASSETS.DEFEAT_TEXT);
 
-        this.bgClouds = bgClouds;
-        this.bgClouds_1 = bgClouds_1;
-        this.platform_1 = platform_1;
-        this.platform_2 = platform_2;
-        this.platform_3 = platform_3;
+        this.topClouds = topClouds;
+        this.bottomClouds = bottomClouds;
+        this.leftPlatform = leftPlatform;
+        this.middlePlatform = middlePlatform;
+        this.rightPlatform = rightPlatform;
         this.eloBanner = eloBanner;
         this.defeatText = defeatText;
 
         this.events.emit("scene-awake");
     }
 
-    private bgClouds!: Phaser.GameObjects.TileSprite;
-    private bgClouds_1!: Phaser.GameObjects.TileSprite;
-    private platform_1!: Phaser.GameObjects.Image;
-    private platform_2!: Phaser.GameObjects.Image;
-    private platform_3!: Phaser.GameObjects.Image;
+    private topClouds!: Phaser.GameObjects.TileSprite;
+    private bottomClouds!: Phaser.GameObjects.TileSprite;
+    private leftPlatform!: Phaser.GameObjects.Image;
+    private middlePlatform!: Phaser.GameObjects.Image;
+    private rightPlatform!: Phaser.GameObjects.Image;
     private eloBanner!: Phaser.GameObjects.Image;
     private defeatText!: Phaser.GameObjects.Image;
 
@@ -105,9 +111,9 @@ export default class Defeat extends Phaser.Scene {
         this.editorCreate();
 
         this.eloBanner.setAlpha(0);
-        this.platform_1.setAlpha(0);
-        this.platform_2.setAlpha(0);
-        this.platform_3.setAlpha(0);
+        this.leftPlatform.setAlpha(0);
+        this.middlePlatform.setAlpha(0);
+        this.rightPlatform.setAlpha(0);
         this.defeatText.setAlpha(0);
 
         // Set up shutdown event listener to stop music when scene closes
@@ -127,7 +133,7 @@ export default class Defeat extends Phaser.Scene {
     }
 
     update() {
-        [this.bgClouds, this.bgClouds_1].forEach(
+        [this.topClouds, this.bottomClouds].forEach(
             (cloud) => (cloud.tilePositionX += 1)
         );
     }
@@ -135,7 +141,7 @@ export default class Defeat extends Phaser.Scene {
     startAnimationSequence() {
         // Platform rise animation with delays
         this.tweens.add({
-            targets: this.platform_1,
+            targets: this.leftPlatform,
             y: 608,
             alpha: 1,
             duration: 2000,
@@ -143,7 +149,7 @@ export default class Defeat extends Phaser.Scene {
         });
         this.time.delayedCall(500, () => {
             this.tweens.add({
-                targets: this.platform_2,
+                targets: this.middlePlatform,
                 y: 560,
                 alpha: 1,
                 duration: 2000,
@@ -152,7 +158,7 @@ export default class Defeat extends Phaser.Scene {
         });
         this.time.delayedCall(1000, () => {
             this.tweens.add({
-                targets: this.platform_3,
+                targets: this.rightPlatform,
                 y: 608,
                 alpha: 1,
                 duration: 2000,
@@ -177,7 +183,7 @@ export default class Defeat extends Phaser.Scene {
         // After 8 sec, fade platforms
         this.time.delayedCall(8000, () => {
             this.tweens.add({
-                targets: [this.platform_1, this.platform_2, this.platform_3],
+                targets: [this.leftPlatform, this.middlePlatform, this.rightPlatform],
                 alpha: 0,
                 duration: 2000,
                 ease: "Linear",

@@ -1,13 +1,14 @@
 // Client-side only MatchFound scene – all networking stripped
 
 export default class MatchFound extends Phaser.Scene {
-    private image_3!: Phaser.GameObjects.Image;
-    private playerName!: Phaser.GameObjects.Text;
-    private image!: Phaser.GameObjects.Image;
-    private playerName_1!: Phaser.GameObjects.Text;
+    // Scene element references (renamed for clarity)
+    private leftPlayerCard!: Phaser.GameObjects.Image;
+    private rightPlayerCard!: Phaser.GameObjects.Image;
+    private leftPlayerName!: Phaser.GameObjects.Text;
+    private rightPlayerName!: Phaser.GameObjects.Text;
     private playerCharSprite!: Phaser.GameObjects.Image;
     private enemyCharSprite!: Phaser.GameObjects.Image;
-    private vs!: Phaser.GameObjects.Text;
+    private vsText!: Phaser.GameObjects.Text;
 
     constructor() {
         super("MatchFound");
@@ -23,8 +24,8 @@ export default class MatchFound extends Phaser.Scene {
         this.editorCreate();
 
         // Static placeholder names for polishing
-        this.playerName.setText("Player 1");
-        this.playerName_1.setText("Player 2");
+        this.leftPlayerName.setText("Player 1");
+        this.rightPlayerName.setText("Player 2");
 
         // Set up initial states & animate entrance
         this.setupInitialStates();
@@ -40,10 +41,10 @@ export default class MatchFound extends Phaser.Scene {
 
     private editorCreate(): void {
         // Left player card
-        this.image_3 = this.add.image(146, 216, "M_playerCard");
+        this.leftPlayerCard = this.add.image(146, 216, "M_playerCard");
 
         // Left player name
-        this.playerName = this.add.text(18, 184, "", {
+        this.leftPlayerName = this.add.text(18, 184, "", {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
@@ -51,10 +52,10 @@ export default class MatchFound extends Phaser.Scene {
         });
 
         // Right player card
-        this.image = this.add.image(1761, 216, "M_playerCard");
+        this.rightPlayerCard = this.add.image(1761, 216, "M_playerCard");
 
         // Right player name
-        this.playerName_1 = this.add.text(1521, 184, "", {
+        this.rightPlayerName = this.add.text(1521, 184, "", {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
@@ -71,7 +72,7 @@ export default class MatchFound extends Phaser.Scene {
         this.enemyCharSprite.setFlipX(true);
 
         // VS text
-        this.vs = this.add.text(834, 486, "V.S", {
+        this.vsText = this.add.text(834, 486, "V.S", {
             align: "center",
             fontFamily: "Arial",
             fontSize: "128px",
@@ -87,19 +88,19 @@ export default class MatchFound extends Phaser.Scene {
 
     private setupInitialStates(): void {
         // Hide player names initially
-        this.playerName.setAlpha(0);
-        this.playerName_1.setAlpha(0);
+        this.leftPlayerName.setAlpha(0);
+        this.rightPlayerName.setAlpha(0);
 
         // Move player cards off-screen
-        this.image_3.x = -300;
-        this.image.x = this.cameras.main.width + 300;
+        this.leftPlayerCard.x = -300;
+        this.rightPlayerCard.x = this.cameras.main.width + 300;
 
         // Character sprites start invisible & small
         this.playerCharSprite.setAlpha(0).setScale(0.5);
         this.enemyCharSprite.setAlpha(0).setScale(0.5);
 
         // VS text starts invisible & oversized
-        this.vs.setAlpha(0).setScale(2);
+        this.vsText.setAlpha(0).setScale(2);
     }
 
     private animateSceneEntrance(): void {
@@ -108,18 +109,18 @@ export default class MatchFound extends Phaser.Scene {
 
         // Slide-in player cards
         this.tweens.add({
-            targets: this.image_3,
+            targets: this.leftPlayerCard,
             x: 146,
             duration: 600,
             ease: "Back.out(1.5)",
-            onComplete: () => this.tweens.add({ targets: this.playerName, alpha: 1, duration: 300 }),
+            onComplete: () => this.tweens.add({ targets: this.leftPlayerName, alpha: 1, duration: 300 }),
         });
         this.tweens.add({
-            targets: this.image,
+            targets: this.rightPlayerCard,
             x: 1761,
             duration: 600,
             ease: "Back.out(1.5)",
-            onComplete: () => this.tweens.add({ targets: this.playerName_1, alpha: 1, duration: 300 }),
+            onComplete: () => this.tweens.add({ targets: this.rightPlayerName, alpha: 1, duration: 300 }),
         });
 
         // Character sprites
@@ -160,9 +161,9 @@ export default class MatchFound extends Phaser.Scene {
             this.cameras.main.shake(200, 0.01);
             const flashCircle = this.add.circle(834, 486, 100, 0xffff00, 0).setDepth(-1);
             this.tweens.add({ targets: flashCircle, alpha: 0.7, scale: 2, duration: 300, yoyo: true, onComplete: () => flashCircle.destroy() });
-            this.tweens.add({ targets: this.vs, alpha: 1, scale: 1, duration: 400, ease: "Back.out(1.7)" });
+            this.tweens.add({ targets: this.vsText, alpha: 1, scale: 1, duration: 400, ease: "Back.out(1.7)" });
             this.time.delayedCall(400, () => {
-                this.tweens.add({ targets: this.vs, scale: 1.1, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+                this.tweens.add({ targets: this.vsText, scale: 1.1, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
             });
         });
     }

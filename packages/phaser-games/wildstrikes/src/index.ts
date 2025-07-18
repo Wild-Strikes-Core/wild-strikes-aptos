@@ -1,15 +1,12 @@
 import * as Phaser from 'phaser';
-import { MainScene } from './scenes/MainScene';
 import { BootScene } from './scenes/BootScene';
 import { StartScene } from './scenes/StartScene';
 import { HomeScene } from './scenes/HomeScene';
 import MatchmakingScene from './scenes/MatchmakingScene';
 import MatchFoundScene from './scenes/MatchFoundScene';
 import ArenaScene from './scenes/ArenaScene';
-import { MainGameScene } from './scenes/MainGameScene';
 import VictoryScene from './scenes/VictoryScene';
 import DefeatScene from './scenes/DefeatScene';
-import { GameOverScene } from './scenes/GameOverScene';
 
 class WildstrikesGame extends Phaser.Game {
   constructor(container: HTMLElement) {
@@ -26,11 +23,8 @@ class WildstrikesGame extends Phaser.Game {
         MatchmakingScene,
         MatchFoundScene,
         ArenaScene,
-        MainGameScene,
         VictoryScene,
         DefeatScene,
-        GameOverScene,
-        MainScene,
       ],
       transparent: true,
       physics: {

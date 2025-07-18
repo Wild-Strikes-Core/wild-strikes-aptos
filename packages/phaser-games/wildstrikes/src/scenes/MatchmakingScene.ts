@@ -1,10 +1,11 @@
 // Client-side only Matchmaking scene – networking stripped for animation polish
 export default class Matchmaking extends Phaser.Scene {
-    private PLAYER_SPRITE!: Phaser.GameObjects.Image;
-    private BUTTON_CANCEL!: Phaser.GameObjects.Image;
-    private LOADER!: Phaser.GameObjects.Text;
-    private PLAYER_NAME!: Phaser.GameObjects.Text;
-    private FINDING_MATCH_TEXT!: Phaser.GameObjects.Text;
+    // Scene element references (renamed for clarity)
+    private playerSprite!: Phaser.GameObjects.Image;
+    private cancelButton!: Phaser.GameObjects.Image;
+    private loaderText!: Phaser.GameObjects.Text;
+    private playerNameLabel!: Phaser.GameObjects.Text;
+    private findingMatchLabel!: Phaser.GameObjects.Text;
 
     private loaderDots: string[] = [".", "..", "..."];
     private loaderIndex = 0;
@@ -44,9 +45,9 @@ export default class Matchmaking extends Phaser.Scene {
      * ------------------------------------------------------------------ */
 
     private setupCancelButton(): void {
-        this.BUTTON_CANCEL.setInteractive();
+        this.cancelButton.setInteractive();
 
-        this.BUTTON_CANCEL.on("pointerdown", () => {
+        this.cancelButton.on("pointerdown", () => {
             this.cameras.main.fadeOut(180, 0, 0, 0);
             this.cameras.main.once("camerafadeoutcomplete", () => {
                 this.scene.stop("Matchmaking");
@@ -54,13 +55,13 @@ export default class Matchmaking extends Phaser.Scene {
             });
         });
 
-        this.BUTTON_CANCEL.on("pointerover", () => this.BUTTON_CANCEL.setTint(0xffff66));
-        this.BUTTON_CANCEL.on("pointerout", () => this.BUTTON_CANCEL.clearTint());
+        this.cancelButton.on("pointerover", () => this.cancelButton.setTint(0xffff66));
+        this.cancelButton.on("pointerout", () => this.cancelButton.clearTint());
     }
 
     private animateEntrance(): void {
         this.tweens.add({
-            targets: this.PLAYER_SPRITE,
+            targets: this.playerSprite,
             angle: 360,
             duration: 1000,
             ease: "Sine.easeInOut",
@@ -78,7 +79,7 @@ export default class Matchmaking extends Phaser.Scene {
             delay: 250,
             repeat: -1,
             callback: () => {
-                this.LOADER.text = this.loaderDots[this.loaderIndex];
+                this.loaderText.text = this.loaderDots[this.loaderIndex];
                 this.loaderIndex = (this.loaderIndex + 1) % this.loaderDots.length;
             },
         });
@@ -101,34 +102,34 @@ export default class Matchmaking extends Phaser.Scene {
      * ------------------------------------------------------------------ */
 
     editorCreate(): void {
-        this.PLAYER_SPRITE = this.add.image(528, 608, "M_charONE");
-        this.PLAYER_SPRITE.setScale(1.310153805177419);
+        this.playerSprite = this.add.image(528, 608, "M_charONE");
+        this.playerSprite.setScale(1.310153805177419);
 
         // Player card background
         this.add.image(160, 176, "M_playerCard");
 
         // Cancel button
-        this.BUTTON_CANCEL = this.add.image(1424, 704, "M_btnCancel");
-        this.BUTTON_CANCEL.setScale(1.419003049417908);
+        this.cancelButton = this.add.image(1424, 704, "M_btnCancel");
+        this.cancelButton.setScale(1.419003049417908);
 
         // ‘Finding a Match’ text
-        this.FINDING_MATCH_TEXT = this.add.text(1168, 416, "Finding a Match", {
+        this.findingMatchLabel = this.add.text(1168, 416, "Finding a Match", {
             fontFamily: "Arial",
             fontSize: "48px",
             fontStyle: "bold",
         });
-        this.FINDING_MATCH_TEXT.setScale(1.4657553250177893);
+        this.findingMatchLabel.setScale(1.4657553250177893);
 
         // Loader text (animated dots)
-        this.LOADER = this.add.text(1392, 496, "...", {
+        this.loaderText = this.add.text(1392, 496, "...", {
             fontFamily: "Arial",
             fontSize: "48px",
             fontStyle: "bold",
         });
-        this.LOADER.setScale(1.4657553250177893);
+        this.loaderText.setScale(1.4657553250177893);
 
         // Player name placeholder
-        this.PLAYER_NAME = this.add.text(32, 144, "Player Name", {
+        this.playerNameLabel = this.add.text(32, 144, "Player Name", {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
