@@ -9,7 +9,7 @@ export interface AssetEntry {
     // ---------- BOOT ---------- //
     { key: 'boot', url: '/assets/boot-asset-pack.json', type: 'pack', group: 'boot' },
   
-    // ---------- UI ---------- //
+    // ---------- UI PACKS (Images/Sprites Only) ---------- //
     { key: 'gameMenu', url: '/assets/gameMenu-asset-pack.json', type: 'pack', group: 'ui' },
     { key: 'landingPage', url: '/assets/landingPage-asset-pack.json', type: 'pack', group: 'ui' },
     { key: 'settingsMenu', url: '/assets/settingsMenu-asset-pack.json', type: 'pack', group: 'ui' },
@@ -22,12 +22,29 @@ export interface AssetEntry {
     { key: 'aboutMenu', url: '/assets/aboutMenu-asset-pack.json', type: 'pack', group: 'ui' },
     { key: 'leadMENU', url: '/assets/leadMENU-asset-pack.json', type: 'pack', group: 'ui' },
   
-    // ---------- GAMEPLAY ---------- //
+    // ---------- UI AUDIO (Individual Audio Files) ---------- //
+    { key: 'game-menu-music', url: '/assets/02 - Game Menu/game-menu.mp3', type: 'audio', group: 'ui-audio' },
+    { key: 'click-menu', url: '/assets/02 - Game Menu/click-menu.mp3', type: 'audio', group: 'ui-audio' },
+    { key: 'victory', url: '/assets/11 - Victory/victory.mp3', type: 'audio', group: 'ui-audio' },
+    { key: 'defeat', url: '/assets/12 - Defeat/defeat.mp3', type: 'audio', group: 'ui-audio' },
+  
+    // ---------- GAMEPLAY PACKS (Images/Sprites Only) ---------- //
     { key: 'matchMaking', url: '/assets/Match/matchMaking-asset-pack.json', type: 'pack', group: 'gameplay' },
     { key: 'map', url: '/assets/Match/map-asset-pack.json', type: 'pack', group: 'gameplay' },
     { key: 'tiles', url: '/assets/Match/02 - Map/tiles-asset-pack.json', type: 'pack', group: 'gameplay' },
     { key: 'matchUI', url: '/assets/Match/match-skills-assets-pack.json', type: 'pack', group: 'gameplay' },
     { key: 'timerAnim', url: '/assets/Match/timerAnim.json', type: 'pack', group: 'gameplay' },
+  
+    // ---------- GAMEPLAY AUDIO (Individual Audio Files) ---------- //
+    { key: 'waiting-music', url: '/assets/Match/01 - Matchmaking/waiting-music.mp3', type: 'audio', group: 'gameplay-audio' },
+    { key: 'in-match', url: '/assets/Match/02 - Map/in-match.mp3', type: 'audio', group: 'gameplay-audio' },
+    { key: 'Attack', url: '/assets/Match/02 - Map/Attack.wav', type: 'audio', group: 'gameplay-audio' },
+    { key: 'Footstep', url: '/assets/Match/02 - Map/Footstep.wav', type: 'audio', group: 'gameplay-audio' },
+    { key: 'player-hit', url: '/assets/Match/02 - Map/player-hit.mp3', type: 'audio', group: 'gameplay-audio' },
+    { key: 'game-over', url: '/assets/Match/02 - Map/game-over.mp3', type: 'audio', group: 'gameplay-audio' },
+    { key: 'PH-BG', url: '/assets/Match/02 - Map/PH-BG.mp3', type: 'audio', group: 'gameplay-audio' },
+    { key: 'JPN-BG', url: '/assets/Match/02 - Map/JPN-BG.mp3', type: 'audio', group: 'gameplay-audio' },
+    { key: 'FRN-BG', url: '/assets/Match/02 - Map/FRN-BG.mp3', type: 'audio', group: 'gameplay-audio' },
   
     // ---------- CHARACTERS ---------- //
     { key: 'sprite_heroP1', url: '/assets/Sprites/Hero_P1-pack.json', type: 'pack', group: 'chars' },

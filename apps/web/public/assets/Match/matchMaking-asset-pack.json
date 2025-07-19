@@ -25,13 +25,6 @@
                 "url": "assets/Match/01 - Matchmaking/M_playerCard.png",
                 "type": "image",
                 "key": "M_playerCard"
-            },
-            {
-                "url": [
-                    "assets/Match/01 - Matchmaking/waiting-music.mp3"
-                ],
-                "type": "audio",
-                "key": "waiting-music"
             }
         ]
     },

@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import bgClouds from '../components/bg-clouds';
 import { BaseScene } from './BaseScene';
+import { AssetLoader } from '../AssetLoader';
 
 export class HomeScene extends BaseScene {
   // UI Layers
@@ -17,6 +18,13 @@ export class HomeScene extends BaseScene {
 
   constructor() {
     super('Home');
+  }
+
+  preload(): void {
+    // Load gameplay and audio assets needed for subsequent scenes
+    const loader = new AssetLoader(this.load);
+    loader.loadGroup('gameplay');
+    loader.loadGroup('audio');
   }
 
   // --- Scene Lifecycle ---

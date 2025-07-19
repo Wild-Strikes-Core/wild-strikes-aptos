@@ -29,6 +29,9 @@ export class BootScene extends Phaser.Scene {
     loader.loadGroup('environment');
     // UI elements (buttons, logos) are needed immediately in StartScene
     loader.loadGroup('ui');
+    // Load audio assets separately using proper Phaser loading methods
+    loader.loadGroup('ui-audio');
+    loader.loadGroup('gameplay-audio');
   }
 
 

@@ -35,8 +35,12 @@ export default class Matchmaking extends Phaser.Scene {
         // Simulate a match being found after a short delay
         this.time.delayedCall(2500, () => this.goToMatchFound());
 
-        // Optional ambience
-        this.sound.play("waiting-music", { loop: true });
+        // Optional ambience - only play if audio is loaded
+        if (this.sound.get("waiting-music") || this.cache.audio.exists("waiting-music")) {
+            this.sound.play("waiting-music", { loop: true });
+        } else {
+            console.warn("waiting-music audio not found in cache");
+        }
         this.events.once("shutdown", this.onShutdown, this);
     }
 
@@ -94,7 +98,10 @@ export default class Matchmaking extends Phaser.Scene {
     }
 
     private onShutdown(): void {
-        this.sound.stopByKey("waiting-music");
+        // Only stop audio if it exists and is playing
+        if (this.sound.get("waiting-music")) {
+            this.sound.stopByKey("waiting-music");
+        }
     }
 
     /* ------------------------------------------------------------------

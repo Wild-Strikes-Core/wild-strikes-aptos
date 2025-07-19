@@ -35,13 +35,6 @@
                 "url": "assets/12 - Defeat/1 (9).png",
                 "type": "image",
                 "key": "1 (9)"
-            },
-            {
-                "url": [
-                    "assets/12 - Defeat/defeat.mp3"
-                ],
-                "type": "audio",
-                "key": "defeat"
             }
         ]
     },

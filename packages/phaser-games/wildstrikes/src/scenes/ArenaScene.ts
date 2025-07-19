@@ -11,8 +11,10 @@ export default class Arena extends Phaser.Scene {
     }
 
     create(): void {
-        
-
+        const bg = this.add.image(0, 0, 'Philippines');
+        bg.setOrigin(0, 0);
+        bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        bg.setDepth(-1000);
         
     }
 
