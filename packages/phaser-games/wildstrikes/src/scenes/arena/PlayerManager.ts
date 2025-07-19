@@ -8,6 +8,7 @@ export class PlayerManager {
     private isAttacking: boolean = false;
     private isMoving: boolean = false;
     private isOnGround: boolean = false;
+    private isSprinting: boolean = false;
 
     private dashDuration: number = 300; // Duration of dash in milliseconds
     private dashCooldown: number = 1000; // Cooldown time after dash
@@ -21,9 +22,11 @@ export class PlayerManager {
     private spriteManager: PlayerSpriteManager;
 
     private keyObjects: { [key: string]: Phaser.Input.Keyboard.Key } = {};
+    private enableInput: boolean;
 
-    constructor(private scene: Phaser.Scene) {
+    constructor(private scene: Phaser.Scene, enableInput: boolean = true) {
         this.scene = scene;
+        this.enableInput = enableInput;
         this.spriteManager = new PlayerSpriteManager(scene);
         
         // Set up callback for when attack animation completes
@@ -32,15 +35,18 @@ export class PlayerManager {
             console.log('Attack state cleared by callback');
         });
         
-        // Set up input controls
-        this.keyObjects = scene.input.keyboard.addKeys({
-            left: 'A',
-            right: 'D',
-            up: 'W',
-            jump: 'SPACE',
-            dash: 'SHIFT'
-        }) as { [key: string]: Phaser.Input.Keyboard.Key };
-        this.setupInputHandlers();
+        // Only set up input controls if input is enabled
+        if (this.enableInput) {
+            this.keyObjects = scene.input.keyboard.addKeys({
+                left: 'A',
+                right: 'D',
+                up: 'W',
+                jump: 'SPACE',
+                dash: 'Q',
+                sprint: 'SHIFT'
+            }) as { [key: string]: Phaser.Input.Keyboard.Key };
+            this.setupInputHandlers();
+        }
     }
 
     public createPlayer(x: number, y: number): Phaser.Physics.Arcade.Sprite {
@@ -60,8 +66,8 @@ export class PlayerManager {
     private setupInputHandlers(): void {
         // Set up keyboard event listeners for special actions
         this.scene.input.keyboard?.on('keydown-SPACE', this.handleJump, this);
-        this.scene.input.keyboard?.on('keydown-SHIFT', this.handleDash, this);
-        
+        this.scene.input.keyboard?.on('keydown-Q', this.handleDash, this);
+
         // Set up mouse event listeners for attacks
         this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             if (pointer.leftButtonDown()) {
@@ -85,10 +91,14 @@ export class PlayerManager {
     }
 
     private handleMovement(): void {
-        if (!this.player) return;
+        if (!this.player || !this.enableInput) return;
 
-        const speed = 300;
+        const baseSpeed = 300;
+        const sprintMultiplier = 1.5;
+        this.isSprinting = this.keyObjects.sprint.isDown;
+        const speed = this.isSprinting ? baseSpeed * sprintMultiplier : baseSpeed;
         this.isMoving = false;
+
 
         // Handle horizontal movement
         if (this.keyObjects.left.isDown) {
@@ -124,7 +134,11 @@ export class PlayerManager {
                 this.spriteManager.playFallAnimation(this.player);
             }
         } else if (this.isMoving) {
-            this.spriteManager.playWalkingAnimation(this.player);
+            if (this.isSprinting) {
+                this.spriteManager.playSprintingAnimation(this.player);
+            } else {
+                this.spriteManager.playWalkingAnimation(this.player);
+            }
         } else {
             // Player is on ground, not moving, not attacking - play idle
             this.spriteManager.playIdleAnimation(this.player);
@@ -132,7 +146,7 @@ export class PlayerManager {
     }
 
     private handleJump(): void {
-        if (!this.player) return;
+        if (!this.player || !this.enableInput) return;
 
         const jumpSpeed = -1300;
         
@@ -147,7 +161,7 @@ export class PlayerManager {
     }
 
     private handleDash(): void {
-        if (!this.player || this.isDashing) return;
+        if (!this.player || this.isDashing || !this.enableInput) return;
 
         // Check if dash is on cooldown
         if (this.dashTimer && this.dashTimer.getRemaining() > 0) {
@@ -175,7 +189,7 @@ export class PlayerManager {
     }
 
     private handleLightAttack(): void {
-        if (!this.player) return;
+        if (!this.player || !this.enableInput) return;
 
         // Don't attack while dashing
         if (this.isDashing) return;
@@ -202,7 +216,7 @@ export class PlayerManager {
     }
 
     private handleHeavyAttack(): void {
-        if (!this.player) return;
+        if (!this.player || !this.enableInput) return;
 
         // Don't attack while dashing
         if (this.isDashing) return;

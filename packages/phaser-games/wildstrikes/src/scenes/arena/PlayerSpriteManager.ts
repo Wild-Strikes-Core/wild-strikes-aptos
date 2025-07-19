@@ -123,6 +123,13 @@ export class PlayerSpriteManager {
         }
     }
 
+    public playSprintingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
+        if (sprite.getData('currentState') !== 'sprinting') {
+            sprite.anims.play('_Run', true);
+            sprite.setData('currentState', 'sprinting');
+        }
+    }
+
     public playJumpingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
         sprite.anims.play('_Jump', true);
         sprite.setData('currentState', 'jumping');

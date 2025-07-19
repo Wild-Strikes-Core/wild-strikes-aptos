@@ -52,7 +52,7 @@ export default class Arena extends Phaser.Scene {
 
         // Add any additional setup for the arena scene here
         this.playerONE = new PlayerManager(this);
-        this.playerTWO = new PlayerManager(this);
+        this.playerTWO = new PlayerManager(this, false); // Disable input for playerTWO (dummy)
 
         // Create player way above the platform (will fall down due to gravity)
         const spawnX = this.cameras.main.width / 2; // Center horizontally
