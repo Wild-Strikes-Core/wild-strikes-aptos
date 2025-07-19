@@ -14,7 +14,7 @@ export class SpriteManager {
     public createPlayerSprite(
         x: number,
         y: number,
-        texture: string = '_Idle_Idle',
+        texture: string = '_Idle',
         frame: number = 0
     ): Phaser.Physics.Arcade.Sprite {
         const sprite = this.scene.physics.add.sprite(x, y, texture, frame);

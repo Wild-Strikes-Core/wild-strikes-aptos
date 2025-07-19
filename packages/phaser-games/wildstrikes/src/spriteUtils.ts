@@ -9,7 +9,7 @@ export function createPlayerSprite(
     scene: Phaser.Scene,
     x: number,
     y: number,
-    texture: string = '_Idle_Idle',
+    texture: string = '_Idle',
     frame: number = 0
 ): Phaser.Physics.Arcade.Sprite {
     const sprite = scene.physics.add.sprite(x, y, texture, frame);

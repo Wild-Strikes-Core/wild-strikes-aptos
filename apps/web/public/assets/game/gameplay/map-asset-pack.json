@@ -1,0 +1,123 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/game/gameplay/maps/2M_land.png",
+                "type": "image",
+                "key": "2M_land"
+            },
+            {
+                "url": "assets/game/gameplay/maps/2M_mapBG.png",
+                "type": "image",
+                "key": "2M_mapBG"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/Attack.wav"
+                ],
+                "type": "audio",
+                "key": "Attack"
+            },
+            {
+                "url": "assets/game/gameplay/ui/ButtonMenu.png",
+                "type": "image",
+                "key": "ButtonMenu"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/Footstep.wav"
+                ],
+                "type": "audio",
+                "key": "Footstep"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/in-match.mp3"
+                ],
+                "type": "audio",
+                "key": "in-match"
+            },
+            {
+                "url": "assets/game/gameplay/ui/InGameCard.png",
+                "type": "image",
+                "key": "InGameCard"
+            },
+            {
+                "url": "assets/game/gameplay/ui/inGameExit.png",
+                "type": "image",
+                "key": "inGameExit"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/player-hit.mp3"
+                ],
+                "type": "audio",
+                "key": "player-hit"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/game-over.mp3"
+                ],
+                "type": "audio",
+                "key": "game-over"
+            },
+            {
+                "url": "assets/game/gameplay/maps/newMap.png",
+                "frameConfig": {
+                    "frameWidth": 1920,
+                    "frameHeight": 1080,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "newMap"
+            },
+            {
+                "url": "assets/game/gameplay/maps/Philippines.png",
+                "type": "image",
+                "key": "Philippines"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/PH-BG.mp3"
+                ],
+                "type": "audio",
+                "key": "PH-BG"
+            },
+            {
+                "url": "assets/game/gameplay/maps/Japan.png",
+                "type": "image",
+                "key": "Japan"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/JPN-BG.mp3"
+                ],
+                "type": "audio",
+                "key": "JPN-BG"
+            },
+            {
+                "url": "assets/game/gameplay/maps/France.png",
+                "type": "image",
+                "key": "France"
+            },
+            {
+                "url": [
+                    "assets/game/gameplay/maps/FRN-BG.mp3"
+                ],
+                "type": "audio",
+                "key": "FRN-BG"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

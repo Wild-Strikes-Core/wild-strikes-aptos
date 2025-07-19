@@ -38,6 +38,9 @@ export default class Arena extends Phaser.Scene {
         // Set up the map background and music
         this.mapManager.setupMap(this, this.currentMapConfig);
 
+        // Create animations from loaded animation JSON files
+        this.createCharacterAnimations();
+
         // Initialize debug mode if enabled
         if (Arena.DEBUG_ENABLED) {
             this.debugMode = new DebugMode(this);
@@ -52,7 +55,65 @@ export default class Arena extends Phaser.Scene {
         const spawnY = 200; // High up in the air
         const player = this.playerManager.createPlayer(spawnX, spawnY);
         
-    }    update(time: number, delta: number): void {
+    }
+
+    private createCharacterAnimations(): void {
+        // Create animations from loaded animation JSON files
+        try {
+            // Check if animation data exists before creating
+            const idleAnimData = this.cache.json.get('_Idle_1');
+            const jumpAnimData = this.cache.json.get('_Jump_1');
+            const attackAnimData = this.cache.json.get('_Attack_1');
+            const runAnimData = this.cache.json.get('_Run_1');
+            const dashAnimData = this.cache.json.get('_Dash_1');
+
+            if (idleAnimData && idleAnimData.anims) {
+                idleAnimData.anims.forEach((anim: any) => {
+                    if (!this.anims.exists(anim.key)) {
+                        this.anims.create(anim);
+                    }
+                });
+            }
+
+            if (jumpAnimData && jumpAnimData.anims) {
+                jumpAnimData.anims.forEach((anim: any) => {
+                    if (!this.anims.exists(anim.key)) {
+                        this.anims.create(anim);
+                    }
+                });
+            }
+
+            if (attackAnimData && attackAnimData.anims) {
+                attackAnimData.anims.forEach((anim: any) => {
+                    if (!this.anims.exists(anim.key)) {
+                        this.anims.create(anim);
+                    }
+                });
+            }
+
+            if (runAnimData && runAnimData.anims) {
+                runAnimData.anims.forEach((anim: any) => {
+                    if (!this.anims.exists(anim.key)) {
+                        this.anims.create(anim);
+                    }
+                });
+            }
+
+            if (dashAnimData && dashAnimData.anims) {
+                dashAnimData.anims.forEach((anim: any) => {
+                    if (!this.anims.exists(anim.key)) {
+                        this.anims.create(anim);
+                    }
+                });
+            }
+
+            console.log('Character animations created successfully');
+        } catch (error) {
+            console.error('Error creating character animations:', error);
+        }
+    }
+
+    update(time: number, delta: number): void {
         // Update debug mode if enabled
         if (Arena.DEBUG_ENABLED && this.debugMode) {
             this.debugMode.update(time, delta);

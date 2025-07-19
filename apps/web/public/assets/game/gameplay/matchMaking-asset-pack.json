@@ -1,0 +1,39 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/game/gameplay/matchmaking/M_btnCancel.png",
+                "type": "image",
+                "key": "M_btnCancel"
+            },
+            {
+                "url": "assets/game/gameplay/matchmaking/M_charONE.png",
+                "type": "image",
+                "key": "M_charONE"
+            },
+            {
+                "url": "assets/game/gameplay/matchmaking/M_charTHREE.png",
+                "type": "image",
+                "key": "M_charTHREE"
+            },
+            {
+                "url": "assets/game/gameplay/matchmaking/M_charTWO.png",
+                "type": "image",
+                "key": "M_charTWO"
+            },
+            {
+                "url": "assets/game/gameplay/matchmaking/M_playerCard.png",
+                "type": "image",
+                "key": "M_playerCard"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}
