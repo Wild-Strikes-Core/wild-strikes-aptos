@@ -3,16 +3,28 @@
  */
 export class PlayerSpriteManager {
     private scene: Phaser.Scene;
-    private onAttackCompleteCallback?: () => void;
+    private onLightAttackCompleteCallback?: () => void;
+    private onHeavyAttackCompleteCallback?: () => void;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.scene.time.delayedCall(100, () => this.createCharacterAnimations());
     }
 
-    // Set callback for when attack animation completes
+    // Set callback for when light attack animation completes
+    public setLightAttackCompleteCallback(callback: () => void): void {
+        this.onLightAttackCompleteCallback = callback;
+    }
+
+    // Set callback for when heavy attack animation completes
+    public setHeavyAttackCompleteCallback(callback: () => void): void {
+        this.onHeavyAttackCompleteCallback = callback;
+    }
+
+    // Legacy method for backwards compatibility
     public setAttackCompleteCallback(callback: () => void): void {
-        this.onAttackCompleteCallback = callback;
+        this.onLightAttackCompleteCallback = callback;
+        this.onHeavyAttackCompleteCallback = callback;
     }
 
     // ========================================
@@ -156,8 +168,8 @@ export class PlayerSpriteManager {
             sprite.once('animationcomplete', () => {
                 if (sprite && sprite.active) {
                     console.log("Attack animation completed");
-                    if (this.onAttackCompleteCallback) {
-                        this.onAttackCompleteCallback();
+                    if (this.onLightAttackCompleteCallback) {
+                        this.onLightAttackCompleteCallback();
                     }
                 }
             });
@@ -166,16 +178,16 @@ export class PlayerSpriteManager {
             this.scene.time.delayedCall(300, () => { // Reduced from 400ms to 300ms for spam attacks
                 if (sprite && sprite.active) {
                     console.log("Attack animation timeout");
-                    if (this.onAttackCompleteCallback) {
-                        this.onAttackCompleteCallback();
+                    if (this.onLightAttackCompleteCallback) {
+                        this.onLightAttackCompleteCallback();
                     }
                 }
             });
             
         } catch (error) {
             console.error("Failed to play attack animation:", error);
-            if (this.onAttackCompleteCallback) {
-                this.onAttackCompleteCallback();
+            if (this.onLightAttackCompleteCallback) {
+                this.onLightAttackCompleteCallback();
             }
         }
 
@@ -208,8 +220,8 @@ export class PlayerSpriteManager {
             sprite.once('animationcomplete', () => {
                 if (sprite && sprite.active) {
                     console.log("Heavy attack animation completed");
-                    if (this.onAttackCompleteCallback) {
-                        this.onAttackCompleteCallback();
+                    if (this.onHeavyAttackCompleteCallback) {
+                        this.onHeavyAttackCompleteCallback();
                     }
                 }
             });
@@ -218,16 +230,16 @@ export class PlayerSpriteManager {
             this.scene.time.delayedCall(400, () => { // Heavy attack might be longer than light attack
                 if (sprite && sprite.active) {
                     console.log("Heavy attack animation timeout");
-                    if (this.onAttackCompleteCallback) {
-                        this.onAttackCompleteCallback();
+                    if (this.onHeavyAttackCompleteCallback) {
+                        this.onHeavyAttackCompleteCallback();
                     }
                 }
             });
             
         } catch (error) {
             console.error("Failed to play heavy attack animation:", error);
-            if (this.onAttackCompleteCallback) {
-                this.onAttackCompleteCallback();
+            if (this.onHeavyAttackCompleteCallback) {
+                this.onHeavyAttackCompleteCallback();
             }
         }
 
