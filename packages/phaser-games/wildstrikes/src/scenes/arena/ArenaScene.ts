@@ -31,6 +31,8 @@ export default class Arena extends Phaser.Scene {
         loader.loadGroup('gameplay-audio');
         // Load character sprites
         loader.loadGroup('chars');
+
+        this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
     }
 
 
@@ -57,10 +59,12 @@ export default class Arena extends Phaser.Scene {
         const spawnY = 200; // High up in the air
         
         this.playerONE.createPlayer(spawnX, spawnY);
-        this.playerTWO.createPlayer(spawnX + 100, spawnY);
+        this.playerTWO.createPlayer(spawnX + 300, spawnY);
+
+        this.setupMobileControls();
 
     }
-
+        
 
     update(time: number, delta: number): void {
         // Update debug mode if enabled
@@ -95,5 +99,39 @@ export default class Arena extends Phaser.Scene {
 
     destroy(): void {
         this.shutdown();
+    }
+
+    setupMobileControls(): void {
+        var joyStick = (this.plugins.get('rexvirtualjoystickplugin') as any).add(this, {
+            x: this.cameras.main.width / 4 - 300,
+            y: this.cameras.main.height - 200,
+            radius: 100,
+        })
+
+        var button = this.add.circle(this.cameras.main.width - 300, this.cameras.main.height - 200, 50, 0xff0000, 0.5)
+            .setInteractive();
+
+        let isPressed = false;
+
+        button.on('pointerdown', () => {
+            isPressed = true;
+            button.setFillStyle(0xff0000, 1);
+            button.setScale(1.2);
+            console.log('Attack');
+        });
+
+        button.on('pointerup', () => {
+            isPressed = false;
+            button.setFillStyle(0xff0000, 0.5);
+            button.setScale(1);
+        });
+
+        button.on('pointerout', () => {
+            if (isPressed) {
+            isPressed = false;
+            button.setFillStyle(0xff0000, 0.5);
+            button.setScale(1);
+            }
+        });
     }
 }

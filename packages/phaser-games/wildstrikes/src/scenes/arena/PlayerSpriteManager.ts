@@ -3,10 +3,16 @@
  */
 export class PlayerSpriteManager {
     private scene: Phaser.Scene;
+    private onAttackCompleteCallback?: () => void;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.scene.time.delayedCall(100, () => this.createCharacterAnimations());
+    }
+
+    // Set callback for when attack animation completes
+    public setAttackCompleteCallback(callback: () => void): void {
+        this.onAttackCompleteCallback = callback;
     }
 
     // ========================================
@@ -37,13 +43,27 @@ export class PlayerSpriteManager {
         animations.forEach(anim => {
             if (!this.scene.anims.exists(anim.key)) {
                 const animData = this.scene.cache.json.get(anim.data);
+                
+                if (!animData) {
+                    console.warn(`Animation data not found for ${anim.data}`);
+                    return;
+                }
+                
                 const frameCount = animData.anims[0].frames.length;
+                
+                // Attack animations should never repeat
+                let repeatValue = frameCount === 1 ? 0 : (animData.anims[0].repeat || 0);
+                if (anim.key.includes('Attack') || anim.key.includes('_Hit') || anim.key.includes('_Death')) {
+                    repeatValue = 0; // No repeat for attack, hit, or death animations
+                }
+                
+                console.log(`Creating animation ${anim.key} with ${frameCount} frames, repeat: ${repeatValue}`);
                 
                 this.scene.anims.create({
                     key: anim.key,
                     frames: this.scene.anims.generateFrameNumbers(anim.texture, { start: 0, end: frameCount - 1 }),
                     frameRate: animData.anims[0].frameRate || 10,
-                    repeat: frameCount === 1 ? 0 : (animData.anims[0].repeat || 0)
+                    repeat: repeatValue
                 });
             }
         });
@@ -54,16 +74,34 @@ export class PlayerSpriteManager {
     // ========================================
 
     public createPlayerSprite(x: number, y: number, texture: string = '_Idle'): Phaser.Physics.Arcade.Sprite {
+        // Create the physics-enabled sprite
         const sprite = this.scene.physics.add.sprite(x, y, texture);
         
-        sprite.setInteractive({ hitArea: new Phaser.Geom.Rectangle(0, 0, 120, 80), hitAreaCallback: Phaser.Geom.Rectangle.Contains });
-        sprite.setScale(3).setOrigin(0, 0);
+        // Set up interactive area for click/touch detection
+        sprite.setInteractive({ 
+            hitArea: new Phaser.Geom.Rectangle(0, 0, 120, 80), 
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains 
+        });
         
+        // Configure sprite display properties
+        sprite.setScale(3);
+        sprite.setOrigin(0.5, 1); // Center horizontally, bottom vertically for ground alignment
+        
+        // Configure physics body
         if (sprite.body) {
-            sprite.body.setGravityY(10000).setOffset(45, 40).setSize(30, 40);
+            const body = sprite.body as Phaser.Physics.Arcade.Body;
+            body.setGravityY(10000);           // Reasonable gravity
+            body.setSize(30, 40);            // Collision box size
+            body.setOffset(45, 40);          // Center the collision box
+            body.setCollideWorldBounds(true); // Keep player in bounds
+            body.setBounce(0.1);             // Small bounce on landing
+            body.setDragX(200);              // Air resistance for horizontal movement
         }
         
-        sprite.setData('isAttacking', false).setData('currentState', 'idle');
+        // Initialize sprite data
+        sprite.setData('currentState', 'idle');
+        
+        // Start with idle animation
         this.playIdleAnimation(sprite);
         
         return sprite;
@@ -91,13 +129,50 @@ export class PlayerSpriteManager {
     }
 
     public playAttackingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
-        sprite.anims.play('_Attack', true);
-        sprite.setData('currentState', 'attacking').setData('isAttacking', true);
-        
-        sprite.once('animationcomplete', () => {
-            sprite.setData('isAttacking', false);
-            this.playIdleAnimation(sprite);
-        });
+        if (sprite.anims.currentAnim) sprite.anims.stop();
+
+        try {
+            // Add a small delay to ensure the attacking flag is processed before animation starts
+            this.scene.time.delayedCall(10, () => {
+                if (sprite && sprite.active) {
+                    sprite.play({
+                        key: "_Attack",
+                        frameRate: 12,
+                        repeat: 0,
+                    });
+                }
+            });
+
+            sprite.off('animationcomplete');
+
+            // Reset attacking flag when animation completes
+            sprite.once('animationcomplete', () => {
+                if (sprite && sprite.active) {
+                    console.log("Attack animation completed");
+                    if (this.onAttackCompleteCallback) {
+                        this.onAttackCompleteCallback();
+                    }
+                }
+            });
+
+            // Fallback timeout to clear attacking flag if animation doesn't complete
+            this.scene.time.delayedCall(300, () => { // Reduced from 400ms to 300ms for spam attacks
+                if (sprite && sprite.active) {
+                    console.log("Attack animation timeout");
+                    if (this.onAttackCompleteCallback) {
+                        this.onAttackCompleteCallback();
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error("Failed to play attack animation:", error);
+            if (this.onAttackCompleteCallback) {
+                this.onAttackCompleteCallback();
+            }
+        }
+
+        sprite.setData('currentState', 'attacking');
     }
 
     public playDashingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
@@ -106,12 +181,50 @@ export class PlayerSpriteManager {
     }
 
     public playAttack2Animation(sprite: Phaser.Physics.Arcade.Sprite): void {
-        sprite.anims.play('_Attack2', true);
-        sprite.setData('currentState', 'attacking').setData('isAttacking', true);
-        sprite.once('animationcomplete', () => {
-            sprite.setData('isAttacking', false);
-            this.playIdleAnimation(sprite);
-        });
+        if (sprite.anims.currentAnim) sprite.anims.stop();
+
+        try {
+            // Add a small delay to ensure the attacking flag is processed before animation starts
+            this.scene.time.delayedCall(10, () => {
+                if (sprite && sprite.active) {
+                    sprite.play({
+                        key: "_Attack2",
+                        frameRate: 12,
+                        repeat: 0,
+                    });
+                }
+            });
+
+            sprite.off('animationcomplete');
+
+            // Reset attacking flag when animation completes
+            sprite.once('animationcomplete', () => {
+                if (sprite && sprite.active) {
+                    console.log("Heavy attack animation completed");
+                    if (this.onAttackCompleteCallback) {
+                        this.onAttackCompleteCallback();
+                    }
+                }
+            });
+
+            // Fallback timeout to clear attacking flag if animation doesn't complete
+            this.scene.time.delayedCall(400, () => { // Heavy attack might be longer than light attack
+                if (sprite && sprite.active) {
+                    console.log("Heavy attack animation timeout");
+                    if (this.onAttackCompleteCallback) {
+                        this.onAttackCompleteCallback();
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error("Failed to play heavy attack animation:", error);
+            if (this.onAttackCompleteCallback) {
+                this.onAttackCompleteCallback();
+            }
+        }
+
+        sprite.setData('currentState', 'attacking');
     }
 
     public playAttackNoMovementAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
@@ -208,9 +321,8 @@ export class PlayerSpriteManager {
         return sprite.getData('currentState') || 'idle';
     }
 
-    public isAttacking(sprite: Phaser.Physics.Arcade.Sprite): boolean {
-        return sprite.getData('isAttacking') || false;
-    }
+    // Note: isAttacking is now managed in PlayerManager private properties
+    // Use PlayerManager.getIsAttacking() instead
 
     // ========================================
     // DEBUG METHODS

@@ -5,21 +5,41 @@ export class PlayerManager {
     private jumpLimit: number = 2; // Allow double jump
     private isJumping: boolean = false;
     private isDashing: boolean = false;
+    private isAttacking: boolean = false;
+    private isMoving: boolean = false;
+    private isOnGround: boolean = false;
+
     private dashDuration: number = 300; // Duration of dash in milliseconds
     private dashCooldown: number = 1000; // Cooldown time after dash
     private dashTimer: Phaser.Time.TimerEvent | null = null;
+    
+    // Attack cooldown properties
+    private attackCooldown: number = 300; // Minimum time between attacks in milliseconds
+    private lastAttackTime: number = 0;
 
     private player: Phaser.Physics.Arcade.Sprite | null = null;
     private spriteManager: PlayerSpriteManager;
 
-    private cursors: Phaser.Types.Input.Keyboard.CursorKeys | undefined;
+    private keyObjects: { [key: string]: Phaser.Input.Keyboard.Key } = {};
 
     constructor(private scene: Phaser.Scene) {
         this.scene = scene;
         this.spriteManager = new PlayerSpriteManager(scene);
         
+        // Set up callback for when attack animation completes
+        this.spriteManager.setAttackCompleteCallback(() => {
+            this.isAttacking = false;
+            console.log('Attack state cleared by callback');
+        });
+        
         // Set up input controls
-        this.cursors = this.scene.input.keyboard?.createCursorKeys();
+        this.keyObjects = scene.input.keyboard.addKeys({
+            left: 'A',
+            right: 'D',
+            up: 'W',
+            jump: 'SPACE',
+            dash: 'SHIFT'
+        }) as { [key: string]: Phaser.Input.Keyboard.Key };
         this.setupInputHandlers();
     }
 
@@ -30,200 +50,182 @@ export class PlayerManager {
         // Set depth for proper rendering order
         this.player.setDepth(1);
         
-        // Test all animations for debugging
-        this.spriteManager.testAllAnimations(this.player);
-        
         // Set up collision with platform
         this.setupCollisions();
         
+
         return this.player;
     }
 
     private setupInputHandlers(): void {
-        if (!this.scene.input.keyboard) return;
-
-        // Set up keyboard input for movement
-        this.scene.input.keyboard.on('keydown-SPACE', () => {
-            this.handleJump();
-        });
-
-        // ========================================
-        // ANIMATION TEST CONTROLS (Non-conflicting)
-        // ========================================
-        // Basic animations:
-        // J - Jump animation
-        // D - Dash animation
-        // K - Idle animation
-        // L - Run animation
-        // U - Attack animation
-        // V - Attack2 animation
-        // B - AttackNoMovement animation
-        // N - Attack2NoMovement animation
-        // O - AttackCombo2hit animation
-        // P - AttackComboNoMovement animation
-        // Z - CrouchAttack animation
-        // X - CrouchFull animation
-        // C - CrouchWalk animation
-        // W - Death animation
-        // Q - DeathNoMovement animation
-        // H - Fall animation
-        // G - Hit animation
-        // F - Roll animation
-        // ========================================
-
-        this.scene.input.keyboard.on('keydown-J', () => {
-            if (this.player) {
-                console.log('Testing Jump animation...');
-                this.spriteManager.playJumpingAnimation(this.player);
+        // Set up keyboard event listeners for special actions
+        this.scene.input.keyboard?.on('keydown-SPACE', this.handleJump, this);
+        this.scene.input.keyboard?.on('keydown-SHIFT', this.handleDash, this);
+        
+        // Set up mouse event listeners for attacks
+        this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (pointer.leftButtonDown()) {
+                this.handleLightAttack();
+            } else if (pointer.rightButtonDown()) {
+                this.handleHeavyAttack();
             }
         });
-
-        this.scene.input.keyboard.on('keydown-D', () => {
-            if (this.player) {
-                console.log('Testing Dash animation...');
-                this.spriteManager.playDashingAnimation(this.player);
-            }
-        });
-
-        // Animation test keys using non-conflicting letters
-        this.scene.input.keyboard.on('keydown-K', () => {
-            if (this.player) {
-                console.log('Testing Idle animation...');
-                this.spriteManager.playIdleAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-L', () => {
-            if (this.player) {
-                console.log('Testing Run animation...');
-                this.spriteManager.playWalkingAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-U', () => {
-            if (this.player) {
-                console.log('Testing Attack animation...');
-                this.spriteManager.playAttackingAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-V', () => {
-            if (this.player) {
-                console.log('Testing Attack2 animation...');
-                this.spriteManager.playAttack2Animation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-B', () => {
-            if (this.player) {
-                console.log('Testing AttackNoMovement animation...');
-                this.spriteManager.playAttackNoMovementAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-N', () => {
-            if (this.player) {
-                console.log('Testing Attack2NoMovement animation...');
-                this.spriteManager.playAttack2NoMovementAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-O', () => {
-            if (this.player) {
-                console.log('Testing AttackCombo2hit animation...');
-                this.spriteManager.playAttackCombo2hitAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-P', () => {
-            if (this.player) {
-                console.log('Testing AttackComboNoMovement animation...');
-                this.spriteManager.playAttackComboNoMovementAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-Z', () => {
-            if (this.player) {
-                console.log('Testing CrouchAttack animation...');
-                this.spriteManager.playCrouchAttackAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-X', () => {
-            if (this.player) {
-                console.log('Testing CrouchFull animation...');
-                this.spriteManager.playCrouchFullAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-C', () => {
-            if (this.player) {
-                console.log('Testing CrouchWalk animation...');
-                this.spriteManager.playCrouchWalkAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-W', () => {
-            if (this.player) {
-                console.log('Testing Death animation...');
-                this.spriteManager.playDeathAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-Q', () => {
-            if (this.player) {
-                console.log('Testing DeathNoMovement animation...');
-                this.spriteManager.playDeathNoMovementAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-H', () => {
-            if (this.player) {
-                console.log('Testing Fall animation...');
-                this.spriteManager.playFallAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-G', () => {
-            if (this.player) {
-                console.log('Testing Hit animation...');
-                this.spriteManager.playHitAnimation(this.player);
-            }
-        });
-
-        this.scene.input.keyboard.on('keydown-F', () => {
-            if (this.player) {
-                console.log('Testing Roll animation...');
-                this.spriteManager.playRollAnimation(this.player);
-            }
-        });
+        
+        // Prevent context menu on right click
+        this.scene.input.mouse?.disableContextMenu();
     }
 
     public update(): void {
-        if (!this.player || !this.cursors) return;
-
+        if (!this.player) return;
+        
         this.handleMovement();
         this.updateAnimations();
+        
+        // Don't reset velocity here - let physics handle it naturally
     }
 
     private handleMovement(): void {
-       
+        if (!this.player) return;
+
+        const speed = 300;
+        this.isMoving = false;
+
+        // Handle horizontal movement
+        if (this.keyObjects.left.isDown) {
+            this.player.setVelocityX(-speed);
+            this.spriteManager.flipSprite(this.player, true); // Face left
+            this.isMoving = true;
+        } else if (this.keyObjects.right.isDown) {
+            this.player.setVelocityX(speed);
+            this.spriteManager.flipSprite(this.player, false); // Face right
+            this.isMoving = true;
+        } else {
+            // Stop horizontal movement when no keys are pressed
+            this.player.setVelocityX(0);
+        }
     }
 
     private updateAnimations(): void {
-        
+        if (!this.player) return;
+
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        this.isOnGround = body.touching.down;
+
+        // Don't override animations if already attacking
+        if (this.isAttacking) {
+            return;
+        } else if (this.isDashing) {
+            this.spriteManager.playDashingAnimation(this.player);
+        } else if (!this.isOnGround) {
+            // In air - jumping or falling
+            if (body.velocity.y < 0) {
+                this.spriteManager.playJumpingAnimation(this.player);
+            } else {
+                this.spriteManager.playFallAnimation(this.player);
+            }
+        } else if (this.isMoving) {
+            this.spriteManager.playWalkingAnimation(this.player);
+        } else {
+            // Player is on ground, not moving, not attacking - play idle
+            this.spriteManager.playIdleAnimation(this.player);
+        }
     }
 
     private handleJump(): void {
+        if (!this.player) return;
+
+        const jumpSpeed = -1300;
         
+        // Allow jumping if we haven't exceeded jump limit
+        if (this.jumpCount < this.jumpLimit) {
+            this.player.setVelocityY(jumpSpeed);
+            this.jumpCount++;
+            this.isJumping = true;
+            
+            console.log(`Jump ${this.jumpCount}/${this.jumpLimit}`);
+        }
     }
 
     private handleDash(): void {
+        if (!this.player || this.isDashing) return;
+
+        // Check if dash is on cooldown
+        if (this.dashTimer && this.dashTimer.getRemaining() > 0) {
+            console.log('Dash on cooldown');
+            return;
+        }
+
+        this.isDashing = true;
+        const dashSpeed = this.player.flipX ? -2400 : 2400;
         
+        // Apply dash velocity
+        this.player.setVelocityX(dashSpeed);
+        
+        console.log('Dash executed');
+
+        // End dash after duration
+        this.scene.time.delayedCall(this.dashDuration, () => {
+            this.isDashing = false;
+            
+            // Start cooldown timer
+            this.dashTimer = this.scene.time.delayedCall(this.dashCooldown, () => {
+                console.log('Dash cooldown finished');
+            });
+        });
     }
 
-    private handleAttack(): void {
-        
+    private handleLightAttack(): void {
+        if (!this.player) return;
+
+        // Don't attack while dashing
+        if (this.isDashing) return;
+
+        // Don't attack if already attacking
+        if (this.isAttacking) {
+            console.log('Light attack blocked - already attacking');
+            return;
+        }
+
+        // Check attack cooldown
+        const currentTime = this.scene.time.now;
+        if (currentTime - this.lastAttackTime < this.attackCooldown) {
+            console.log('Light attack blocked - cooldown');
+            return;
+        }
+
+        // Set attacking state and trigger animation
+        this.isAttacking = true;
+        this.spriteManager.playAttackingAnimation(this.player);
+        this.lastAttackTime = currentTime;
+
+        console.log('Light attack executed');
+    }
+
+    private handleHeavyAttack(): void {
+        if (!this.player) return;
+
+        // Don't attack while dashing
+        if (this.isDashing) return;
+
+        // Don't attack if already attacking
+        if (this.isAttacking) {
+            console.log('Heavy attack blocked - already attacking');
+            return;
+        }
+
+        // Check attack cooldown
+        const currentTime = this.scene.time.now;
+        if (currentTime - this.lastAttackTime < this.attackCooldown) {
+            console.log('Heavy attack blocked - cooldown');
+            return;
+        }
+
+        // Set attacking state and trigger heavy attack animation
+        this.isAttacking = true;
+        this.spriteManager.playAttack2Animation(this.player);
+        this.lastAttackTime = currentTime;
+
+        console.log('Heavy attack executed');
     }
 
     private setupCollisions(): void {
@@ -238,6 +240,7 @@ export class PlayerManager {
                 // Reset jump count when player lands on platform
                 this.jumpCount = 0;
                 this.isJumping = false;
+                this.isOnGround = true;
                 console.log('Player landed on platform');
             });
             
@@ -249,6 +252,23 @@ export class PlayerManager {
 
     public getPlayer(): Phaser.Physics.Arcade.Sprite | null {
         return this.player;
+    }
+
+    // Getter methods for state access
+    public getIsAttacking(): boolean {
+        return this.isAttacking;
+    }
+
+    public getIsMoving(): boolean {
+        return this.isMoving;
+    }
+
+    public getIsOnGround(): boolean {
+        return this.isOnGround;
+    }
+
+    public getIsDashing(): boolean {
+        return this.isDashing;
     }
 
 }
