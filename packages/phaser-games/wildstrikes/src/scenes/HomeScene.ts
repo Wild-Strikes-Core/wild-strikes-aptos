@@ -24,7 +24,7 @@ export class HomeScene extends BaseScene {
     // Load gameplay and audio assets needed for subsequent scenes
     const loader = new AssetLoader(this.load);
     loader.loadGroup('gameplay');
-    loader.loadGroup('audio');
+    loader.loadGroup('gameplay-audio');
   }
 
   // --- Scene Lifecycle ---

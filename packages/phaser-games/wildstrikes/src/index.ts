@@ -4,9 +4,9 @@ import { StartScene } from './scenes/StartScene';
 import { HomeScene } from './scenes/HomeScene';
 import MatchmakingScene from './scenes/MatchmakingScene';
 import MatchFoundScene from './scenes/MatchFoundScene';
-import ArenaScene from './scenes/ArenaScene';
 import VictoryScene from './scenes/VictoryScene';
 import DefeatScene from './scenes/DefeatScene';
+import ArenaScene from './scenes/arena/ArenaScene';
 
 class WildstrikesGame extends Phaser.Game {
   constructor(container: HTMLElement) {

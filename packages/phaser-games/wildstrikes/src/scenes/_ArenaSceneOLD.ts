@@ -8,14 +8,14 @@ import { PlayerManager } from "../controllers/PlayerManager";
 import { UIManager } from "../controllers/UIManager";
 import { SceneManager } from "../controllers/SceneManager";
 import { MultiplayerManager } from "../controllers/MultiplayerManager";
-import { ArenaBackground } from "../arena/ArenaBackground";
-import { ArenaUI } from "../arena/ArenaUI";
-import { ArenaAudio } from "../arena/ArenaAudio";
-import { ArenaInput } from "../arena/ArenaInput";
-import { ArenaNetworking, IPlayerState } from "../arena/ArenaNetworking";
-import { ArenaPlayer } from "../arena/ArenaPlayer";
-import { ArenaPhysics } from "../arena/ArenaPhysics";
-import { ArenaGameState } from "../arena/ArenaGameState";
+import { ArenaBackground } from "./arena/ArenaBackground";
+import { ArenaUI } from "./arena/ArenaUI";
+import { ArenaAudio } from "./arena/ArenaAudio";
+import { ArenaInput } from "./arena/ArenaInput";
+import { ArenaNetworking, IPlayerState } from "./arena/ArenaNetworking";
+import { ArenaPlayer } from "./arena/ArenaPlayer";
+import { ArenaPhysics } from "./arena/ArenaPhysics";
+import { ArenaGameState } from "./arena/ArenaGameState";
 /* END-USER-IMPORTS */
 
 interface InputPayload {
