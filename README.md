@@ -124,12 +124,7 @@ createPhaserButton(scene, x, y, texture, onClick);
 - **Blank canvas?** Make sure you're mounting Phaser in a `'use client'` dynamic component.
 - **Path errors?** Check `tsconfig.json` and `pnpm-workspace.yaml`.
 - **Socket.IO not connecting?** Confirm backend is running at port `3001`.
-
-### 👤 Maintainers
-
--   [@J3yZ](https://github.com/J3yZ) — Frontend lead & monorepo architect
--   You? Open a PR and join the wildverse 🧠🔥
-
+- 
 Game on 🎮🚀
 
 ## Multiplayer Dev Workflow
