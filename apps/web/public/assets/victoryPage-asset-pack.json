@@ -1,0 +1,41 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/11 - Victory/1.png",
+                "type": "image",
+                "key": "1"
+            },
+            {
+                "url": "assets/12 - Defeat/1 (1).png",
+                "type": "image",
+                "key": "1 (1)"
+            },
+            {
+                "url": "assets/11 - Victory/1 (2).png",
+                "type": "image",
+                "key": "1 (2)"
+            },
+            {
+                "url": "assets/11 - Victory/1 (3).png",
+                "type": "image",
+                "key": "1 (3)"
+            },
+            {
+                "url": [
+                    "assets/11 - Victory/victory.mp3"
+                ],
+                "type": "audio",
+                "key": "victory"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

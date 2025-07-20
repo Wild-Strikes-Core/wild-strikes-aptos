@@ -1,0 +1,27 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/Match/02 - Map/world_tileset.png",
+                "frameConfig": {
+                    "frameWidth": 16,
+                    "frameHeight": 16,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "world_tileset"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

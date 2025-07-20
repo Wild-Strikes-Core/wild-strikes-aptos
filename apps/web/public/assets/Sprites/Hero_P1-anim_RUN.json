@@ -1,0 +1,73 @@
+{
+    "anims": [
+        {
+            "key": "heroRUNHero",
+            "type": "frame",
+            "frames": [
+                {
+                    "key": "Hero_P1",
+                    "frame": 90,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 91,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 92,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 93,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 94,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 95,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 96,
+                    "duration": 0,
+                    "keyframe": false
+                },
+                {
+                    "key": "Hero_P1",
+                    "frame": 97,
+                    "duration": 0,
+                    "keyframe": false
+                }
+            ],
+            "frameRate": 16,
+            "skipMissedFrames": true,
+            "delay": 2,
+            "repeat": -1,
+            "randomFrame": false
+        }
+    ],
+    "globalTimeScale": 1,
+    "meta": {
+        "app": "Phaser Editor 2D v3",
+        "contentType": "Phaser v3 Animations"
+    },
+    "settings": {
+        "sourceLang": "JAVA_SCRIPT",
+        "esModule": false,
+        "generateCode": false
+    }
+}

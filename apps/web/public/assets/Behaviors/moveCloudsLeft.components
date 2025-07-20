@@ -1,0 +1,39 @@
+{
+  "components": [
+    {
+      "name": "MoveCloudsLeft",
+      "baseClass": "UserComponent",
+      "gameObjectType": "Phaser.GameObjects.Image",
+      "properties": [
+        {
+          "name": "speed",
+          "label": "Speed",
+          "tooltip": "The cloud's movement speed",
+          "defValue": 100,
+          "customDefinition": false,
+          "type": {
+            "id": "number"
+          }
+        },
+        {
+          "name": "resetX",
+          "label": "Reset X Position",
+          "tooltip": "X position to reset the cloud when it moves off screen",
+          "defValue": 2000,
+          "customDefinition": false,
+          "type": {
+            "id": "number"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "app": "Phaser Editor 2D - User Components Editor",
+    "url": "https://phasereditor2d.com",
+    "contentType": "phasereditor2d.core.scene.UserComponents"
+  },
+  "outputLang": "TYPE_SCRIPT",
+  "exportClass": true,
+  "autoImport": true
+}
