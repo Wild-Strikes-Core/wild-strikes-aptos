@@ -3,9 +3,10 @@
 /* Root Footer Container */
 .footer {
   background-color: #1a1a1a;
-  padding: 40px 60px 20px;
+  padding: 40px 60px 30px 150px;
   width: 100%;
-  border-top: 2px solid #333;
+  border-top: 2px solid #333;;
+  
 }
 
 /* Content Container */
@@ -16,6 +17,12 @@
   max-width: 1200px;
   margin: 0 auto;
   gap: 60px;
+}
+
+.footer-boarder {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
 }
 
 /* Section Container (Quick Links, Papers, Socials) */

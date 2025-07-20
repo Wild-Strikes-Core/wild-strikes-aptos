@@ -191,7 +191,7 @@ export default function Home() {
         <Image
           src="/assets/Website Page/earth.png"
           alt="Earth"
-          width={140}
+          width={80}
           height={120}
           className="floating-earth"
         />
@@ -205,7 +205,8 @@ export default function Home() {
 
         {/* Content */}
         <div className="gameplay-content">
-          <h2>GAME PLAY</h2>
+          <h2 style={{ padding: '40px' }}>GAME PLAY</h2>
+
           <div className="video-container">
             <iframe
               src="https://www.youtube.com/embed/FP1rjBAhat0?si=TYzB1FNzjqL2W5R-"
