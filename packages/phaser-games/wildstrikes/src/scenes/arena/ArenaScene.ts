@@ -2,7 +2,6 @@ import { MapManager } from "./MapManager";
 import { AssetLoader } from "../../AssetLoader";
 import { DebugMode } from "./DebugMode";
 import { PlayerManager } from "./PlayerManager";
-import { PLAYER_1 } from "@shared/constants/constants";
 
 
 export default class Arena extends Phaser.Scene {
