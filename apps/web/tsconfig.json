@@ -21,8 +21,7 @@
     "paths": {
       "@/*": ["./*"],
       "@shared/*": ["../../packages/shared-utils/*"],
-      "@phaser-games/*": ["../../packages/phaser-games/*"],
-      "@socket-client": ["../../packages/socket-client"]
+      "@phaser-games/*": ["../../packages/phaser-games/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

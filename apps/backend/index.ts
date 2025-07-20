@@ -8,9 +8,12 @@ import { Server } from 'socket.io';
 import * as gameLoop from 'node-gameloop';
 import { MATCHES, PLAYER_MATCH } from '@shared/constants/states';
 import { Match } from '@shared/types/types';
+import { platform } from 'os';
 
 // ------------------ Configuration ------------------ //
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+const isWindows = platform() === 'win32';
+// Use different default ports to avoid conflicts on Windows where processes might linger
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : (isWindows ? 3002 : 3001);
 const HOST = process.env.HOST || '0.0.0.0';
 const MATCH_DURATION = process.env.MATCH_DURATION ? parseInt(process.env.MATCH_DURATION) : 120; // seconds
 const UPDATE_THROTTLE = process.env.UPDATE_THROTTLE ? parseInt(process.env.UPDATE_THROTTLE) : 50; // ms
