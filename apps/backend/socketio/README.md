@@ -1,71 +1,151 @@
-# 🎮 Wild Strikes Backend
+<div align="center">
 
-A real-time multiplayer game backend built with Node.js, Express, and Socket.IO for the Wild Strikes fighting game.
+# 🎮 Wild Strikes Backend 🔌
+
+### ⚡ Real-time Multiplayer Game Backend ⚡
+
+<img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js" alt="Node.js" />
+<img src="https://img.shields.io/badge/Express.js-4-000000?style=for-the-badge&logo=express" alt="Express.js" />
+<img src="https://img.shields.io/badge/Socket.IO-4-white?style=for-the-badge&logo=socket.io&logoColor=black" alt="Socket.IO" />
+<img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=for-the-badge&logo=typescript" alt="TypeScript" />
+
+**🥊 Built with Node.js, Express, and Socket.IO for the Wild Strikes fighting game**
+**🌐 Powering real-time multiplayer battles across the globe**
+
+</div>
+
+---
 
 ## 📋 Table of Contents
 
-- [Architecture Overview](#architecture-overview)
-- [Quick Start](#quick-start)
-- [API Endpoints](#api-endpoints)
-- [Socket.IO Events](#socketio-events)
-- [Services](#services)
-- [Models](#models)
-- [Testing](#testing)
-- [Future Steps](#future-steps)
-- [Troubleshooting](#troubleshooting)
+<div align="center">
+
+| Section | Description |
+|---------|-------------|
+| [🏗️ Architecture Overview](#️-architecture-overview) | System design and components |
+| [🚀 Quick Start](#-quick-start) | Get up and running fast |
+| [🔌 API Endpoints](#-api-endpoints) | HTTP API documentation |
+| [📡 Socket.IO Events](#-socketio-events) | Real-time event system |
+| [⚙️ Services](#️-services) | Core backend services |
+| [📊 Models](#-models) | Data models and structures |
+| [🧪 Testing](#-testing) | Testing strategies |
+| [🚀 Future Steps](#-future-steps) | Roadmap and next features |
+| [🔧 Troubleshooting](#-troubleshooting) | Common issues and fixes |
+
+</div>
 
 ## 🏗️ Architecture Overview
 
-The backend follows a modular architecture with clear separation of concerns:
+<div align="center">
+
+### 🎯 **Modular Architecture with Clear Separation of Concerns** 🎯
+
+</div>
 
 ```
-src/
-├── config/          # Middleware and configuration
-├── constants/       # Global state and constants
-├── controllers/     # Business logic handlers
-├── models/          # Data models and room management
-├── services/        # Core services (matchmaking, reconnection, etc.)
-├── sockets/         # Socket.IO event handlers
-├── types/           # TypeScript type definitions
-└── index.ts         # Main server entry point
+🔌 src/
+├── ⚙️ config/          # Middleware and Configuration
+├── 📊 constants/       # Global State and Constants
+├── 🎮 controllers/     # Business Logic Handlers
+├── 📋 models/          # Data Models and Room Management
+├── 🛠️ services/        # Core Services (Matchmaking, Reconnection, etc.)
+├── 📡 sockets/         # Socket.IO Event Handlers
+├── 🏷️ types/           # TypeScript Type Definitions
+└── 🚀 index.ts         # Main Server Entry Point
 ```
 
-### Key Components:
+### ⭐ Key Components:
 
-- **Express Server**: HTTP server with middleware setup
-- **Socket.IO**: Real-time bidirectional communication
-- **Matchmaking Service**: Queue management and player pairing
-- **Room Service**: Game room creation and management
-- **Reconnection Service**: Graceful disconnection handling
-- **Match End Service**: Match completion and cleanup
+<table align="center">
+<tr>
+<th>Component</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+<tr>
+<td>🌐 <strong>Express Server</strong></td>
+<td>Express.js</td>
+<td>HTTP server with middleware setup</td>
+</tr>
+<tr>
+<td>📡 <strong>Socket.IO</strong></td>
+<td>Socket.IO</td>
+<td>Real-time bidirectional communication</td>
+</tr>
+<tr>
+<td>🎯 <strong>Matchmaking Service</strong></td>
+<td>Custom Service</td>
+<td>Queue management and player pairing</td>
+</tr>
+<tr>
+<td>🏠 <strong>Room Service</strong></td>
+<td>Custom Service</td>
+<td>Game room creation and management</td>
+</tr>
+<tr>
+<td>🔄 <strong>Reconnection Service</strong></td>
+<td>Custom Service</td>
+<td>Graceful disconnection handling</td>
+</tr>
+<tr>
+<td>🏁 <strong>Match End Service</strong></td>
+<td>Custom Service</td>
+<td>Match completion and cleanup</td>
+</tr>
+</table>
 
 ## 🚀 Quick Start
 
-### Prerequisites
+<div align="center">
 
-- Node.js 18+ 
-- pnpm (recommended) or npm
+### 🎯 **Get your backend server running in seconds!** 🎯
 
-### Installation
+</div>
+
+### 📋 Prerequisites
+
+<table align="center">
+<tr>
+<td align="center">
+<h4>📦 Node.js 18+</h4>
+<p><a href="https://nodejs.org/">Download here</a></p>
+</td>
+<td align="center">
+<h4>⚡ pnpm</h4>
+<p><em>Recommended package manager</em></p>
+</td>
+<td align="center">
+<h4>📦 npm</h4>
+<p><em>Alternative option</em></p>
+</td>
+</tr>
+</table>
+
+### ⚙️ Installation
 
 ```bash
-# Navigate to backend directory
+# 📁 Navigate to backend directory
 cd apps/backend
 
-# Install dependencies
+# 📦 Install dependencies
 pnpm install
 
-# Start development server
+# 🚀 Start development server
 pnpm dev
 ```
 
-The server will start on `http://localhost:3001`
+<div align="center">
 
-### Environment Variables
+🔌 **The server will start on `http://localhost:3001`** 🔌
+
+</div>
+
+### 🌍 Environment Variables
 
 Create a `.env` file in the backend directory:
 
 ```env
+# 🚦 Server Configuration
 PORT=3001
 NODE_ENV=development
 ```

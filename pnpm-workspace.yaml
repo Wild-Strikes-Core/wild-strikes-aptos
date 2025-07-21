@@ -1,5 +1,6 @@
 # pnpm-workspace.yaml
 packages:
   - "apps/*"
+  - "apps/backend/socketio"
   - "packages/*"
   - "packages/phaser-games/wildstrikes"
