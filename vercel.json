@@ -1,6 +1,5 @@
 {
   "buildCommand": "pnpm turbo run build --filter=landing",
   "outputDirectory": "apps/web/app/landing/.next",
-  "framework": "nextjs",
-  "rootDirectory": "apps/web/app/landing"
+  "framework": "nextjs"
 }
