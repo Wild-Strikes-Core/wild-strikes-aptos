@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "Only the Wildest Strikes Survive",
 };
 
-// ✅ Viewport config (new correct way)
+// ✅ Viewport config (new correct ways)
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
