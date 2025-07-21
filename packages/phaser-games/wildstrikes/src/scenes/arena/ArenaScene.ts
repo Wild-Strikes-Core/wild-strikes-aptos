@@ -13,8 +13,8 @@ export default class Arena extends Phaser.Scene {
     private mapManager: MapManager;
     private debugMode: DebugMode;
 
-    private playerONE: PlayerManager;
-    private playerTWO: PlayerManager;
+    private playerManager: Map<string, PlayerManager> = new Map();
+    private localPlayer: string = 'playerONE';
 
     private currentMapConfig: any;
     
@@ -49,22 +49,13 @@ export default class Arena extends Phaser.Scene {
             this.debugMode.initialize(this.mapManager, this.currentMapConfig);
         }
 
-        // Add any additional setup for the arena scene here
-        this.playerONE = new PlayerManager(this);
-        this.playerTWO = new PlayerManager(this, false); // Disable input for playerTWO (dummy)
-
+        
         // Create player way above the platform (will fall down due to gravity)
         const spawnX = this.cameras.main.width / 2; // Center horizontally
         const spawnY = 200; // High up in the air
         
-        this.playerONE.createPlayer(spawnX, spawnY);
-        this.playerTWO.createPlayer(spawnX + 300, spawnY);
-
-        
-
-        this.cameras.main.startFollow(this.playerONE.getPlayerSprite(), true, 0.1, 0.1);
-        this.cameras.main.setZoom(1.3, 1.3);
-        this.cameras.main.setBounds(0, 0, 1920, 1080);
+        this.spawnPlayer(this.localPlayer, spawnX, spawnY, true);
+        this.spawnPlayer('playerTWO', spawnX + 300, spawnY, false);
 
         this.setupMobileControls();
 
@@ -78,15 +69,17 @@ export default class Arena extends Phaser.Scene {
         }
 
         // Update player managers
-        if (this.playerONE) {
-            this.playerONE.update();
-            this.cameras.main.followOffset.set(-200, 0);
-        }
-        if (this.playerTWO) {
-            this.playerTWO.update();
-        }
+        // if (this.playerONE) {
+        //     this.playerONE.update();
+        //     this.cameras.main.followOffset.set(-200, 0);
+        // }
+        // if (this.playerTWO) {
+        //     this.playerTWO.update();
+        // }
 
-
+        this.playerManager.forEach((playerManager) => {
+            playerManager.update();
+        });
     }
 
 
@@ -150,5 +143,38 @@ export default class Arena extends Phaser.Scene {
             button.setScale(1);
             }
         });
+    }
+
+    // for multiplayer-proof code
+    spawnPlayer(playerId: string, spawnX: number, spawnY: number, isLocal: boolean = false) : void {
+        const playerManager = new PlayerManager(this, isLocal);
+        playerManager.createPlayer(spawnX, spawnY);
+        this.playerManager.set(playerId, playerManager);
+        if (isLocal) {
+            this.localPlayer = playerId;
+            
+            this.cameras.main.startFollow(playerManager.getPlayerSprite(), true);
+            this.cameras.main.setZoom(1.3, 1.3);
+            this.cameras.main.setBounds(0, 0, 1920, 1080);
+        }
+    }
+
+    removePlayer(playerId: string): void {
+        const player = this.playerManager.get(playerId);
+        if (player) {
+            player.destroy?.();
+            this.playerManager.delete(playerId);
+        }
+    }
+
+    getLocalPlayer(): Phaser.Physics.Arcade.Sprite | null {
+        const localPlayer = this.playerManager.get(this.localPlayer);
+        return localPlayer?.getPlayerSprite();
+    }
+
+    getAllPlayers(): Phaser.Physics.Arcade.Sprite[] {
+        return Array.from(this.playerManager.values())
+            .map(pm => pm.getPlayerSprite())
+            .filter(sprite => sprite !== null);
     }
 }
