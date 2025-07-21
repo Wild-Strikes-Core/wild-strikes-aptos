@@ -1,8 +1,9 @@
 import * as Phaser from 'phaser';
 import bgClouds from '../components/bg-clouds';
+import { BaseScene } from './BaseScene';
+import { Animations } from '../effects/Animations';
 
-export class StartScene extends Phaser.Scene {
-  private BACKGROUND_LAYER!: Phaser.GameObjects.Layer;
+export class StartScene extends BaseScene {
   private PLAY_BUTTON!: Phaser.GameObjects.Image;
   private MAIN_LOGO!: Phaser.GameObjects.Image;
 
@@ -10,60 +11,45 @@ export class StartScene extends Phaser.Scene {
     super('Start');
   }
 
-  private editorCreate(): void {
-    // Background layer placeholder (not strictly required but migrated for parity)
-    this.BACKGROUND_LAYER = this.add.layer();
-    this.BACKGROUND_LAYER.blendMode = Phaser.BlendModes.SKIP_CHECK;
-
-    // Play Button
-    this.PLAY_BUTTON = this.add.image(
-      960,
-      832,
-      'Purple_Green_Pixel_Illustration_Game_Presentation-removebg-preview'
-    );
-    this.PLAY_BUTTON.setScale(0.86);
-
-    // Main Logo
-    this.MAIN_LOGO = this.add.image(992, 480, 'newLogo');
-    this.MAIN_LOGO.setScale(1.74);
-
-    this.events.emit('scene-awake');
-  }
-
   create(): void {
-    // Stretch background image to fill the view
-    const bg = this.add.image(0, 0, '2G_bg');
-    bg.setOrigin(0, 0);
-    bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-    bg.setDepth(-1000);
+    const { centerX, centerY, width, height } = this.cameras.main;
 
-    this.editorCreate();
+    // --- Constants ---
+    const BG_DEPTH = -1000;
+    const CLOUD_DEPTHS = [-500, -400, -300];
+    const CLOUD_POSITIONS = [
+      { x: 500, y: 300, speed: 20 },
+      { x: 1200, y: 450, speed: 30 },
+      { x: 900, y: 200, speed: 40 },
+    ];
 
-    this.cameras.main.fadeIn(180, 0, 0, 0);
+    // --- Background ---
+    this.createStandardBackground();
 
-    // Decorative moving clouds (parallax background)
+    // --- Decorative Parallax Clouds ---
     if (this.textures.exists('2G_bgClouds_2')) {
-      const clouds1 = new bgClouds(this, 500, 300).setDepth(-500);
-      const clouds2 = new bgClouds(this, 1200, 450).setDepth(-400);
-      clouds2.speed = 30;
-      const clouds3 = new bgClouds(this, 900, 200).setDepth(-300);
-      clouds3.speed = 40;
-
-      this.add.existing(clouds1);
-      this.add.existing(clouds2);
-      this.add.existing(clouds3);
+      CLOUD_POSITIONS.forEach((cfg, i) => {
+        const cloud = new bgClouds(this, cfg.x, cfg.y).setDepth(CLOUD_DEPTHS[i]);
+        cloud.speed = cfg.speed;
+        this.add.existing(cloud);
+      });
     }
 
-    // Interactive play button setup
+    // --- UI Elements ---
+    this.PLAY_BUTTON = this.add.image(centerX, centerY + 200, 'Purple_Green_Pixel_Illustration_Game_Presentation-removebg-preview').setScale(0.86);
+    this.MAIN_LOGO = this.add.image(centerX, centerY - 120, 'newLogo').setScale(1.74);
+
+    this.events.emit('scene-awake');
+    this.cameras.main.fadeIn(180, 0, 0, 0);
+
+    // --- Idle Animations ---
+    Animations.floatyIdle(this, this.PLAY_BUTTON, 15);
+    this.applyLogoPulse(this.MAIN_LOGO);
+
+    // --- Button Interactivity ---
     this.PLAY_BUTTON.setInteractive({ cursor: 'pointer' });
 
-    // Idle animations (float / pulse)
-    this.createPlayButtonIdleAnimation(this.PLAY_BUTTON);
-    this.createLogoIdleAnimation(this.MAIN_LOGO);
-
-    // Input handlers
     this.PLAY_BUTTON.on('pointerdown', () => {
-      // Stop idle tween for crisp effect
       this.tweens.killTweensOf(this.PLAY_BUTTON);
       this.createClickEffect(this.PLAY_BUTTON, () => {
         this.cameras.main.fadeOut(180, 0, 0, 0);
@@ -96,40 +82,23 @@ export class StartScene extends Phaser.Scene {
     });
   }
 
-  private createPlayButtonIdleAnimation(button: Phaser.GameObjects.Image): void {
-    const originalY = button.y;
+  // Removed custom floaty idle implementation in favour of Animations.floatyIdle
+
+  private applyLogoPulse(logo: Phaser.GameObjects.Image): void {
     this.tweens.add({
-      targets: button,
-      y: originalY - 15,
-      duration: 1800,
+      targets: logo,
+      scale: logo.scaleX * 1.02,
+      duration: 3000,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
-    });
-    this.tweens.add({
-      targets: button,
-      scaleX: button.scaleX * 1.05,
-      scaleY: button.scaleY * 1.05,
-      duration: 1200,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: 400,
-    });
-    this.tweens.add({
-      targets: button,
-      alpha: 0.8,
-      duration: 2000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: 600,
     });
   }
 
   private createShimmerEffect(button: Phaser.GameObjects.Image): void {
     const colors = [0xffff66, 0xffffff, 0xffe066, 0xffffcc];
     let colorIndex = 0;
+
     this.time.addEvent({
       delay: 150,
       callback: () => {
@@ -159,17 +128,4 @@ export class StartScene extends Phaser.Scene {
       },
     });
   }
-
-  private createLogoIdleAnimation(logo: Phaser.GameObjects.Image): void {
-    this.tweens.add({
-      targets: logo,
-      scale: logo.scaleX * 1.02,
-      duration: 3000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-  }
-
-  update(): void {}
-} 
+}

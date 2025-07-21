@@ -1,176 +1,149 @@
-// You can write more code here
-
-/* START OF COMPILED CODE */
-
-/* START-USER-IMPORTS */
-/* END-USER-IMPORTS */
-import { SOCKET } from "@shared/socket";
-import { Socket } from "socket.io-client";
-
+// Client-side only Matchmaking scene – networking stripped for animation polish
 export default class Matchmaking extends Phaser.Scene {
-    private socket: Socket;
+    // Scene element references (renamed for clarity)
+    private playerSprite!: Phaser.GameObjects.Image;
+    private cancelButton!: Phaser.GameObjects.Image;
+    private loaderText!: Phaser.GameObjects.Text;
+    private playerNameLabel!: Phaser.GameObjects.Text;
+    private findingMatchLabel!: Phaser.GameObjects.Text;
 
-    private PLAYER_SPRITE: Phaser.GameObjects.Image;
-    private BUTTON_CANCEL!: Phaser.GameObjects.Image;
-    private LOADER!: Phaser.GameObjects.Text;
-    private PLAYER_NAME!: Phaser.GameObjects.Text;
-    private FINDING_MATCH_TEXT!: Phaser.GameObjects.Text;
+    private loaderDots: string[] = [".", "..", "..."];
+    private loaderIndex = 0;
 
     constructor() {
         super("Matchmaking");
     }
 
-    editorCreate(): void {
-        this.PLAYER_SPRITE = this.add.image(528, 608, "M_charONE");
-        this.PLAYER_SPRITE.scaleX = 1.310153805177419;
-        this.PLAYER_SPRITE.scaleY = 1.310153805177419;
+    /* ------------------------------------------------------------------
+     * Scene creation
+     * ------------------------------------------------------------------ */
+    create(): void {
+        // Full-screen background
+        const bg = this.add.image(0, 0, "2G_bg");
+        bg.setOrigin(0, 0);
+        bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        bg.setDepth(-1000);
 
-        // image_3
+        // Build UI that was originally auto-generated
+        this.editorCreate();
+
+        this.animateEntrance();
+        this.setupEntranceTransition();
+        this.setupCancelButton();
+        this.animateLoader();
+
+        // Simulate a match being found after a short delay
+        this.time.delayedCall(2500, () => this.goToMatchFound());
+
+        // Optional ambience - only play if audio is loaded
+        if (this.sound.get("waiting-music") || this.cache.audio.exists("waiting-music")) {
+            this.sound.play("waiting-music", { loop: true });
+        } else {
+            console.warn("waiting-music audio not found in cache");
+        }
+        this.events.once("shutdown", this.onShutdown, this);
+    }
+
+    /* ------------------------------------------------------------------
+     * Helpers
+     * ------------------------------------------------------------------ */
+
+    private setupCancelButton(): void {
+        this.cancelButton.setInteractive();
+
+        this.cancelButton.on("pointerdown", () => {
+            this.cameras.main.fadeOut(180, 0, 0, 0);
+            this.cameras.main.once("camerafadeoutcomplete", () => {
+                this.scene.stop("Matchmaking");
+                this.scene.start("Home");
+            });
+        });
+
+        this.cancelButton.on("pointerover", () => this.cancelButton.setTint(0xffff66));
+        this.cancelButton.on("pointerout", () => this.cancelButton.clearTint());
+    }
+
+    private animateEntrance(): void {
+        this.tweens.add({
+            targets: this.playerSprite,
+            angle: 360,
+            duration: 1000,
+            ease: "Sine.easeInOut",
+        });
+    }
+
+    private setupEntranceTransition(): void {
+        this.cameras.main.fadeIn(800, 0, 0, 0, (_: any, progress: number) => {
+            this.cameras.main.setAlpha(Math.pow(progress, 3));
+        });
+    }
+
+    private animateLoader(): void {
+        this.time.addEvent({
+            delay: 250,
+            repeat: -1,
+            callback: () => {
+                this.loaderText.text = this.loaderDots[this.loaderIndex];
+                this.loaderIndex = (this.loaderIndex + 1) % this.loaderDots.length;
+            },
+        });
+    }
+
+    private goToMatchFound(): void {
+        this.cameras.main.fadeOut(400, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.stop("Matchmaking");
+            this.scene.start("MatchFound");
+        });
+    }
+
+    private onShutdown(): void {
+        // Only stop audio if it exists and is playing
+        if (this.sound.get("waiting-music")) {
+            this.sound.stopByKey("waiting-music");
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     * editorCreate – UI recreated from the original auto-generated code
+     * ------------------------------------------------------------------ */
+
+    editorCreate(): void {
+        this.playerSprite = this.add.image(528, 608, "M_charONE");
+        this.playerSprite.setScale(1.310153805177419);
+
+        // Player card background
         this.add.image(160, 176, "M_playerCard");
 
-        // btnCancel
-        this.BUTTON_CANCEL = this.add.image(1424, 704, "M_btnCancel");
-        this.BUTTON_CANCEL.scaleX = 1.419003049417908;
-        this.BUTTON_CANCEL.scaleY = 1.419003049417908;
+        // Cancel button
+        this.cancelButton = this.add.image(1424, 704, "M_btnCancel");
+        this.cancelButton.setScale(1.419003049417908);
 
-        // text_1
-        this.FINDING_MATCH_TEXT = this.add.text(1168, 416, "", {});
-        this.FINDING_MATCH_TEXT.scaleX = 1.4657553250177893;
-        this.FINDING_MATCH_TEXT.scaleY = 1.4657553250177893;
-        this.FINDING_MATCH_TEXT.text = "Finding a Match";
-        this.FINDING_MATCH_TEXT.setStyle({
+        // ‘Finding a Match’ text
+        this.findingMatchLabel = this.add.text(1168, 416, "Finding a Match", {
             fontFamily: "Arial",
             fontSize: "48px",
             fontStyle: "bold",
         });
+        this.findingMatchLabel.setScale(1.4657553250177893);
 
-        // loader
-        this.LOADER = this.add.text(1392, 496, "", {});
-        this.LOADER.scaleX = 1.4657553250177893;
-        this.LOADER.scaleY = 1.4657553250177893;
-        this.LOADER.text = "...";
-        this.LOADER.setStyle({
+        // Loader text (animated dots)
+        this.loaderText = this.add.text(1392, 496, "...", {
             fontFamily: "Arial",
             fontSize: "48px",
             fontStyle: "bold",
         });
+        this.loaderText.setScale(1.4657553250177893);
 
-        this.PLAYER_NAME = this.add.text(32, 144, "", {});
-        this.PLAYER_NAME.text = "Player Name";
-        this.PLAYER_NAME.setStyle({
+        // Player name placeholder
+        this.playerNameLabel = this.add.text(32, 144, "Player Name", {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
             fontStyle: "bold",
         });
 
-        this.PLAYER_SPRITE = this.PLAYER_SPRITE;
-
         this.events.emit("scene-awake");
     }
-
-    /* START-USER-CODE */
-
-    // Write your code here
-
-    create() {
-        // Add the main background image first (behind all other elements)
-        // Make it responsive to cover the full screen
-        const bg = this.add.image(0, 0, "2G_bg");
-        bg.setOrigin(0, 0);
-        bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-        bg.setDepth(-1000); // Ensure background is behind everything
-
-        this.socket = SOCKET;
-        this.socket.connect();
-
-        this.editorCreate();
-
-        this.animateEntrance();
-
-        this.setupEntranceTransition();
-
-        this.BUTTON_CANCEL.setInteractive();
-        this.BUTTON_CANCEL.on("pointerdown", () => {
-            this.cameras.main.fadeOut(180, 0, 0, 0);
-
-            this.cameras.main.once("camerafadeoutcomplete", () => {
-                this.tweens.add({
-                    targets: this.BUTTON_CANCEL,
-                    scale: "*=0.9",
-                    duration: 100,
-                    yoyo: true,
-                    onComplete: () => {
-                        this.scene.stop("Matchmaking");
-                        this.scene.start("Home");
-                    },
-                });
-            });
-        });
-
-        this.BUTTON_CANCEL.on("pointerover", () => {
-            this.BUTTON_CANCEL.setTint(0xffff66);
-        });
-
-        this.BUTTON_CANCEL.on("pointerout", () => {
-            this.BUTTON_CANCEL.clearTint();
-        });
-
-        this.animateLoader();
-
-        this.socket.emit("findMatch");
-
-        this.socket.on("matchFound", (data) => {
-            this.cameras.main!.fadeOut(400, 0, 0, 0);
-            this.cameras.main.once("camerafadeoutcomplete", () => {
-                this.scene.stop("Matchmaking");
-                this.scene.start("MatchFound");
-            });
-        });
-
-        this.sound.play("waiting-music", { loop: true });
-        this.events.on("shutdown", this.onShutdown, this);
-    }
-
-    setupEntranceTransition() {
-        this.cameras.main.fadeIn(800, 0, 0, 0, (_: any, progress: any) => {
-            const easedProgress = Math.pow(progress, 3);
-            this.cameras.main.setAlpha(easedProgress);
-        });
-    }
-
-    animateEntrance() {
-        this.tweens.add({
-            targets: this.PLAYER_SPRITE,
-            angle: 360,
-            duration: 1000,
-            ease: "Sine.easeInOut",
-            repeat: 0,
-        });
-    }
-
-    private animateLoader() {
-        let dots = [".", "..", "..."];
-        let index = 0;
-
-        this.time.addEvent({
-            delay: 250, // Update every 200ms
-            repeat: -1, // Repeat for the given duration in 200ms intervals
-            callback: () => {
-                this.LOADER.text = dots[index];
-                index = (index + 1) % dots.length;
-            },
-        });
-    }
-
-    onShutdown() {
-        this.sound.stopByKey("waiting-music");
-    }
-
-    /* END-USER-CODE */
 }
-
-/* END OF COMPILED CODE */
-
-// You can write more code here
 

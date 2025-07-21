@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator dbml {
+  provider = "prisma-dbml-generator"
+  output   = "../dbml"
+}
+
+// --------------------------------------------------
+// Users
+// --------------------------------------------------
+model User {
+  id           String    @id @unique          
+  handle       String    @unique               // in-game name, e.g. "8bitRyu"
+  avatar       String?                           // small 8-bit sprite url
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  ratings      Rating[]                          // one row per season
+  wallets     Wallet[]                          // linked wallets
+  matchesAsP1  Match[]  @relation("Player1")
+  matchesAsP2  Match[]  @relation("Player2")
+}
+
+// --------------------------------------------------
+// Leaderboards (per season)
+// --------------------------------------------------
+model Season {
+  id        String   @id @default(cuid())
+  name      String   // e.g. "Season 1: Genesis"
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+
+  ratings   Rating[]
+}
+
+model Rating {
+  id       String @id @default(cuid())
+  userId   String
+  seasonId String
+  elo      Int    @default(1000)   // classic Elo
+  wins     Int    @default(0)
+  losses   Int    @default(0)
+
+  user   User   @relation(fields: [userId],   references: [id])
+  season Season @relation(fields: [seasonId], references: [id])
+
+  @@unique([userId, seasonId])
+}
+
+// --------------------------------------------------
+// Matches
+// --------------------------------------------------
+enum MatchOutcome {
+  P1_WIN
+  P2_WIN
+  DRAW
+}
+
+model Match {
+  id        String       @id @default(cuid())
+  player1Id String
+  player2Id String
+  outcome   MatchOutcome
+  p1Score   Int                             // rounds won
+  p2Score   Int
+  playedAt  DateTime     @default(now())
+
+  // Optional links to on-chain replay or IPFS log
+  replayUrl String?
+  txHash    String?                         // Aptos txn containing the match result
+
+  player1 User @relation("Player1", fields: [player1Id], references: [id])
+  player2 User @relation("Player2", fields: [player2Id], references: [id])
+
+  @@index([player1Id, playedAt])
+  @@index([player2Id, playedAt])
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  pub_address   String   @unique // e.g. Aptos address
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

@@ -2,9 +2,17 @@
   "name": "wildverse-monorepo",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean"
+  },
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "apps/web/*",
+    "apps/web/app/*"
   ],
   "devDependencies": {
     "turbo": "^1.12.3"

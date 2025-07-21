@@ -1,0 +1,46 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/game/ui/results/1.png",
+                "type": "image",
+                "key": "draw_main"
+            },
+            {
+                "url": "assets/game/ui/results/1 (9).png",
+                "type": "image",
+                "key": "draw_bg1"
+            },
+            {
+                "url": "assets/game/ui/results/1 (10).png",
+                "type": "image",
+                "key": "draw_bg2"
+            },
+            {
+                "url": "assets/game/ui/results/1 (11).png",
+                "type": "image",
+                "key": "draw_element1"
+            },
+            {
+                "url": "assets/game/ui/results/1 (12).png",
+                "type": "image",
+                "key": "draw_element2"
+            },
+            {
+                "url": "assets/game/ui/results/1 (13).png",
+                "type": "image",
+                "key": "draw_element3"
+            },
+            {
+                "url": "assets/game/ui/results/1 (14).png",
+                "type": "image",
+                "key": "draw_element4"
+            },
+            {
+                "url": "assets/game/ui/results/1 (15).png",
+                "type": "image",
+                "key": "draw_element5"
+            }
+        ]
+    }
+} 

@@ -25,35 +25,35 @@ export default class Victory extends Phaser.Scene {
 
     editorCreate(): void {
         // bgClouds
-        const bgClouds = this.add.tileSprite(
+        const topClouds = this.add.tileSprite(
             976,
             288,
             1029,
             242,
             "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview"
         );
-        bgClouds.scaleX = 2;
-        bgClouds.scaleY = 2;
+        topClouds.scaleX = 2;
+        topClouds.scaleY = 2;
 
         // bgClouds_1
-        const bgClouds_1 = this.add.tileSprite(
+        const bottomClouds = this.add.tileSprite(
             1008,
             1072,
             1029,
             242,
             "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview"
         );
-        bgClouds_1.scaleX = 2;
-        bgClouds_1.scaleY = 2;
+        bottomClouds.scaleX = 2;
+        bottomClouds.scaleY = 2;
 
         // platform_1 - Always use our constant keys to avoid conflicts
-        const platform_1 = this.add.image(512, 1136, VICTORY_ASSETS.PLATFORM);
+        const leftPlatform = this.add.image(512, 1136, VICTORY_ASSETS.PLATFORM);
 
         // platform_2
-        const platform_2 = this.add.image(960, 1136, VICTORY_ASSETS.PLATFORM);
+        const middlePlatform = this.add.image(960, 1136, VICTORY_ASSETS.PLATFORM);
 
         // platform_3
-        const platform_3 = this.add.image(1392, 1136, VICTORY_ASSETS.PLATFORM);
+        const rightPlatform = this.add.image(1392, 1136, VICTORY_ASSETS.PLATFORM);
 
         // eloBanner
         const eloBanner = this.add.image(960, 848, VICTORY_ASSETS.ELO_BANNER);
@@ -62,28 +62,28 @@ export default class Victory extends Phaser.Scene {
         const victoryText = this.add.image(960, 128, VICTORY_ASSETS.VICTORY_TEXT);
 
         // WLD
-        const wLD = this.add.image(960, 416, VICTORY_ASSETS.WLD_DISPLAY);
+        const wldDisplay = this.add.image(960, 416, VICTORY_ASSETS.WLD_DISPLAY);
 
-        this.bgClouds = bgClouds;
-        this.bgClouds_1 = bgClouds_1;
-        this.platform_1 = platform_1;
-        this.platform_2 = platform_2;
-        this.platform_3 = platform_3;
+        this.topClouds = topClouds;
+        this.bottomClouds = bottomClouds;
+        this.leftPlatform = leftPlatform;
+        this.middlePlatform = middlePlatform;
+        this.rightPlatform = rightPlatform;
         this.eloBanner = eloBanner;
         this.victoryText = victoryText;
-        this.wLD = wLD;
+        this.wldDisplay = wldDisplay;
 
         this.events.emit("scene-awake");
     }
 
-    private bgClouds!: Phaser.GameObjects.TileSprite;
-    private bgClouds_1!: Phaser.GameObjects.TileSprite;
-    private platform_1!: Phaser.GameObjects.Image;
-    private platform_2!: Phaser.GameObjects.Image;
-    private platform_3!: Phaser.GameObjects.Image;
+    private topClouds!: Phaser.GameObjects.TileSprite;
+    private bottomClouds!: Phaser.GameObjects.TileSprite;
+    private leftPlatform!: Phaser.GameObjects.Image;
+    private middlePlatform!: Phaser.GameObjects.Image;
+    private rightPlatform!: Phaser.GameObjects.Image;
     private eloBanner!: Phaser.GameObjects.Image;
     private victoryText!: Phaser.GameObjects.Image;
-    private wLD!: Phaser.GameObjects.Image;
+    private wldDisplay!: Phaser.GameObjects.Image;
 
     /* START-USER-CODE */
 
@@ -170,11 +170,11 @@ export default class Victory extends Phaser.Scene {
         // Set initial alpha values to 0 for fade-in animations (only if elements exist)
         try {
             if (this.eloBanner) this.eloBanner.setAlpha(0);
-            if (this.platform_1) this.platform_1.setAlpha(0);
-            if (this.platform_2) this.platform_2.setAlpha(0);
-            if (this.platform_3) this.platform_3.setAlpha(0);
+            if (this.leftPlatform) this.leftPlatform.setAlpha(0);
+            if (this.middlePlatform) this.middlePlatform.setAlpha(0);
+            if (this.rightPlatform) this.rightPlatform.setAlpha(0);
             if (this.victoryText) this.victoryText.setAlpha(0);
-            if (this.wLD) this.wLD.setAlpha(0);
+            if (this.wldDisplay) this.wldDisplay.setAlpha(0);
         } catch (error) {
             console.warn("Error setting alpha values:", error);
         }
@@ -196,7 +196,7 @@ export default class Victory extends Phaser.Scene {
     }
 
     update() {
-        [this.bgClouds, this.bgClouds_1].forEach(
+        [this.topClouds, this.bottomClouds].forEach(
             (cloud) => (cloud.tilePositionX += 1)
         );
     }
@@ -206,7 +206,7 @@ export default class Victory extends Phaser.Scene {
 
         // Platforms rise animation
         this.tweens.add({
-            targets: this.platform_1,
+            targets: this.leftPlatform,
             y: 608,
             alpha: 1,
             duration: 2000,
@@ -217,7 +217,7 @@ export default class Victory extends Phaser.Scene {
         // Delay platform 2 movement
         this.time.delayedCall(500, () => {
             this.tweens.add({
-                targets: this.platform_2,
+                targets: this.middlePlatform,
                 y: 560,
                 alpha: 1,
                 duration: 2000,
@@ -229,7 +229,7 @@ export default class Victory extends Phaser.Scene {
         // Delay platform 3 movement
         this.time.delayedCall(1000, () => {
             this.tweens.add({
-                targets: this.platform_3,
+                targets: this.rightPlatform,
                 y: 608,
                 alpha: 1,
                 duration: 2000,
@@ -258,13 +258,13 @@ export default class Victory extends Phaser.Scene {
         this.time.delayedCall(3000, () => {
             console.log("Fading out platforms, showing WLD...");
             this.tweens.add({
-                targets: [this.platform_1, this.platform_2, this.platform_3],
+                targets: [this.leftPlatform, this.middlePlatform, this.rightPlatform],
                 alpha: 0,
                 duration: 1000,
                 ease: "Linear",
             });
             this.tweens.add({
-                targets: this.wLD,
+                targets: this.wldDisplay,
                 alpha: 1,
                 duration: 1000,
                 ease: "Linear",

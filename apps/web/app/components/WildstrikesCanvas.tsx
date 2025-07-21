@@ -6,7 +6,7 @@ export default function WildstrikesCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let game: any;
+    let game: Phaser.Game | null = null;
     if (!containerRef.current) return;
 
     import('@phaser-games/wildstrikes').then(({ default: WildstrikesGame }) => {
