@@ -1,0 +1,84 @@
+/* Navbar styles */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* background: rgba(255, 255, 255, 0.1); */
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  font-family: 'Silkscreen', monospace;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  letter-spacing: 1px;
+}
+
+.navbar a:hover {
+  color: #ffd700; /* Gold color on hover */
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+}
+
+.navbar a.active {
+  color: #ffd700; /* Gold highlight for active section */
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 1),
+               0 0 16px rgba(255, 215, 0, 0.8),
+               0 0 24px rgba(255, 215, 0, 0.6);
+}
+
+/* RESPONSIVE STYLES FOR NAVBAR */
+
+/* Tablet styles */
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 0.8rem 1rem;
+    gap: 1.5rem;
+  }
+  
+  .navbar a {
+    font-size: 13px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0.5rem 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .navbar a {
+    font-size: 12px;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Small mobile styles */
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.5rem 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .navbar a {
+    font-size: 11px;
+    padding: 0.2rem 0.3rem;
+  }
+}
+

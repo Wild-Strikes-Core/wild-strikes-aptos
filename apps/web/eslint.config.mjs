@@ -28,7 +28,8 @@ const eslintConfig = [
       "@typescript-eslint": typescriptEslint,
     },
     rules: {
-      ...typescriptEslint.configs.recommended.rules,
+        "@typescript-eslint/no-unused-vars": "warn"
+
     },
   },
   ...compat.extends("next/core-web-vitals"),

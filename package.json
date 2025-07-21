@@ -10,7 +10,9 @@
   },
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "apps/web/*",
+    "apps/web/app/*"
   ],
   "devDependencies": {
     "turbo": "^1.12.3"
