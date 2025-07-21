@@ -1,0 +1,52 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/Sprites/Hero_P1.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "Hero_P1"
+            },
+            {
+                "url": "assets/Sprites/Hero_P1-anim_ATK.json",
+                "type": "animation",
+                "key": "Hero_P1-anim_ATK"
+            },
+            {
+                "url": "assets/Sprites/Hero_P1-anim_IDLE.json",
+                "type": "animation",
+                "key": "Hero_P1-anim_IDLE"
+            },
+            {
+                "url": "assets/Sprites/Hero_P1-anim_JUMP.json",
+                "type": "animation",
+                "key": "Hero_P1-anim_JUMP"
+            },
+            {
+                "url": "assets/Sprites/Hero_P1-anim_RUN.json",
+                "type": "animation",
+                "key": "Hero_P1-anim_RUN"
+            },
+            {
+                "url": "assets/Sprites/Hero_P1-anim.json",
+                "type": "animation",
+                "key": "Hero_P1-walk"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

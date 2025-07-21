@@ -1,0 +1,39 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/04 - Team-Developers/5G_btnBack.png",
+                "type": "image",
+                "key": "5G_btnBack"
+            },
+            {
+                "url": "assets/05 - Settings/5G_btnLinkAccount.png",
+                "type": "image",
+                "key": "5G_btnLinkAccount"
+            },
+            {
+                "url": "assets/05 - Settings/5G_btnLogout.png",
+                "type": "image",
+                "key": "5G_btnLogout"
+            },
+            {
+                "url": "assets/05 - Settings/5G_btnTermsAndServices.png",
+                "type": "image",
+                "key": "5G_btnTermsAndServices"
+            },
+            {
+                "url": "assets/05 - Settings/5G_titleSetting.png",
+                "type": "image",
+                "key": "5G_titleSetting"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

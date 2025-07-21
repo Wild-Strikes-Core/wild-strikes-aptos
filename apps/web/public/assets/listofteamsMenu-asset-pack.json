@@ -1,0 +1,49 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/07 - List of Teams/1 (24).png",
+                "type": "image",
+                "key": "1 (24)"
+            },
+            {
+                "url": "assets/07 - List of Teams/1__11_-removebg-preview.png",
+                "type": "image",
+                "key": "1__11_-removebg-preview"
+            },
+            {
+                "url": "assets/07 - List of Teams/1__20_-removebg-preview.png",
+                "type": "image",
+                "key": "1__20_-removebg-preview"
+            },
+            {
+                "url": "assets/07 - List of Teams/1__21_-removebg-preview.png",
+                "type": "image",
+                "key": "1__21_-removebg-preview"
+            },
+            {
+                "url": "assets/07 - List of Teams/1__22_-removebg-preview.png",
+                "type": "image",
+                "key": "1__22_-removebg-preview"
+            },
+            {
+                "url": "assets/07 - List of Teams/1__23_-removebg-preview.png",
+                "type": "image",
+                "key": "1__23_-removebg-preview"
+            },
+            {
+                "url": "assets/07 - List of Teams/1__24_-removebg-preview.png",
+                "type": "image",
+                "key": "1__24_-removebg-preview"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}
