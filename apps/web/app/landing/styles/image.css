@@ -61,12 +61,14 @@
   /* margin-top: 2rem; */
   cursor: pointer;
   transition: transform 0.2s;
-  animation: playButtonPulse 2s ease-in-out infinite;
+  animation: playButtonPulse 1s ease-in-out infinite;
 }
 
 .play-button:hover {
-  transform: scale(1.05);
-  animation-play-state: paused;
+  /* transform: scale(10.05);
+  animation-play-state: paused; */
+  animation: none;              /* Stop the animation completely */
+  transform: scale(1.05);       /* Slightly enlarged size */
 }
 
 .overview-avatars {
@@ -116,7 +118,7 @@
     box-shadow: none;
   }
   50% {
-    transform: scale(1.02);
+    transform: scale(1.05);
     box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
   }
 }

@@ -5,7 +5,7 @@
   background-color: #1a1a1a;
   padding: 40px 60px 30px 150px;
   width: 100%;
-  border-top: 2px solid #333;;
+  border-top: 2px solid #333;
   
 }
 
@@ -118,6 +118,11 @@
   margin: 0;
   letter-spacing: 0.5px;
 }
+
+.footer-logo-section {
+  padding-right: 20%; /* Adjust value as needed */
+}
+
 
 /* Responsive Design */
 @media (max-width: 1024px) {
