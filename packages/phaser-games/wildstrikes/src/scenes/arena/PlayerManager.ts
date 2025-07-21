@@ -26,6 +26,7 @@ export class PlayerManager {
     private keyObjects: { [key: string]: Phaser.Input.Keyboard.Key } = {};
     private enableInput: boolean;
 
+
     constructor(private scene: Phaser.Scene, enableInput: boolean = true) {
         this.scene = scene;
         this.enableInput = enableInput;
@@ -101,13 +102,8 @@ export class PlayerManager {
     private handleMovement(): void {
         if (!this.player || !this.enableInput) return;
 
-        this.isCrouching = this.keyObjects.crouch.isDown && this.isOnGround;
-        this.isSprinting = this.keyObjects.sprint.isDown;
-        
-        // if (this.isCrouching) {
-        //     const body = this.player.body as Phaser.Physics.Arcade.Body;
-        //     body.setSize(body.width, body.height * 0.6); // Reduce height when crouching
-        // }
+        this.isCrouching = this.keyObjects.crouch?.isDown && this.isOnGround;
+        this.isSprinting = this.keyObjects.sprint?.isDown;
         
         const baseSpeed = 300;
         const crouchSpeed = 150;
@@ -122,17 +118,28 @@ export class PlayerManager {
 
         this.isMoving = false;
 
-        // Handle horizontal movement
-        if (this.keyObjects.left.isDown) {
+        // Handle horizontal movement - check both keyboard and mobile input
+        let shouldMoveLeft = false;
+        let shouldMoveRight = false;
+
+        // Keyboard input (if keys exist)
+        if (this.keyObjects.left?.isDown) {
+            shouldMoveLeft = true;
+        } else if (this.keyObjects.right?.isDown) {
+            shouldMoveRight = true;
+        }
+
+        // Apply movement
+        if (shouldMoveLeft) {
             this.player.setVelocityX(-speed);
             this.spriteManager.flipSprite(this.player, true); // Face left
             this.isMoving = true;
-        } else if (this.keyObjects.right.isDown) {
+        } else if (shouldMoveRight) {
             this.player.setVelocityX(speed);
             this.spriteManager.flipSprite(this.player, false); // Face right
             this.isMoving = true;
         } else {
-            // Stop horizontal movement when no keys are pressed
+            // Stop horizontal movement when no input
             this.player.setVelocityX(0);
         }
     }
@@ -337,6 +344,24 @@ export class PlayerManager {
         
         // Clear sprite manager
         this.spriteManager.destroySprite(this.player);
+    }
+
+    // temporary mobile triggers, would be replaced with event-based input handling soon
+
+    public triggerJump(): void {
+        this.handleJump();
+    }
+
+    public triggerLightAttack(): void {
+        this.handleLightAttack();
+    }
+
+    public triggerHeavyAttack(): void {
+        this.handleHeavyAttack();
+    }
+
+    public triggerDash(): void {
+        this.handleDash();
     }
 
     // For multiplayer support (soon):

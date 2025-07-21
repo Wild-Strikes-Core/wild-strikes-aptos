@@ -2,6 +2,7 @@ import { MapManager } from "./MapManager";
 import { AssetLoader } from "../../AssetLoader";
 import { DebugMode } from "./DebugMode";
 import { PlayerManager } from "./PlayerManager";
+import { MobileButton } from "./components/mobButton";
 
 
 export default class Arena extends Phaser.Scene {
@@ -17,6 +18,8 @@ export default class Arena extends Phaser.Scene {
     private localPlayer: string = 'playerONE';
 
     private currentMapConfig: any;
+
+    private joystick: any;
     
     // Enable/disable debug mode - set to false for production
     private static readonly DEBUG_ENABLED = true;
@@ -68,15 +71,7 @@ export default class Arena extends Phaser.Scene {
             this.debugMode.update(time, delta);
         }
 
-        // Update player managers
-        // if (this.playerONE) {
-        //     this.playerONE.update();
-        //     this.cameras.main.followOffset.set(-200, 0);
-        // }
-        // if (this.playerTWO) {
-        //     this.playerTWO.update();
-        // }
-
+        // Update player managers - this will call handleMovement() for each player
         this.playerManager.forEach((playerManager) => {
             playerManager.update();
         });
@@ -103,47 +98,51 @@ export default class Arena extends Phaser.Scene {
     }
 
     setupMobileControls(): void {
-        var joyStick = (this.plugins.get('rexvirtualjoystickplugin') as any).add(this, {
+        const localPlayerManager = this.playerManager.get(this.localPlayer);
+
+        // movement joystick
+        this.joystick = (this.plugins.get('rexvirtualjoystickplugin') as any).add(this, {
             x: 400,
             y: this.cameras.main.height - 300,
             radius: 100,
-        })
-        if (joyStick) {
-            joyStick.base.setScrollFactor(0);
-            joyStick.thumb.setScrollFactor(0);
-            // Scale down the joystick to fit better with camera zoom
-            joyStick.base.setScale(0.8);
-            joyStick.thumb.setScale(0.8);
+        });
+        
+        if (this.joystick) {
+            this.joystick.base.setScrollFactor(0);
+            this.joystick.thumb.setScrollFactor(0);
+            this.joystick.base.setScale(0.8);
+            this.joystick.thumb.setScale(0.8);
         }
 
-        var button = this.add.circle(this.cameras.main.width - 300, this.cameras.main.height - 200, 50, 0xff0000, 0.5)
-            .setInteractive()
-            .setScrollFactor(0)
-            .setScale(0.8); // Scale down the button to fit better with camera zoom
-
-        let isPressed = false;
-
-        button.on('pointerdown', () => {
-            isPressed = true;
-            button.setFillStyle(0xff0000, 1);
-            button.setScale(1.2);
-            console.log('Attack');
+        // Attack button
+        const attackButton = new MobileButton(this, {
+            x: this.cameras.main.width - 300,
+            y: this.cameras.main.height - 200,
+            radius: 50,
+            color: 0xff0000,
+            alpha: 0.5,
+            text: 'ATK',
+            onPress: () => {
+                console.log('Attack button pressed!');
+                localPlayerManager?.triggerLightAttack();
+            }
         });
 
-        button.on('pointerup', () => {
-            isPressed = false;
-            button.setFillStyle(0xff0000, 0.5);
-            button.setScale(1);
-        });
-
-        button.on('pointerout', () => {
-            if (isPressed) {
-            isPressed = false;
-            button.setFillStyle(0xff0000, 0.5);
-            button.setScale(1);
+        // Jump button
+        const jumpButton = new MobileButton(this, {
+            x: this.cameras.main.width - 300,
+            y: this.cameras.main.height - 320,
+            radius: 45,
+            color: 0x00ff00,
+            alpha: 0.5,
+            text: 'JUMP',
+            onPress: () => {
+                console.log('Jump button pressed!');
+                localPlayerManager?.triggerJump();
             }
         });
     }
+
 
     // for multiplayer-proof code
     spawnPlayer(playerId: string, spawnX: number, spawnY: number, isLocal: boolean = false) : void {
