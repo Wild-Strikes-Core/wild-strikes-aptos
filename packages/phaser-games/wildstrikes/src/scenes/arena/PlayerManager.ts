@@ -322,4 +322,8 @@ export class PlayerManager {
         return this.isDashing;
     }
 
+    public getPlayerSprite(): Phaser.Physics.Arcade.Sprite | null {
+        return this.player;
+    }
+
 }

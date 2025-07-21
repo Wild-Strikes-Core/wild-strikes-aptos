@@ -93,8 +93,10 @@ export class DebugMode {
     }
 
     private createDebugPanel(): void {
-        this.debugPanel = this.scene.add.container(10, 10);
+        this.debugPanel = this.scene.add.container(250, 150);
         this.debugPanel.setDepth(10000);
+        this.debugPanel.setScrollFactor(0); // Keep UI fixed to camera
+        this.debugPanel.setScale(0.7); // Scale down to fit better with camera zoom
         this.debugPanel.setVisible(true); // Always visible when debug mode is enabled
 
         // Background for debug panel

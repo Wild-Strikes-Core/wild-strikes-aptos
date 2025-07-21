@@ -60,6 +60,12 @@ export default class Arena extends Phaser.Scene {
         this.playerONE.createPlayer(spawnX, spawnY);
         this.playerTWO.createPlayer(spawnX + 300, spawnY);
 
+        
+
+        this.cameras.main.startFollow(this.playerONE.getPlayerSprite(), true, 0.1, 0.1);
+        this.cameras.main.setZoom(1.3, 1.3);
+        this.cameras.main.setBounds(0, 0, 1920, 1080);
+
         this.setupMobileControls();
 
     }
@@ -74,10 +80,13 @@ export default class Arena extends Phaser.Scene {
         // Update player managers
         if (this.playerONE) {
             this.playerONE.update();
+            this.cameras.main.followOffset.set(-200, 0);
         }
         if (this.playerTWO) {
             this.playerTWO.update();
         }
+
+
     }
 
 
@@ -102,13 +111,22 @@ export default class Arena extends Phaser.Scene {
 
     setupMobileControls(): void {
         var joyStick = (this.plugins.get('rexvirtualjoystickplugin') as any).add(this, {
-            x: this.cameras.main.width / 4 - 300,
-            y: this.cameras.main.height - 200,
+            x: 400,
+            y: this.cameras.main.height - 300,
             radius: 100,
         })
+        if (joyStick) {
+            joyStick.base.setScrollFactor(0);
+            joyStick.thumb.setScrollFactor(0);
+            // Scale down the joystick to fit better with camera zoom
+            joyStick.base.setScale(0.8);
+            joyStick.thumb.setScale(0.8);
+        }
 
         var button = this.add.circle(this.cameras.main.width - 300, this.cameras.main.height - 200, 50, 0xff0000, 0.5)
-            .setInteractive();
+            .setInteractive()
+            .setScrollFactor(0)
+            .setScale(0.8); // Scale down the button to fit better with camera zoom
 
         let isPressed = false;
 
