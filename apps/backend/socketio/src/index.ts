@@ -12,8 +12,13 @@ const httpServer = createServer(app);
 
 // Initialize Socket.IO
 const io = new Server(httpServer, {
-  cors: { origin: '*' },
-  transports: ['websocket'],
+  cors: { 
+    origin: ['http://localhost:3002', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['polling', 'websocket'], // Allow both polling and websocket
+  allowEIO3: true // Allow Engine.IO v3 clients
 });
 
 // Apply express middlewares

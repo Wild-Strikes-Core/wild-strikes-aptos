@@ -32,13 +32,13 @@ export class GameRoom {
     // Initialize player state
     this.playerStates.set(socketId, {
       id: socketId,
-      x: 400 + (this.players.size - 1) * 300, // Spawn players apart
+      x: 960 + (this.players.size - 1) * 300, // Center screen with offset
       y: 200,
       velocityX: 0,
       velocityY: 0,
       health: 100,
       flipX: this.players.size === 2, // Second player faces left
-      anim: "_Idle_Idle",
+      anim: "_Idle",
       lastProcessedTick: 0
     });
 

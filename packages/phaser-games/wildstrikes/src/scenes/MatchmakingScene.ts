@@ -1,4 +1,5 @@
-// Client-side only Matchmaking scene – networking stripped for animation polish
+import { io, Socket } from 'socket.io-client';
+
 export default class Matchmaking extends Phaser.Scene {
     // Scene element references (renamed for clarity)
     private playerSprite!: Phaser.GameObjects.Image;
@@ -9,6 +10,8 @@ export default class Matchmaking extends Phaser.Scene {
 
     private loaderDots: string[] = [".", "..", "..."];
     private loaderIndex = 0;
+
+    private socket: Socket | null = null;
 
     constructor() {
         super("Matchmaking");
@@ -33,7 +36,7 @@ export default class Matchmaking extends Phaser.Scene {
         this.animateLoader();
 
         // Simulate a match being found after a short delay
-        this.time.delayedCall(2500, () => this.goToMatchFound());
+        // this.time.delayedCall(2500, () => this.goToMatchFound());
 
         // Optional ambience - only play if audio is loaded
         if (this.sound.get("waiting-music") || this.cache.audio.exists("waiting-music")) {
@@ -42,6 +45,39 @@ export default class Matchmaking extends Phaser.Scene {
             console.warn("waiting-music audio not found in cache");
         }
         this.events.once("shutdown", this.onShutdown, this);
+
+        this.connectToServer();
+    }
+
+    private connectToServer(): void {
+        console.log('Connecting to matchmaking server...');
+        this.socket = io('http://localhost:3001');
+
+        this.socket.on('connect', () => {
+            console.log('Connected to server:', this.socket!.id);
+            this.findingMatchLabel.setText('Connected! Finding Match...');
+            
+            // Send matchmaking request once connected
+            this.socket!.emit('matchmaking:find');
+        });
+
+        this.socket.on('matchmaking:found', (data: any) => {
+            console.log('Match found:', data);
+            this.findingMatchLabel.setText('Match Found!');
+            
+            // Go to MatchFound scene with socket data
+            this.goToMatchFound(data);
+        });
+
+        this.socket.on('connect_error', (error: any) => {
+            console.error('Connection failed:', error);
+            this.findingMatchLabel.setText('Connection Failed!');
+            
+            // Fallback to single player after 3 seconds
+            this.time.delayedCall(3000, () => {
+                this.scene.start('Arena');
+            });
+        });
     }
 
     /* ------------------------------------------------------------------
@@ -89,11 +125,15 @@ export default class Matchmaking extends Phaser.Scene {
         });
     }
 
-    private goToMatchFound(): void {
+    private goToMatchFound(matchData:any): void {
         this.cameras.main.fadeOut(400, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
             this.scene.stop("Matchmaking");
-            this.scene.start("MatchFound");
+            this.scene.start("MatchFound", {
+                socket: this.socket,
+                roomId: matchData.roomId,
+                opponentId: matchData.opponentId,
+            });
         });
     }
 

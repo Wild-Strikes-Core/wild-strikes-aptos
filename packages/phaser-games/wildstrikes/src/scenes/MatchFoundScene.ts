@@ -1,4 +1,4 @@
-// Client-side only MatchFound scene – all networking stripped
+import { Socket } from "socket.io-client";
 
 export default class MatchFound extends Phaser.Scene {
     // Scene element references (renamed for clarity)
@@ -10,11 +10,23 @@ export default class MatchFound extends Phaser.Scene {
     private enemyCharSprite!: Phaser.GameObjects.Image;
     private vsText!: Phaser.GameObjects.Text;
 
+    private socket: Socket | null = null;
+    private roomId: string = '';
+    private opponentId: string = '';
+
     constructor() {
         super("MatchFound");
     }
 
     create(): void {
+        const gameData = this.scene.settings.data;
+        if (gameData) {
+            this.socket = gameData.socket;
+            this.roomId = gameData.roomId;
+            this.opponentId = gameData.opponentId || '';
+        }
+
+
         // Full-screen background
         const bg = this.add.image(0, 0, "2G_bg");
         bg.setOrigin(0, 0);
@@ -24,8 +36,8 @@ export default class MatchFound extends Phaser.Scene {
         this.editorCreate();
 
         // Static placeholder names for polishing
-        this.leftPlayerName.setText("Player 1");
-        this.rightPlayerName.setText("Player 2");
+        this.leftPlayerName.setText(this.socket?.id.slice(0, 8) || "Player 1");
+        this.rightPlayerName.setText(this.socket?.id.slice(0, 8) || "Player 2");
 
         // Set up initial states & animate entrance
         this.setupInitialStates();
@@ -33,6 +45,24 @@ export default class MatchFound extends Phaser.Scene {
 
         // Automatically transition to Arena after animations
         this.time.delayedCall(3500, () => this.transitionToBattle());
+
+        this.setupMatchListeners();
+    }
+
+    private setupMatchListeners(): void {
+        if (this.socket) {
+            this.socket.on('match:ready', (data: any) => {
+                console.log('Match is ready:', data);
+                this.transitionToBattle();
+            });
+
+            this.socket.on('match:error', (error: any) => {
+                console.error('Match error:', error);
+                // Handle match error (e.g., show message, retry, etc.)
+            });
+        } else {
+            console.warn('Socket not initialized');
+        }
     }
 
     /* ------------------------------------------------------------------
@@ -173,7 +203,12 @@ export default class MatchFound extends Phaser.Scene {
         this.cameras.main.once("cameraflashcomplete", () => {
             this.cameras.main.fadeOut(400);
             this.cameras.main.once("camerafadeoutcomplete", () => {
-                this.scene.start("Arena");
+                this.scene.start("Arena", {
+                    isMultiplayer: true,
+                    socket: this.socket,
+                    roomId: this.roomId,
+                    opponentId: this.opponentId,
+                });
             });
         });
     }

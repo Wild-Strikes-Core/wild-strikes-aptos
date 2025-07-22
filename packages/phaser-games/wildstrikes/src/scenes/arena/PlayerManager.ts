@@ -1,3 +1,4 @@
+import { Socket } from "socket.io-client";
 import { PlayerSpriteManager } from "./PlayerSpriteManager";
 
 export class PlayerManager {
@@ -26,10 +27,17 @@ export class PlayerManager {
     private keyObjects: { [key: string]: Phaser.Input.Keyboard.Key } = {};
     private enableInput: boolean;
 
+    // shaket
+    private socket?: Socket;
+    private playerId: string;
 
-    constructor(private scene: Phaser.Scene, enableInput: boolean = true) {
+
+    constructor(private scene: Phaser.Scene, enableInput: boolean = true, socket?: Socket, playerId?: string) {
         this.scene = scene;
         this.enableInput = enableInput;
+        this.socket = socket;
+        this.playerId = playerId || 'playerONE'; // Default player ID if not provided
+
         this.spriteManager = new PlayerSpriteManager(scene);
         
         // Set up callbacks for when attack animations complete
@@ -299,6 +307,24 @@ export class PlayerManager {
             console.warn('Platform not found on scene for collision setup');
         }
     }
+
+    // multiplayer - start
+    public applyRemoteUpdate(data: any): void {
+        if (!this.player || this.enableInput) return; // only apply updates to remote players
+
+        this.player.setPosition(data.x, data.y);
+        this.player.setVelocity(data.velocityX, data.velocityY);
+        this.player.setFlipX(data.flipX);
+
+        // Update animation if different
+        if (data.anim && this.player.anims.currentAnim?.key !== data.anim) {
+            console.log('Updating remote player animation from', this.player.anims.currentAnim?.key, 'to', data.anim);
+            this.player.anims.play(data.anim, true);
+        }
+    }
+
+
+    // multiplayer - end
 
     public getPlayer(): Phaser.Physics.Arcade.Sprite | null {
         return this.player;

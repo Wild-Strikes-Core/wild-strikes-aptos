@@ -4,12 +4,9 @@ import { DebugMode } from "./DebugMode";
 import { PlayerManager } from "./PlayerManager";
 import { MobileButton } from "./components/mobButton";
 
+import { io, Socket } from 'socket.io-client';
 
 export default class Arena extends Phaser.Scene {
-
-    constructor() {
-        super({ key: "Arena" });
-    }
 
     private mapManager: MapManager;
     private debugMode: DebugMode;
@@ -24,7 +21,18 @@ export default class Arena extends Phaser.Scene {
     // Enable/disable debug mode - set to false for production
     private static readonly DEBUG_ENABLED = true;
 
+    // socket (shaket </3)
+    private socket: Socket | null = null;
+    private roomId: string = '';
+    private isMultiplayer: boolean = false;
+    private lastUpdateTime: number = 0;
+
+    constructor() {
+        super({ key: "Arena" });
+    }
+
     preload(): void {
+
         this.mapManager = new MapManager();
         
         // Load gameplay and audio assets needed for the arena
@@ -37,28 +45,16 @@ export default class Arena extends Phaser.Scene {
         this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
     }
 
-
     create(): void {
-        // Get a random map configuration
-        this.currentMapConfig = this.mapManager.getRandomMapConfig();
-
-        // Set up the map background and music
-        this.mapManager.setupMap(this, this.currentMapConfig);
-
-        // Initialize debug mode if enabled
-        if (Arena.DEBUG_ENABLED) {
-            this.debugMode = new DebugMode(this);
-            this.debugMode.enable();
-            this.debugMode.initialize(this.mapManager, this.currentMapConfig);
+        const gameData = this.scene.settings.data as any;
+        if (gameData && gameData.isMultiplayer) {
+            this.isMultiplayer = true;
+            this.socket = gameData.socket;
+            this.roomId = gameData.roomId;
+            this.setupMultiplayerGame(gameData);
+        } else {
+            this.setupSinglePlayerGame();
         }
-
-        
-        // Create player way above the platform (will fall down due to gravity)
-        const spawnX = this.cameras.main.width / 2; // Center horizontally
-        const spawnY = 200; // High up in the air
-        
-        this.spawnPlayer(this.localPlayer, spawnX, spawnY, true);
-        this.spawnPlayer('playerTWO', spawnX + 300, spawnY, false);
 
         this.setupMobileControls();
 
@@ -75,8 +71,128 @@ export default class Arena extends Phaser.Scene {
         this.playerManager.forEach((playerManager) => {
             playerManager.update();
         });
+
+        // Send position updates for local player in multiplayer (throttled)
+        if (this.isMultiplayer && this.socket) {
+            // Throttle to 20 updates per second instead of 60fps
+            if (time - (this.lastUpdateTime || 0) > 50) {
+                this.sendLocalPlayerUpdate();
+                this.lastUpdateTime = time;
+            }
+        }
     }
 
+    // to be refactored into: ArenaNetworking.ts
+
+    private setupSinglePlayerGame(): void {
+        this.currentMapConfig = this.mapManager.getRandomMapConfig();
+        this.mapManager.setupMap(this, this.currentMapConfig);
+
+        if (Arena.DEBUG_ENABLED) {
+            this.debugMode = new DebugMode(this);
+            this.debugMode.enable();
+            this.debugMode.initialize(this.mapManager, this.currentMapConfig);
+        }
+
+        const spawnX = this.cameras.main.width / 2; // Center horizontally
+        const spawnY = 200; // High up in the air
+
+        this.spawnPlayer(this.localPlayer, spawnX, spawnY, true);
+        this.spawnPlayer('playerTWO', spawnX + 300, spawnY, false);
+    }
+
+    private setupMultiplayerGame(gameData: any): void {
+        // Use random map for now (will be overridden by server)
+        this.currentMapConfig = this.mapManager.getRandomMapConfig();
+        this.mapManager.setupMap(this, this.currentMapConfig);
+
+        this.activateMultiplayerListeners();
+
+        this.socket?.emit('player:ready', { playerId: this.socket.id });
+    }
+
+    private activateMultiplayerListeners(): void {
+        this.socket.on('player:connected', (data) => {
+            console.log('Player connected:', data);
+
+            // Update to synchronized map if provided
+            if (data.mapId !== undefined) {
+                console.log('Switching to synchronized map:', data.mapId);
+                this.currentMapConfig = this.mapManager.allMapConfigs[data.mapId];
+                this.mapManager.setupMap(this, this.currentMapConfig);
+            }
+
+            const localPlayerId = this.socket.id;
+            const player1 = data.player;
+            const player2 = data.player2;
+
+            if (player1.id === localPlayerId) {
+                // We are player 1
+                this.spawnPlayer(player1.id, player1.spawnX, player1.spawnY, true);
+                this.spawnPlayer(player2.id, player2.spawnX, player2.spawnY, false);
+            } else {
+                // We are player 2
+                this.spawnPlayer(player2.id, player2.spawnX, player2.spawnY, true);
+                this.spawnPlayer(player1.id, player1.spawnX, player1.spawnY, false);
+            }
+        });
+
+        // Receive opponent position updates
+        this.socket.on('player:position', (data) => {
+            console.log('Received player position:', data.playerId, 'anim:', data.anim);
+            // Only update if this is not our own position
+            if (data.playerId !== this.socket.id) {
+                this.updateRemotePlayer(data);
+            }
+        });
+
+        // Handle disconnection
+        this.socket.on('player:disconnected', (data) => {
+            console.log('Player disconnected:', data);
+            // Show disconnection UI
+        });
+
+        // Handle reconnection
+        this.socket.on('player:reconnected', (data) => {
+            console.log('Player reconnected:', data);
+            // Hide disconnection UI
+        });
+
+        // Handle match ended
+        this.socket.on('match:ended', (data) => {
+            console.log('Match ended:', data);
+            // Show match result screen
+        });
+    }
+
+    private updateRemotePlayer(data: any): void {
+        const remotePlayerManager = this.playerManager.get(data.playerId);
+        if (remotePlayerManager) {
+            remotePlayerManager.applyRemoteUpdate(data);
+        }
+    }
+
+    private sendLocalPlayerUpdate(): void {
+        const localPlayerManager = this.playerManager.get(this.localPlayer);
+        if (localPlayerManager) {
+            const player = localPlayerManager.getPlayerSprite();
+            if (player && player.body) {
+                // Get current animation state
+                const currentAnim = player.anims.currentAnim?.key || '_Idle';
+                
+                this.socket!.emit('player:move', {
+                    playerId: this.socket.id, // Add playerId to identify the player
+                    x: player.x,
+                    y: player.y,
+                    velocityX: player.body.velocity.x,
+                    velocityY: player.body.velocity.y,
+                    flipX: player.flipX,
+                    anim: currentAnim,
+                    timestamp: Date.now() // Add timestamp for synchronization
+                });
+            }
+        }
+    }
 
     /* ------------------------------------------------------------------
      * Scene shutdown cleanup

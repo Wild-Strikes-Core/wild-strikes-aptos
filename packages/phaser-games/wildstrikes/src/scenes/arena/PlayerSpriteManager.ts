@@ -344,6 +344,16 @@ export class PlayerSpriteManager {
         sprite.destroy();
     }
 
+    // utility for multi
+    public playAnimation(sprite: Phaser.Physics.Arcade.Sprite, animKey: string): void {
+        if (sprite.anims.exists(animKey)) { // Check if animation exists
+            sprite.anims.play(animKey, true); // Play the animation
+            sprite.setData('currentState', animKey.replace('_', '').toLowerCase()); // Update current state
+        } else {
+            console.warn(`Animation ${animKey} does not exist`);
+        }
+    }
+
     // Note: isAttacking is now managed in PlayerManager private properties
     // Use PlayerManager.getIsAttacking() instead
 

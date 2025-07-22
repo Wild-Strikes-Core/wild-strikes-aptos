@@ -65,11 +65,22 @@ export function handlePlayerReady(socket: Socket, data: { playerId: string }) {
   if (gameState && !room.gameStarted) {
     room.startGame();
     
+    // Generate a random map ID for both players to use the same map
+    const mapId = Math.floor(Math.random() * 4); // Assuming you have 4 maps (0-3)
+    
     // Send initial game state to both players
-    room.broadcastToAll('players:connected', {
-      player1: gameState.player1,
-      player2: gameState.player2,
-      selectedMap: 'default' // You can randomize this
+    room.broadcastToAll('player:connected', {
+      player: {
+        id: gameState.player1.id,
+        spawnX: gameState.player1.x,
+        spawnY: gameState.player1.y
+      },
+      player2: {
+        id: gameState.player2.id,
+        spawnX: gameState.player2.x,
+        spawnY: gameState.player2.y
+      },
+      mapId: mapId // Add synchronized map ID
     });
   }
 }
