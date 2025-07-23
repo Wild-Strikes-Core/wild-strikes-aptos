@@ -13,8 +13,8 @@ export default class Arena extends Phaser.Scene {
     private mapManager: MapManager;
     private debugMode: DebugMode;
 
-    private playerONE: PlayerManager;
-    private playerTWO: PlayerManager;
+    private playerManager: Map<string, PlayerManager> = new Map();
+    private localPlayer: string = 'playerONE';
 
     private currentMapConfig: any;
     
@@ -49,16 +49,13 @@ export default class Arena extends Phaser.Scene {
             this.debugMode.initialize(this.mapManager, this.currentMapConfig);
         }
 
-        // Add any additional setup for the arena scene here
-        this.playerONE = new PlayerManager(this);
-        this.playerTWO = new PlayerManager(this, false); // Disable input for playerTWO (dummy)
-
+        
         // Create player way above the platform (will fall down due to gravity)
         const spawnX = this.cameras.main.width / 2; // Center horizontally
         const spawnY = 200; // High up in the air
         
-        this.playerONE.createPlayer(spawnX, spawnY);
-        this.playerTWO.createPlayer(spawnX + 300, spawnY);
+        this.spawnPlayer(this.localPlayer, spawnX, spawnY, true);
+        this.spawnPlayer('playerTWO', spawnX + 300, spawnY, false);
 
         this.setupMobileControls();
 
@@ -72,12 +69,17 @@ export default class Arena extends Phaser.Scene {
         }
 
         // Update player managers
-        if (this.playerONE) {
-            this.playerONE.update();
-        }
-        if (this.playerTWO) {
-            this.playerTWO.update();
-        }
+        // if (this.playerONE) {
+        //     this.playerONE.update();
+        //     this.cameras.main.followOffset.set(-200, 0);
+        // }
+        // if (this.playerTWO) {
+        //     this.playerTWO.update();
+        // }
+
+        this.playerManager.forEach((playerManager) => {
+            playerManager.update();
+        });
     }
 
 
@@ -102,13 +104,22 @@ export default class Arena extends Phaser.Scene {
 
     setupMobileControls(): void {
         var joyStick = (this.plugins.get('rexvirtualjoystickplugin') as any).add(this, {
-            x: this.cameras.main.width / 4 - 300,
-            y: this.cameras.main.height - 200,
+            x: 400,
+            y: this.cameras.main.height - 300,
             radius: 100,
         })
+        if (joyStick) {
+            joyStick.base.setScrollFactor(0);
+            joyStick.thumb.setScrollFactor(0);
+            // Scale down the joystick to fit better with camera zoom
+            joyStick.base.setScale(0.8);
+            joyStick.thumb.setScale(0.8);
+        }
 
         var button = this.add.circle(this.cameras.main.width - 300, this.cameras.main.height - 200, 50, 0xff0000, 0.5)
-            .setInteractive();
+            .setInteractive()
+            .setScrollFactor(0)
+            .setScale(0.8); // Scale down the button to fit better with camera zoom
 
         let isPressed = false;
 
@@ -132,5 +143,38 @@ export default class Arena extends Phaser.Scene {
             button.setScale(1);
             }
         });
+    }
+
+    // for multiplayer-proof code
+    spawnPlayer(playerId: string, spawnX: number, spawnY: number, isLocal: boolean = false) : void {
+        const playerManager = new PlayerManager(this, isLocal);
+        playerManager.createPlayer(spawnX, spawnY);
+        this.playerManager.set(playerId, playerManager);
+        if (isLocal) {
+            this.localPlayer = playerId;
+            
+            this.cameras.main.startFollow(playerManager.getPlayerSprite(), true);
+            this.cameras.main.setZoom(1.3, 1.3);
+            this.cameras.main.setBounds(0, 0, 1920, 1080);
+        }
+    }
+
+    removePlayer(playerId: string): void {
+        const player = this.playerManager.get(playerId);
+        if (player) {
+            player.destroy?.();
+            this.playerManager.delete(playerId);
+        }
+    }
+
+    getLocalPlayer(): Phaser.Physics.Arcade.Sprite | null {
+        const localPlayer = this.playerManager.get(this.localPlayer);
+        return localPlayer?.getPlayerSprite();
+    }
+
+    getAllPlayers(): Phaser.Physics.Arcade.Sprite[] {
+        return Array.from(this.playerManager.values())
+            .map(pm => pm.getPlayerSprite())
+            .filter(sprite => sprite !== null);
     }
 }

@@ -322,4 +322,23 @@ export class PlayerManager {
         return this.isDashing;
     }
 
+    public getPlayerSprite(): Phaser.Physics.Arcade.Sprite | null {
+        return this.player;
+    }
+
+    public destroy(): void {
+        if (this.player) {
+            this.player.destroy();
+            this.player = null;
+        }
+        // Clear input handlers
+        this.scene.input.keyboard?.removeAllListeners();
+        this.scene.input.off('pointerdown');
+        
+        // Clear sprite manager
+        this.spriteManager.destroySprite(this.player);
+    }
+
+    // For multiplayer support (soon):
+
 }

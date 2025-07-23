@@ -340,6 +340,10 @@ export class PlayerSpriteManager {
         return sprite.getData('currentState') || 'idle';
     }
 
+    public destroySprite(sprite: Phaser.Physics.Arcade.Sprite): void {
+        sprite.destroy();
+    }
+
     // Note: isAttacking is now managed in PlayerManager private properties
     // Use PlayerManager.getIsAttacking() instead
 
