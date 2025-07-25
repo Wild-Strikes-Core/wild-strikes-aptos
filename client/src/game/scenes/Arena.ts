@@ -48,6 +48,9 @@ export default class Arena extends Phaser.Scene {
     private player2HealthBarBg!: Phaser.GameObjects.Graphics;
 
     private KEYS!: any;
+    private joystick!: any; // Virtual joystick for movement controls
+    private sprintButtonPressed!: () => boolean; // Function to check sprint button state
+    private isMobileDevice: boolean = false; // Track if we're on a mobile device
     /* START-USER-CODE */
 
     // Socket connection
@@ -443,6 +446,180 @@ export default class Arena extends Phaser.Scene {
 
     private setupControls(): void {}
 
+    /**
+     * Create mobile-specific controls (joystick and touch buttons)
+     */
+    private createMobileControls(): void {
+        console.log("Creating mobile controls...");
+        
+        // Initialize virtual joystick for movement controls
+        this.joystick = (this.plugins.get('rexvirtualjoystickplugin') as any).add(this, {
+            x: 200,
+            y: this.cameras.main.height - 200,
+            radius: 100,
+            base: this.add.circle(0, 0, 100, 0x888888, 0.3),
+            thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.8),
+            dir: '8dir',   // 8-directional movement
+            enable: true
+        });
+
+        // Add attack button for mobile/touch controls
+        const attackButton = this.add.circle(
+            this.cameras.main.width - 150, 
+            this.cameras.main.height - 150, 
+            60, 
+            0xff4444, 
+            0.7
+        );
+        attackButton.setInteractive();
+        attackButton.setScrollFactor(0);
+        attackButton.setDepth(10);
+        
+        const attackText = this.add.text(
+            this.cameras.main.width - 150, 
+            this.cameras.main.height - 150, 
+            'ATK', 
+            {
+                fontFamily: 'Arial',
+                fontSize: '24px',
+                color: '#ffffff',
+                fontStyle: 'bold'
+            }
+        );
+        attackText.setOrigin(0.5);
+        attackText.setScrollFactor(0);
+        attackText.setDepth(11);
+        
+        attackButton.on('pointerdown', () => {
+            this.performAttack();
+        });
+
+        // Add jump button
+        const jumpButton = this.add.circle(
+            this.cameras.main.width - 280, 
+            this.cameras.main.height - 150, 
+            50, 
+            0x44ff44, 
+            0.7
+        );
+        jumpButton.setInteractive();
+        jumpButton.setScrollFactor(0);
+        jumpButton.setDepth(10);
+        
+        const jumpText = this.add.text(
+            this.cameras.main.width - 280, 
+            this.cameras.main.height - 150, 
+            'JUMP', 
+            {
+                fontFamily: 'Arial',
+                fontSize: '18px',
+                color: '#ffffff',
+                fontStyle: 'bold'
+            }
+        );
+        jumpText.setOrigin(0.5);
+        jumpText.setScrollFactor(0);
+        jumpText.setDepth(11);
+        
+        jumpButton.on('pointerdown', () => {
+            const onGround = this.MY_PLAYER.sprite?.body?.touching!.down! || 
+                            this.MY_PLAYER.sprite?.body?.blocked!.down!;
+            
+            if (onGround) {
+                this.MY_PLAYER.sprite?.setVelocityY(-2000)!;
+                this.jumpCount = 1;
+            } else if (!onGround && this.jumpCount < this.maxJumps) {
+                this.MY_PLAYER.sprite?.setVelocityY(-2000)!;
+                this.jumpCount++;
+                
+                if (this.MY_PLAYER.sprite) {
+                    this.tweens.add({
+                        targets: this.MY_PLAYER.sprite,
+                        alpha: 0.7,
+                        duration: 100,
+                        yoyo: true,
+                        repeat: 1
+                    });
+                }
+            }
+        });
+
+        // Add sprint button
+        const sprintButton = this.add.circle(
+            this.cameras.main.width - 410, 
+            this.cameras.main.height - 150, 
+            45, 
+            0xffaa00, 
+            0.7
+        );
+        sprintButton.setInteractive();
+        sprintButton.setScrollFactor(0);
+        sprintButton.setDepth(10);
+        
+        const sprintText = this.add.text(
+            this.cameras.main.width - 410, 
+            this.cameras.main.height - 150, 
+            'RUN', 
+            {
+                fontFamily: 'Arial',
+                fontSize: '16px',
+                color: '#ffffff',
+                fontStyle: 'bold'
+            }
+        );
+        sprintText.setOrigin(0.5);
+        sprintText.setScrollFactor(0);
+        sprintText.setDepth(11);
+        
+        let isSprintPressed = false;
+        sprintButton.on('pointerdown', () => {
+            isSprintPressed = true;
+        });
+        
+        this.input.on('pointerup', () => {
+            isSprintPressed = false;
+        });
+        
+        this.sprintButtonPressed = () => isSprintPressed;
+
+        // Store references for cleanup
+        this.joystick.attackButton = attackButton;
+        this.joystick.attackText = attackText;
+        this.joystick.jumpButton = jumpButton;
+        this.joystick.jumpText = jumpText;
+        this.joystick.sprintButton = sprintButton;
+        this.joystick.sprintText = sprintText;
+        
+        console.log("Mobile controls created successfully");
+    }
+
+    /**
+     * Setup PC-specific controls (mouse click to attack)
+     */
+    private setupPCControls(): void {
+        console.log("Setting up PC controls...");
+        
+        // Create a placeholder joystick object for PC to prevent errors
+        this.joystick = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            force: 0,
+            wasJumpPressed: false
+        };
+        
+        // Create a placeholder sprint function for PC (always returns false since we use shift key)
+        this.sprintButtonPressed = () => false;
+        
+        // Setup mouse click to attack for PC
+        this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+            this.performAttack();
+        });
+        
+        console.log("PC controls setup completed");
+    }
+
     create() {
         console.log("Arena scene starting - initializing...");
         
@@ -485,6 +662,25 @@ export default class Arena extends Phaser.Scene {
             shift: Phaser.Input.Keyboard.KeyCodes.SHIFT,  // Shift for running
             attack: Phaser.Input.Keyboard.KeyCodes.X,  // X key for attack (alternative to mouse)
         })!;
+
+        // Detect if we're on a mobile device using Phaser's device detection
+        this.isMobileDevice = this.sys.game.device.os.android || 
+                             this.sys.game.device.os.iOS || 
+                             this.sys.game.device.os.iPad ||
+                             this.sys.game.device.os.iPhone ||
+                             this.sys.game.device.input.touch;
+        
+        console.log("Device detection - isMobile:", this.isMobileDevice);
+
+        // Only create mobile controls if on mobile device
+        if (this.isMobileDevice) {
+            this.createMobileControls();
+        }
+
+        // Setup PC controls only if not on mobile
+        if (!this.isMobileDevice) {
+            this.setupPCControls();
+        }
 
         console.log("Setting up socket event listeners");
 
@@ -950,11 +1146,6 @@ export default class Arena extends Phaser.Scene {
             }
         });
 
-        this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            // Allow attacking while jumping or on ground - no restrictions!
-            this.performAttack();
-        });
-
         // Prevent context menu on right click
         this.game.canvas.addEventListener('contextmenu', this.contextMenuHandler);
 
@@ -1275,8 +1466,18 @@ export default class Arena extends Phaser.Scene {
             this.player2HealthBar,
             this.player1HealthBarBg,
             this.player2HealthBarBg,
+            // Only include mobile controls if on mobile device
+            ...(this.isMobileDevice ? [
+                this.joystick,
+                this.joystick?.attackButton,
+                this.joystick?.attackText,
+                this.joystick?.jumpButton,
+                this.joystick?.jumpText,
+                this.joystick?.sprintButton,
+                this.joystick?.sprintText,
+            ] : []),
             ...this.uiManager.getUIElements(), // Get any additional UI elements from the manager
-        ];
+        ].filter(Boolean); // Filter out any undefined elements
 
         // Make main camera ignore ALL UI elements
         this.sceneManager.setMainIgnoreUI(uiElements);
@@ -1437,11 +1638,33 @@ export default class Arena extends Phaser.Scene {
             this.performAttack();
         }
 
-        // Movement with running support
-        const isRunning = this.KEYS.shift?.isDown || false;
+        // Movement with running support (keyboard + joystick + mobile sprint button)
+        const isRunning = this.KEYS.shift?.isDown || (this.sprintButtonPressed && this.sprintButtonPressed()) || false;
         const baseSpeed = 200;
         const runSpeed = 350; // Faster when running
         let currentAnimation = "_Idle_Idle"; // Default animation
+        
+        // Get joystick input with sensitivity adjustments (only if on mobile)
+        const joystickLeft = this.isMobileDevice ? this.joystick.left : false;
+        const joystickRight = this.isMobileDevice ? this.joystick.right : false;
+        const joystickUp = this.isMobileDevice ? this.joystick.up : false;
+        const joystickDown = this.isMobileDevice ? this.joystick.down : false;
+        const joystickForce = this.isMobileDevice ? this.joystick.force : 0; // Force magnitude (0-1)
+        
+        // Joystick sensitivity settings
+        const minForceThreshold = 0.15; // Minimum force needed to register movement (deadzone)
+        const jumpForceThreshold = 0.75; // Force needed to trigger jump
+        const maxSpeedMultiplier = 0.7; // Maximum speed multiplier for joystick (reduces max speed)
+        
+        // Apply deadzone and scale force for more controlled movement
+        const adjustedForce = joystickForce > minForceThreshold ? 
+            Math.min((joystickForce - minForceThreshold) / (1 - minForceThreshold) * maxSpeedMultiplier, maxSpeedMultiplier) : 0;
+        
+        // Track joystick jump state to prevent continuous jumping (mobile only)
+        const joystickJumpPressed = this.isMobileDevice && joystickUp && joystickForce > jumpForceThreshold;
+        if (this.isMobileDevice && !this.joystick.wasJumpPressed) {
+            this.joystick.wasJumpPressed = false;
+        }
         
         // Check if player is in air (not on ground)
         const isInAir = !onGround;
@@ -1450,10 +1673,21 @@ export default class Arena extends Phaser.Scene {
         if (onGround) {
             // Reset jump count when on ground
             this.jumpCount = 0;
+            // Reset joystick jump state when on ground
+            if (!joystickJumpPressed) {
+                this.joystick.wasJumpPressed = false;
+            }
         }
 
-        // Jump with space
-        if (Phaser.Input.Keyboard.JustDown(this.KEYS.up!)) {
+        // Jump with space key or joystick up (with state tracking to prevent continuous jumping)
+        const keyboardJump = Phaser.Input.Keyboard.JustDown(this.KEYS.up!);
+        const joystickJump = joystickJumpPressed && !this.joystick.wasJumpPressed;
+        
+        if (keyboardJump || joystickJump) {
+            if (joystickJump) {
+                this.joystick.wasJumpPressed = true; // Mark that joystick jump was pressed
+            }
+            
             // First jump (from ground)
             if (onGround) {
                 this.MY_PLAYER.sprite?.setVelocityY(-2000)!;
@@ -1490,18 +1724,33 @@ export default class Arena extends Phaser.Scene {
             }
         }
         
+        // Reset joystick jump state when not pressing up (mobile only)
+        if (!joystickJumpPressed && this.isMobileDevice) {
+            this.joystick.wasJumpPressed = false;
+        }
+        
         if (isInAir && !this.MY_PLAYER.sprite?.getData('isAttacking')) {
             // Use jump or fall animation when in air (but not when attacking)
             const velocityY = this.MY_PLAYER.sprite?.body?.velocity.y || 0;
             currentAnimation = velocityY < 0 ? "_Jump" : "_Fall";
-        } else if (this.KEYS.left!.isDown && !this.MY_PLAYER.sprite?.getData('isAttacking')) {
-            const speed = isRunning ? -runSpeed : -baseSpeed;
+        } else if ((this.KEYS.left!.isDown || (joystickLeft && adjustedForce > 0)) && !this.MY_PLAYER.sprite?.getData('isAttacking')) {
+            // Calculate speed based on joystick force or use default for keyboard
+            let speed = isRunning ? -runSpeed : -baseSpeed;
+            if (joystickLeft && adjustedForce > 0) {
+                // Use adjusted force for more precise control
+                speed = -(isRunning ? runSpeed : baseSpeed) * adjustedForce;
+            }
             this.MY_PLAYER.sprite?.setVelocityX(speed)!;
             this.MY_PLAYER.sprite?.setFlipX(true);
             // Use _Run animation for both walking and running (as per reference)
             currentAnimation = "_Run";
-        } else if (this.KEYS.right.isDown && !this.MY_PLAYER.sprite?.getData('isAttacking')) {
-            const speed = isRunning ? runSpeed : baseSpeed;
+        } else if ((this.KEYS.right.isDown || (joystickRight && adjustedForce > 0)) && !this.MY_PLAYER.sprite?.getData('isAttacking')) {
+            // Calculate speed based on joystick force or use default for keyboard
+            let speed = isRunning ? runSpeed : baseSpeed;
+            if (joystickRight && adjustedForce > 0) {
+                // Use adjusted force for more precise control
+                speed = (isRunning ? runSpeed : baseSpeed) * adjustedForce;
+            }
             this.MY_PLAYER.sprite?.setVelocityX(speed)!;
             this.MY_PLAYER.sprite?.setFlipX(false);
             // Use _Run animation for both walking and running (as per reference)
@@ -1976,6 +2225,33 @@ export default class Arena extends Phaser.Scene {
         // Remove context menu event listener
         if (this.game.canvas) {
             this.game.canvas.removeEventListener('contextmenu', this.contextMenuHandler);
+        }
+        
+        // Clean up virtual joystick and mobile controls
+        if (this.joystick && this.isMobileDevice) {
+            // Clean up attack button and text if they exist
+            if (this.joystick.attackButton) {
+                this.joystick.attackButton.destroy();
+            }
+            if (this.joystick.attackText) {
+                this.joystick.attackText.destroy();
+            }
+            // Clean up jump button and text if they exist
+            if (this.joystick.jumpButton) {
+                this.joystick.jumpButton.destroy();
+            }
+            if (this.joystick.jumpText) {
+                this.joystick.jumpText.destroy();
+            }
+            // Clean up sprint button and text if they exist
+            if (this.joystick.sprintButton) {
+                this.joystick.sprintButton.destroy();
+            }
+            if (this.joystick.sprintText) {
+                this.joystick.sprintText.destroy();
+            }
+            this.joystick.destroy();
+            this.joystick = null;
         }
         
         // Clean up any timers

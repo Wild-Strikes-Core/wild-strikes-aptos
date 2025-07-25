@@ -50,6 +50,10 @@ export default class Preloader extends Phaser.Scene {
      * Groups assets by categories for better organization
      */
     preload() {
+        // PLUGINS
+        // Load Rex Virtual Joystick plugin for mobile controls
+        this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
+        
         // UI ASSETS
         // Main menu and navigation screens
         this.load.pack("gameMenu", "assets/gameMenu-asset-pack.json"); // Main game menu UI
