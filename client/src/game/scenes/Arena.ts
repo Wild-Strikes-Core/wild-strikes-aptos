@@ -59,6 +59,9 @@ export default class Arena extends Phaser.Scene {
     private attackText!: Phaser.GameObjects.Text;
     private jumpText!: Phaser.GameObjects.Text;
     private sprintText!: Phaser.GameObjects.Text;
+    
+    // Fullscreen control
+    private fullscreenButton!: Phaser.GameObjects.Text;
     /* START-USER-CODE */
 
     // Socket connection
@@ -571,6 +574,72 @@ export default class Arena extends Phaser.Scene {
     }
 
     /**
+     * Create fullscreen toggle button
+     */
+    private createFullscreenButton(): void {
+        console.log("Creating fullscreen button...");
+        
+        // Create fullscreen button in top-right corner
+        this.fullscreenButton = this.add.text(
+            this.cameras.main.width - 80,
+            30,
+            '⛶', // Fullscreen symbol (you can replace with an icon asset later)
+            {
+                fontFamily: 'Arial',
+                fontSize: '32px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        
+        this.fullscreenButton.setOrigin(0.5);
+        this.fullscreenButton.setInteractive({ useHandCursor: true });
+        this.fullscreenButton.setScrollFactor(0); // Keep pinned to corner
+        this.fullscreenButton.setDepth(20); // Make sure it's on top
+        this.fullscreenButton.setAlpha(0.8); // Slightly transparent so it's not too intrusive
+        
+        // Handle fullscreen toggle
+        this.fullscreenButton.on('pointerdown', () => {
+            console.log("Fullscreen button pressed");
+            
+            if (this.scale.isFullscreen) {
+                console.log("Exiting fullscreen");
+                this.scale.stopFullscreen();
+            } else {
+                console.log("Entering fullscreen");
+                this.scale.startFullscreen();
+            }
+        });
+        
+        // Add hover effects
+        this.fullscreenButton.on('pointerover', () => {
+            this.fullscreenButton.setAlpha(1.0);
+            this.fullscreenButton.setScale(1.1);
+        });
+        
+        this.fullscreenButton.on('pointerout', () => {
+            this.fullscreenButton.setAlpha(0.8);
+            this.fullscreenButton.setScale(1.0);
+        });
+        
+        // Listen for fullscreen state changes to update button appearance
+        this.scale.on('enterfullscreen', () => {
+            console.log("Entered fullscreen mode");
+            this.fullscreenButton.setText('⛷'); // Exit fullscreen symbol
+            this.fullscreenButton.setColor('#00ff00'); // Green when in fullscreen
+        });
+        
+        this.scale.on('leavefullscreen', () => {
+            console.log("Left fullscreen mode");
+            this.fullscreenButton.setText('⛶'); // Enter fullscreen symbol
+            this.fullscreenButton.setColor('#ffffff'); // White when not in fullscreen
+        });
+        
+        console.log("Fullscreen button created successfully");
+    }
+
+    /**
      * Setup PC-specific controls (mouse click to attack)
      */
     private setupPCControls(): void {
@@ -727,6 +796,11 @@ export default class Arena extends Phaser.Scene {
         // Setup PC controls only if not on mobile
         if (!this.isMobileDevice) {
             this.setupPCControls();
+        }
+
+        // Add fullscreen button for mobile devices (if fullscreen is supported)
+        if (this.scale.fullscreen.available) {
+            this.createFullscreenButton();
         }
 
         console.log("Setting up socket event listeners");
@@ -1560,6 +1634,8 @@ export default class Arena extends Phaser.Scene {
                 this.sprintButton,
                 this.sprintText,
             ] : []),
+            // Include fullscreen button if it exists
+            ...(this.fullscreenButton ? [this.fullscreenButton] : []),
             ...this.uiManager.getUIElements(), // Get any additional UI elements from the manager
         ].filter(Boolean); // Filter out any undefined elements
 
@@ -2224,6 +2300,12 @@ export default class Arena extends Phaser.Scene {
         this.socket.off("playersConnected");
         this.socket.off("newPlayer");
         this.socket.off("playerDisconnected");
+
+        // Clean up fullscreen event listeners
+        if (this.scale) {
+            this.scale.off('enterfullscreen');
+            this.scale.off('leavefullscreen');
+        }
 
         // Clean up all managers
         if (this.playerManager) {
