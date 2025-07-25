@@ -4,8 +4,7 @@ body {
     color: rgba(255, 255, 255, 0.87);
     background-color: #000000; 
     font-family: Arial, Helvetica, sans-serif;
-    /* Prevent default touch behaviors that interfere with multi-touch */
-    touch-action: none;
+    /* Allow normal scrolling on the page, but prevent text selection */
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;

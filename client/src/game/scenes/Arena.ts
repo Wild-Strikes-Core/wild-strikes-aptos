@@ -392,8 +392,7 @@ export default class Arena extends Phaser.Scene {
             // Mobile optimizations for multi-touch
             forceMin: 8,    // Minimum force threshold
             fixed: true,    // Fixed position joystick
-            capturePointer: false, // Allow other touch events to work
-            pointer: 1      // Use specific pointer ID for joystick
+            capturePointer: false // Allow other touch events to work
         });
         
         console.log("Virtual joystick created for mobile device");
