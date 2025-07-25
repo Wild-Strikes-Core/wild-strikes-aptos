@@ -165,6 +165,13 @@ export default class Arena extends Phaser.Scene {
     private jumpCount: number = 0; // Tracks how many jumps have been performed since last touching ground
     private maxJumps: number = 2; // Maximum number of jumps allowed (1 = normal jump, 2 = double jump)
 
+    // 1. Add rexTouchState plugin loading in create() if not already loaded
+    private attackButtonState!: any;
+    private jumpButtonState!: any;
+    private sprintButtonState!: any;
+    private lastMobileAttackDown: boolean;
+    private lastMobileJumpDown: boolean;
+
     constructor() {
         super("Arena");
     }
@@ -1360,6 +1367,27 @@ export default class Arena extends Phaser.Scene {
         // Background music will be started when we receive server data with selected map
         // Set up shutdown event listener to stop music when scene closes
         this.events.on("shutdown", this.onShutdown, this);
+
+        // 1. Add rexTouchState plugin loading in create() if not already loaded
+        if (!this.plugins.get('rexTouchState')) {
+            this.load.plugin(
+                'rexTouchState',
+                'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rextouchstateplugin.min.js',
+                true
+            );
+            this.load.once('complete', () => {
+                // Continue scene setup after plugin is loaded
+                this.finishCreate();
+            });
+            this.load.start();
+            return;
+        }
+        this.finishCreate();
+    }
+
+    // Move the rest of your create() logic to finishCreate()
+    finishCreate() {
+        // ... everything that was in create() after plugin loading ...
     }
 
     /**
@@ -1683,7 +1711,7 @@ export default class Arena extends Phaser.Scene {
         }
 
         // Movement with running support (keyboard + joystick + mobile sprint button)
-        const isRunning = this.KEYS.shift?.isDown || (this.sprintButtonPressed && this.sprintButtonPressed()) || false;
+        const isRunning = (this.isMobileDevice && this.sprintButtonState?.isDown) || this.KEYS.shift?.isDown;
         const baseSpeed = 200;
         const runSpeed = 350; // Faster when running
         let currentAnimation = "_Idle_Idle"; // Default animation
@@ -2038,6 +2066,39 @@ export default class Arena extends Phaser.Scene {
         //         this.refreshAllPlatformColliders();
         //     }
         // }
+
+        // --- NEW: Check Mobile Button States with debounce ---
+        if (this.isMobileDevice) {
+            // Attack (debounce: only trigger on justDown)
+            if (this.attackButtonState?.isDown && !this.lastMobileAttackDown) {
+                this.performAttack();
+            }
+            this.lastMobileAttackDown = !!this.attackButtonState?.isDown;
+            // Jump (debounce: only trigger on justDown)
+            if (this.jumpButtonState?.isDown && !this.lastMobileJumpDown) {
+                const onGround = this.MY_PLAYER.sprite?.body?.touching.down || this.MY_PLAYER.sprite?.body?.blocked.down;
+                if (onGround) {
+                    this.MY_PLAYER.sprite?.setVelocityY(-2000);
+                    this.jumpCount = 1;
+                } else if (!onGround && this.jumpCount < this.maxJumps) {
+                    this.MY_PLAYER.sprite?.setVelocityY(-2000);
+                    this.jumpCount++;
+                    if (this.MY_PLAYER.sprite) {
+                        this.tweens.add({
+                            targets: this.MY_PLAYER.sprite,
+                            alpha: 0.7,
+                            duration: 100,
+                            yoyo: true,
+                            repeat: 1
+                        });
+                    }
+                }
+            }
+            this.lastMobileJumpDown = !!this.jumpButtonState?.isDown;
+        }
+        // --- MODIFIED: Running Logic ---
+        // Check sprint button state for mobile, or shift key for desktop
+        const isRunning = (this.isMobileDevice && this.sprintButtonState?.isDown) || this.KEYS.shift?.isDown;
     }
 
     /**
