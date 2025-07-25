@@ -185,6 +185,28 @@ export default class Arena extends Phaser.Scene {
             console.log("Using server-selected map:", this.selectedMap.name, "with music:", this.selectedMap.musicKey);
         }
         
+        // Mobile optimization: Add a small delay to ensure textures are fully loaded
+        if (this.sys.game.device.input.touch) {
+            console.log("Mobile device detected - ensuring texture loading...");
+            
+            // Wait a frame to ensure all textures are loaded
+            this.time.delayedCall(50, () => {
+                this.createBackgroundSprites();
+            });
+        } else {
+            this.createBackgroundSprites();
+        }
+    }
+
+    /**
+     * Create background sprites (separated for mobile optimization)
+     */
+    private createBackgroundSprites(): void {
+        if (!this.selectedMap) {
+            console.error("No selected map available for background creation");
+            return;
+        }
+        
         // Create background based on selected map
         if (this.selectedMap.name === "forest") {
             // Forest map uses spritesheet frames from newMap
@@ -203,12 +225,33 @@ export default class Arena extends Phaser.Scene {
             this.grass = this.add.sprite(960, 656, this.selectedMap.backgroundKey, 3);
             this.grass.setDepth(-1);
             console.log("Forest grass created:", this.grass);
+            
+            // Mobile optimization: Check if textures loaded properly
+            if (this.isMobileDevice) {
+                console.log("Mobile - Forest background texture info:", {
+                    key: this.selectedMap.backgroundKey,
+                    texture: this.background.texture,
+                    frame: this.background.frame,
+                    visible: this.background.visible
+                });
+            }
         } else if (this.selectedMap.name === "Philippines") {
             // Philippines map uses a single background image
             this.background = this.add.sprite(960, 540, this.selectedMap.backgroundKey);
             this.background.setDisplaySize(1920, 1080); // Scale to fit screen
             this.background.setDepth(-4);
             console.log("Philippines background created:", this.background);
+            
+            // Mobile optimization: Verify texture loading
+            if (this.isMobileDevice) {
+                console.log("Mobile - Philippines background texture info:", {
+                    key: this.selectedMap.backgroundKey,
+                    texture: this.background.texture,
+                    displayWidth: this.background.displayWidth,
+                    displayHeight: this.background.displayHeight,
+                    visible: this.background.visible
+                });
+            }
             
             // Create placeholder sprites for consistency (hidden)
             this.background_2 = this.add.sprite(0, 0, "").setVisible(false);
@@ -460,8 +503,13 @@ export default class Arena extends Phaser.Scene {
             base: this.add.circle(0, 0, 100, 0x888888, 0.3),
             thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.8),
             dir: '8dir',   // 8-directional movement
-            enable: true
+            enable: true,
+            // Mobile optimizations
+            forceMin: 8,    // Minimum force threshold
+            fixed: true     // Fixed position joystick
         });
+        
+        console.log("Virtual joystick created for mobile device");
 
         // Add attack button for mobile/touch controls
         const attackButton = this.add.circle(
@@ -491,6 +539,7 @@ export default class Arena extends Phaser.Scene {
         attackText.setDepth(11);
         
         attackButton.on('pointerdown', () => {
+            console.log("Attack button pressed");
             this.performAttack();
         });
 
@@ -522,6 +571,7 @@ export default class Arena extends Phaser.Scene {
         jumpText.setDepth(11);
         
         jumpButton.on('pointerdown', () => {
+            console.log("Jump button pressed");
             const onGround = this.MY_PLAYER.sprite?.body?.touching!.down! || 
                             this.MY_PLAYER.sprite?.body?.blocked!.down!;
             
@@ -572,12 +622,22 @@ export default class Arena extends Phaser.Scene {
         sprintText.setDepth(11);
         
         let isSprintPressed = false;
+        
+        // Sprint button functionality - handle events on the button itself
         sprintButton.on('pointerdown', () => {
             isSprintPressed = true;
+            console.log("Sprint button pressed");
         });
         
-        this.input.on('pointerup', () => {
+        sprintButton.on('pointerup', () => {
             isSprintPressed = false;
+            console.log("Sprint button released");
+        });
+        
+        // Also handle when pointer leaves the button area
+        sprintButton.on('pointerout', () => {
+            isSprintPressed = false;
+            console.log("Sprint button pointer out");
         });
         
         this.sprintButtonPressed = () => isSprintPressed;
@@ -618,6 +678,49 @@ export default class Arena extends Phaser.Scene {
         });
         
         console.log("PC controls setup completed");
+    }
+
+    /**
+     * Debug mobile asset loading issues
+     */
+    private debugMobileAssets(): void {
+        if (!this.isMobileDevice) return;
+        
+        console.log("=== MOBILE ASSET DEBUG ===");
+        
+        // Check texture manager
+        console.log("Texture manager keys:", Object.keys(this.textures.list));
+        
+        // Check specific background textures
+        const backgroundTextures = ['newMap', 'Philippines', 'Japan', 'France'];
+        backgroundTextures.forEach(key => {
+            const texture = this.textures.get(key);
+            if (texture) {
+                console.log(`Texture ${key}:`, {
+                    key: texture.key,
+                    source: texture.source,
+                    frames: Object.keys(texture.frames)
+                });
+            } else {
+                console.error(`Missing texture: ${key}`);
+            }
+        });
+        
+        // Check current background sprites
+        if (this.background) {
+            console.log("Background sprite:", {
+                texture: this.background.texture.key,
+                frame: this.background.frame.name,
+                visible: this.background.visible,
+                alpha: this.background.alpha,
+                x: this.background.x,
+                y: this.background.y,
+                width: this.background.width,
+                height: this.background.height
+            });
+        }
+        
+        console.log("=== END MOBILE ASSET DEBUG ===");
     }
 
     create() {
@@ -671,10 +774,33 @@ export default class Arena extends Phaser.Scene {
                              this.sys.game.device.input.touch;
         
         console.log("Device detection - isMobile:", this.isMobileDevice);
+        console.log("Device info:", {
+            android: this.sys.game.device.os.android,
+            iOS: this.sys.game.device.os.iOS,
+            iPad: this.sys.game.device.os.iPad,
+            iPhone: this.sys.game.device.os.iPhone,
+            touch: this.sys.game.device.input.touch
+        });
+
+        // Debug: Check if textures are loaded properly on mobile
+        if (this.isMobileDevice) {
+            console.log("Mobile device detected - checking texture loading...");
+            const textureKeys = Object.keys(this.textures.list);
+            console.log("Available textures:", textureKeys);
+            
+            // Check if key textures exist
+            const requiredTextures = ['newMap', 'Philippines', 'Japan', 'France'];
+            requiredTextures.forEach(key => {
+                const texture = this.textures.get(key);
+                console.log(`Texture ${key}:`, texture ? 'loaded' : 'missing');
+            });
+        }
 
         // Only create mobile controls if on mobile device
         if (this.isMobileDevice) {
             this.createMobileControls();
+            // Debug mobile assets after creating controls
+            this.debugMobileAssets();
         }
 
         // Setup PC controls only if not on mobile
