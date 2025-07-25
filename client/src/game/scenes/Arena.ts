@@ -172,116 +172,8 @@ export default class Arena extends Phaser.Scene {
     editorCreate(): void {
         console.log("Starting editorCreate...");
         
-        // NOTE: Map selection is now handled by server and received via playersConnected event
-        // We'll use a default map initially and update it when we receive server data
-        if (!this.selectedMap) {
-            this.selectedMap = {
-                name: "forest",
-                backgroundKey: "newMap",
-                musicKey: "in-match"
-            };
-            console.log("Using default map (will be updated by server):", this.selectedMap.name);
-        } else {
-            console.log("Using server-selected map:", this.selectedMap.name, "with music:", this.selectedMap.musicKey);
-        }
-        
-        // Mobile optimization: Add a small delay to ensure textures are fully loaded
-        if (this.sys.game.device.input.touch) {
-            console.log("Mobile device detected - ensuring texture loading...");
-            
-            // Wait a frame to ensure all textures are loaded
-            this.time.delayedCall(50, () => {
-                this.createBackgroundSprites();
-            });
-        } else {
-            this.createBackgroundSprites();
-        }
-    }
-
-    /**
-     * Create background sprites (separated for mobile optimization)
-     */
-    private createBackgroundSprites(): void {
-        if (!this.selectedMap) {
-            console.error("No selected map available for background creation");
-            return;
-        }
-        
-        // Create background based on selected map
-        if (this.selectedMap.name === "forest") {
-            // Forest map uses spritesheet frames from newMap
-            this.background = this.add.sprite(960, 544, this.selectedMap.backgroundKey, 0);
-            this.background.setDepth(-4);
-            console.log("Forest background created:", this.background);
-
-            this.background_2 = this.add.sprite(960, 560, this.selectedMap.backgroundKey, 1);
-            this.background_2.setDepth(-3);
-            console.log("Forest background_2 created:", this.background_2);
-
-            this.background_3 = this.add.sprite(960, 656, this.selectedMap.backgroundKey, 2);
-            this.background_3.setDepth(-2);
-            console.log("Forest background_3 created:", this.background_3);
-
-            this.grass = this.add.sprite(960, 656, this.selectedMap.backgroundKey, 3);
-            this.grass.setDepth(-1);
-            console.log("Forest grass created:", this.grass);
-            
-            // Mobile optimization: Check if textures loaded properly
-            if (this.isMobileDevice) {
-                console.log("Mobile - Forest background texture info:", {
-                    key: this.selectedMap.backgroundKey,
-                    texture: this.background.texture,
-                    frame: this.background.frame,
-                    visible: this.background.visible
-                });
-            }
-        } else if (this.selectedMap.name === "Philippines") {
-            // Philippines map uses a single background image
-            this.background = this.add.sprite(960, 540, this.selectedMap.backgroundKey);
-            this.background.setDisplaySize(1920, 1080); // Scale to fit screen
-            this.background.setDepth(-4);
-            console.log("Philippines background created:", this.background);
-            
-            // Mobile optimization: Verify texture loading
-            if (this.isMobileDevice) {
-                console.log("Mobile - Philippines background texture info:", {
-                    key: this.selectedMap.backgroundKey,
-                    texture: this.background.texture,
-                    displayWidth: this.background.displayWidth,
-                    displayHeight: this.background.displayHeight,
-                    visible: this.background.visible
-                });
-            }
-            
-            // Create placeholder sprites for consistency (hidden)
-            this.background_2 = this.add.sprite(0, 0, "").setVisible(false);
-            this.background_3 = this.add.sprite(0, 0, "").setVisible(false);
-            this.grass = this.add.sprite(0, 0, "").setVisible(false);
-        } else if (this.selectedMap.name === "Japan") {
-            // Japan map uses a single background image
-            this.background = this.add.sprite(960, 540, this.selectedMap.backgroundKey);
-            this.background.setDisplaySize(1920, 1080); // Scale to fit screen
-            this.background.setDepth(-4);
-            console.log("Japan background created:", this.background);
-            
-            // Create placeholder sprites for consistency (hidden)
-            this.background_2 = this.add.sprite(0, 0, "").setVisible(false);
-            this.background_3 = this.add.sprite(0, 0, "").setVisible(false);
-            this.grass = this.add.sprite(0, 0, "").setVisible(false);
-        } else if (this.selectedMap.name === "France") {
-            // France map uses a single background image
-            this.background = this.add.sprite(960, 540, this.selectedMap.backgroundKey);
-            this.background.setDisplaySize(1920, 1080); // Scale to fit screen
-            this.background.setDepth(-4);
-            console.log("France background created:", this.background);
-            
-            // Create placeholder sprites for consistency (hidden)
-            this.background_2 = this.add.sprite(0, 0, "").setVisible(false);
-            this.background_3 = this.add.sprite(0, 0, "").setVisible(false);
-            this.grass = this.add.sprite(0, 0, "").setVisible(false);
-        }
-
-        // platform
+        // Only create platform and UI elements here. Remove background creation logic.
+        // Platform
         const platform = this.physics.add.staticImage(48, 1088, "M_playerCard");
         platform.scaleX = 5;
         platform.alpha = 0.1;
@@ -293,19 +185,19 @@ export default class Arena extends Phaser.Scene {
         platform.body.immovable = true;
         platform.body.setSize(830, 171, false);
         console.log("Platform created:", platform);
-
+        this.platform = platform;
+        
+        // UI elements (unchanged)
         // player1HP
         const player1HP = this.add.text(678, 708, "", {});
         player1HP.text = "(100/100 HP)";
         player1HP.setStyle({ fontSize: "24px", fontStyle: "bold italic" });
         player1HP.setDepth(10); // Ensure UI stays on top
-
         // player1STA
         const player1STA = this.add.text(672, 736, "", {});
         player1STA.text = "(100/100 STA)";
         player1STA.setStyle({ fontSize: "24px", fontStyle: "bold italic" });
         player1STA.setDepth(10); // Ensure UI stays on top
-
         // p1infoContainer
         const p1infoContainer = this.add.image(
             336,
@@ -320,7 +212,6 @@ export default class Arena extends Phaser.Scene {
         p1infoContainer.alphaBottomLeft = 0.8;
         p1infoContainer.alphaBottomRight = 0.8;
         p1infoContainer.setDepth(5); // Ensure UI stays on top
-
         // p2infoContainer
         const p2infoContainer = this.add.image(
             1584,
@@ -336,9 +227,6 @@ export default class Arena extends Phaser.Scene {
         p2infoContainer.alphaBottomLeft = 0.8;
         p2infoContainer.alphaBottomRight = 0.8;
         p2infoContainer.setDepth(5); // Ensure UI stays on top
-
-
-
         // uiTimer
         const uiTimer = this.add.sprite(
             1760,
@@ -350,7 +238,6 @@ export default class Arena extends Phaser.Scene {
         uiTimer.scaleY = 0.8191303940245613;
         uiTimer.setDepth(6); // Ensure UI stays on top
         uiTimer.play("matchTimerAnimTimer_Container_Frames");
-
         // matchTimerText
         const matchTimerText = this.add.text(1728, 986, "", {});
         matchTimerText.text = "XX:XX";
@@ -362,7 +249,6 @@ export default class Arena extends Phaser.Scene {
             "shadow.stroke": true,
         });
         matchTimerText.setDepth(7); // Ensure UI stays on top
-
         // player1Name
         const player1Name = this.add.text(200, 123, "", {});
         player1Name.scaleX = 0.7156265225589847;
@@ -377,7 +263,6 @@ export default class Arena extends Phaser.Scene {
             "shadow.stroke": true,
         });
         player1Name.setDepth(6); // Ensure UI stays on top
-
         // player2Name
         const player2Name = this.add.text(1513, 123, "", {});
         player2Name.scaleX = 0.7156265225589847;
@@ -392,21 +277,15 @@ export default class Arena extends Phaser.Scene {
             "shadow.stroke": true,
         });
         player2Name.setDepth(6); // Ensure UI stays on top
-
         // Create health bars above player heads (will be positioned when players are created)
         const player1HealthBarBg = this.add.graphics();
         player1HealthBarBg.setDepth(15); // Above everything
-        
         const player1HealthBar = this.add.graphics();
         player1HealthBar.setDepth(16); // Above background
-        
         const player2HealthBarBg = this.add.graphics();
         player2HealthBarBg.setDepth(15); // Above everything
-        
         const player2HealthBar = this.add.graphics();
         player2HealthBar.setDepth(16); // Above background
-
-        this.platform = platform;
         this.player1HP = player1HP;
         this.player1STA = player1STA;
         this.p1infoContainer = p1infoContainer;
@@ -419,10 +298,8 @@ export default class Arena extends Phaser.Scene {
         this.player2HealthBar = player2HealthBar;
         this.player1HealthBarBg = player1HealthBarBg;
         this.player2HealthBarBg = player2HealthBarBg;
-
         console.log("editorCreate completed successfully");
         console.log("All assets assigned to instance variables");
-        
         // Debug: Log all UI elements to verify they are created
         console.log("UI Elements created:");
         console.log("- player1HP:", this.player1HP);
@@ -1287,10 +1164,21 @@ export default class Arena extends Phaser.Scene {
                 this.selectedMap = data.selectedMap;
                 if (this.selectedMap) {
                     console.log("Map selected by server:", this.selectedMap.name, "with music:", this.selectedMap.musicKey);
-                    
-                    // Recreate the background with the server-selected map
-                    this.recreateBackground();
-                    
+                    // Advanced: Wait for texture to be available before creating background
+                    const mapTextureKey = this.selectedMap.backgroundKey;
+                    if (this.textures.exists(mapTextureKey)) {
+                        // Texture is ready, create the background immediately
+                        this.recreateBackground();
+                    } else {
+                        // Texture is not ready, wait for it
+                        console.log(`Waiting for texture '${mapTextureKey}' to be available before creating background...`);
+                        this.textures.once('addtexture', (key: string) => {
+                            if (key === mapTextureKey) {
+                                console.log(`Texture '${mapTextureKey}' is now available. Creating background.`);
+                                this.recreateBackground();
+                            }
+                        });
+                    }
                     // Start the correct background music
                     this.startBackgroundMusic();
                 }
