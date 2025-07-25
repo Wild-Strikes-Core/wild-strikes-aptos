@@ -51,6 +51,14 @@ export default class Arena extends Phaser.Scene {
     private joystick!: any; // Virtual joystick for movement controls
     private sprintButtonPressed!: () => boolean; // Function to check sprint button state
     private isMobileDevice: boolean = false; // Track if we're on a mobile device
+    
+    // Independent mobile control buttons
+    private attackButton!: Phaser.GameObjects.Shape;
+    private jumpButton!: Phaser.GameObjects.Shape;
+    private sprintButton!: Phaser.GameObjects.Shape;
+    private attackText!: Phaser.GameObjects.Text;
+    private jumpText!: Phaser.GameObjects.Text;
+    private sprintText!: Phaser.GameObjects.Text;
     /* START-USER-CODE */
 
     // Socket connection
@@ -164,13 +172,6 @@ export default class Arena extends Phaser.Scene {
     // In the class definition, add these properties to track jumps
     private jumpCount: number = 0; // Tracks how many jumps have been performed since last touching ground
     private maxJumps: number = 2; // Maximum number of jumps allowed (1 = normal jump, 2 = double jump)
-
-    // 1. Add rexTouchState plugin loading in create() if not already loaded
-    private attackButtonState!: any;
-    private jumpButtonState!: any;
-    private sprintButtonState!: any;
-    private lastMobileAttackDown: boolean;
-    private lastMobileJumpDown: boolean;
 
     constructor() {
         super("Arena");
@@ -379,7 +380,7 @@ export default class Arena extends Phaser.Scene {
     private createMobileControls(): void {
         console.log("Creating mobile controls...");
         
-        // Initialize virtual joystick for movement controls
+        // Initialize virtual joystick for movement controls with multi-touch support
         this.joystick = (this.plugins.get('rexvirtualjoystickplugin') as any).add(this, {
             x: 200,
             y: this.cameras.main.height - 200,
@@ -388,26 +389,28 @@ export default class Arena extends Phaser.Scene {
             thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.8),
             dir: '8dir',   // 8-directional movement
             enable: true,
-            // Mobile optimizations
+            // Mobile optimizations for multi-touch
             forceMin: 8,    // Minimum force threshold
-            fixed: true     // Fixed position joystick
+            fixed: true,    // Fixed position joystick
+            capturePointer: false, // Allow other touch events to work
+            pointer: 1      // Use specific pointer ID for joystick
         });
         
         console.log("Virtual joystick created for mobile device");
 
-        // Add attack button for mobile/touch controls
-        const attackButton = this.add.circle(
+        // Create independent attack button
+        this.attackButton = this.add.circle(
             this.cameras.main.width - 150, 
             this.cameras.main.height - 150, 
             60, 
             0xff4444, 
             0.7
         );
-        attackButton.setInteractive();
-        attackButton.setScrollFactor(0);
-        attackButton.setDepth(10);
+        this.attackButton.setInteractive({ useHandCursor: false });
+        this.attackButton.setScrollFactor(0);
+        this.attackButton.setDepth(10);
         
-        const attackText = this.add.text(
+        this.attackText = this.add.text(
             this.cameras.main.width - 150, 
             this.cameras.main.height - 150, 
             'ATK', 
@@ -418,28 +421,40 @@ export default class Arena extends Phaser.Scene {
                 fontStyle: 'bold'
             }
         );
-        attackText.setOrigin(0.5);
-        attackText.setScrollFactor(0);
-        attackText.setDepth(11);
+        this.attackText.setOrigin(0.5);
+        this.attackText.setScrollFactor(0);
+        this.attackText.setDepth(11);
         
-        attackButton.on('pointerdown', () => {
-            console.log("Attack button pressed");
+        // Attack button touch handlers with multi-touch support
+        this.attackButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            console.log("Attack button pressed via pointer", pointer.id);
             this.performAttack();
+            // Visual feedback
+            this.attackButton.setAlpha(1.0);
+        });
+        
+        this.attackButton.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+            console.log("Attack button released via pointer", pointer.id);
+            this.attackButton.setAlpha(0.7);
+        });
+        
+        this.attackButton.on('pointerout', (pointer: Phaser.Input.Pointer) => {
+            this.attackButton.setAlpha(0.7);
         });
 
-        // Add jump button
-        const jumpButton = this.add.circle(
+        // Create independent jump button
+        this.jumpButton = this.add.circle(
             this.cameras.main.width - 280, 
             this.cameras.main.height - 150, 
             50, 
             0x44ff44, 
             0.7
         );
-        jumpButton.setInteractive();
-        jumpButton.setScrollFactor(0);
-        jumpButton.setDepth(10);
+        this.jumpButton.setInteractive({ useHandCursor: false });
+        this.jumpButton.setScrollFactor(0);
+        this.jumpButton.setDepth(10);
         
-        const jumpText = this.add.text(
+        this.jumpText = this.add.text(
             this.cameras.main.width - 280, 
             this.cameras.main.height - 150, 
             'JUMP', 
@@ -450,12 +465,13 @@ export default class Arena extends Phaser.Scene {
                 fontStyle: 'bold'
             }
         );
-        jumpText.setOrigin(0.5);
-        jumpText.setScrollFactor(0);
-        jumpText.setDepth(11);
+        this.jumpText.setOrigin(0.5);
+        this.jumpText.setScrollFactor(0);
+        this.jumpText.setDepth(11);
         
-        jumpButton.on('pointerdown', () => {
-            console.log("Jump button pressed");
+        // Jump button touch handlers with multi-touch support
+        this.jumpButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            console.log("Jump button pressed via pointer", pointer.id);
             const onGround = this.MY_PLAYER.sprite?.body?.touching!.down! || 
                             this.MY_PLAYER.sprite?.body?.blocked!.down!;
             
@@ -467,30 +483,51 @@ export default class Arena extends Phaser.Scene {
                 this.jumpCount++;
                 
                 if (this.MY_PLAYER.sprite) {
+                    // Create visual effect for double jump
+                    const jumpEffect = this.add.circle(
+                        this.MY_PLAYER.sprite.x + 60,
+                        this.MY_PLAYER.sprite.y + 100,
+                        20,
+                        0x00ff00,
+                        0.5
+                    );
+                    jumpEffect.setDepth(2);
                     this.tweens.add({
-                        targets: this.MY_PLAYER.sprite,
-                        alpha: 0.7,
-                        duration: 100,
-                        yoyo: true,
-                        repeat: 1
+                        targets: jumpEffect,
+                        scaleX: 2,
+                        scaleY: 2,
+                        alpha: 0,
+                        duration: 300,
+                        onComplete: () => jumpEffect.destroy()
                     });
                 }
             }
+            // Visual feedback
+            this.jumpButton.setAlpha(1.0);
+        });
+        
+        this.jumpButton.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+            console.log("Jump button released via pointer", pointer.id);
+            this.jumpButton.setAlpha(0.7);
+        });
+        
+        this.jumpButton.on('pointerout', (pointer: Phaser.Input.Pointer) => {
+            this.jumpButton.setAlpha(0.7);
         });
 
-        // Add sprint button
-        const sprintButton = this.add.circle(
+        // Create independent sprint button
+        this.sprintButton = this.add.circle(
             this.cameras.main.width - 410, 
             this.cameras.main.height - 150, 
             45, 
             0xffaa00, 
             0.7
         );
-        sprintButton.setInteractive();
-        sprintButton.setScrollFactor(0);
-        sprintButton.setDepth(10);
+        this.sprintButton.setInteractive({ useHandCursor: false });
+        this.sprintButton.setScrollFactor(0);
+        this.sprintButton.setDepth(10);
         
-        const sprintText = this.add.text(
+        this.sprintText = this.add.text(
             this.cameras.main.width - 410, 
             this.cameras.main.height - 150, 
             'RUN', 
@@ -501,40 +538,37 @@ export default class Arena extends Phaser.Scene {
                 fontStyle: 'bold'
             }
         );
-        sprintText.setOrigin(0.5);
-        sprintText.setScrollFactor(0);
-        sprintText.setDepth(11);
+        this.sprintText.setOrigin(0.5);
+        this.sprintText.setScrollFactor(0);
+        this.sprintText.setDepth(11);
         
         let isSprintPressed = false;
         
-        // Sprint button functionality - handle events on the button itself
-        sprintButton.on('pointerdown', () => {
+        // Sprint button touch handlers with multi-touch support
+        this.sprintButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             isSprintPressed = true;
-            console.log("Sprint button pressed");
+            console.log("Sprint button pressed via pointer", pointer.id);
+            // Visual feedback
+            this.sprintButton.setAlpha(1.0);
         });
         
-        sprintButton.on('pointerup', () => {
+        this.sprintButton.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             isSprintPressed = false;
-            console.log("Sprint button released");
+            console.log("Sprint button released via pointer", pointer.id);
+            this.sprintButton.setAlpha(0.7);
         });
         
-        // Also handle when pointer leaves the button area
-        sprintButton.on('pointerout', () => {
-            isSprintPressed = false;
-            console.log("Sprint button pointer out");
+        this.sprintButton.on('pointerout', (pointer: Phaser.Input.Pointer) => {
+            this.sprintButton.setAlpha(0.7);
         });
         
+        // Set the sprint button function
         this.sprintButtonPressed = () => isSprintPressed;
-
-        // Store references for cleanup
-        this.joystick.attackButton = attackButton;
-        this.joystick.attackText = attackText;
-        this.joystick.jumpButton = jumpButton;
-        this.joystick.jumpText = jumpText;
-        this.joystick.sprintButton = sprintButton;
-        this.joystick.sprintText = sprintText;
         
-        console.log("Mobile controls created successfully");
+        console.log("Independent mobile controls created successfully");
+        console.log("Attack button:", this.attackButton);
+        console.log("Jump button:", this.jumpButton);
+        console.log("Sprint button:", this.sprintButton);
     }
 
     /**
@@ -1367,27 +1401,6 @@ export default class Arena extends Phaser.Scene {
         // Background music will be started when we receive server data with selected map
         // Set up shutdown event listener to stop music when scene closes
         this.events.on("shutdown", this.onShutdown, this);
-
-        // 1. Add rexTouchState plugin loading in create() if not already loaded
-        if (!this.plugins.get('rexTouchState')) {
-            this.load.plugin(
-                'rexTouchState',
-                'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rextouchstateplugin.min.js',
-                true
-            );
-            this.load.once('complete', () => {
-                // Continue scene setup after plugin is loaded
-                this.finishCreate();
-            });
-            this.load.start();
-            return;
-        }
-        this.finishCreate();
-    }
-
-    // Move the rest of your create() logic to finishCreate()
-    finishCreate() {
-        // ... everything that was in create() after plugin loading ...
     }
 
     /**
@@ -1541,12 +1554,12 @@ export default class Arena extends Phaser.Scene {
             // Only include mobile controls if on mobile device
             ...(this.isMobileDevice ? [
                 this.joystick,
-                this.joystick?.attackButton,
-                this.joystick?.attackText,
-                this.joystick?.jumpButton,
-                this.joystick?.jumpText,
-                this.joystick?.sprintButton,
-                this.joystick?.sprintText,
+                this.attackButton,
+                this.attackText,
+                this.jumpButton,
+                this.jumpText,
+                this.sprintButton,
+                this.sprintText,
             ] : []),
             ...this.uiManager.getUIElements(), // Get any additional UI elements from the manager
         ].filter(Boolean); // Filter out any undefined elements
@@ -1711,7 +1724,7 @@ export default class Arena extends Phaser.Scene {
         }
 
         // Movement with running support (keyboard + joystick + mobile sprint button)
-        const isRunning = (this.isMobileDevice && this.sprintButtonState?.isDown) || this.KEYS.shift?.isDown;
+        const isRunning = (this.isMobileDevice && this.sprintButtonPressed()) || this.KEYS.shift?.isDown;
         const baseSpeed = 200;
         const runSpeed = 350; // Faster when running
         let currentAnimation = "_Idle_Idle"; // Default animation
@@ -2066,36 +2079,6 @@ export default class Arena extends Phaser.Scene {
         //         this.refreshAllPlatformColliders();
         //     }
         // }
-
-        // --- NEW: Check Mobile Button States with debounce ---
-        if (this.isMobileDevice) {
-            // Attack (debounce: only trigger on justDown)
-            if (this.attackButtonState?.isDown && !this.lastMobileAttackDown) {
-                this.performAttack();
-            }
-            this.lastMobileAttackDown = !!this.attackButtonState?.isDown;
-            // Jump (debounce: only trigger on justDown)
-            if (this.jumpButtonState?.isDown && !this.lastMobileJumpDown) {
-                const onGround = this.MY_PLAYER.sprite?.body?.touching.down || this.MY_PLAYER.sprite?.body?.blocked.down;
-                if (onGround) {
-                    this.MY_PLAYER.sprite?.setVelocityY(-2000);
-                    this.jumpCount = 1;
-                } else if (!onGround && this.jumpCount < this.maxJumps) {
-                    this.MY_PLAYER.sprite?.setVelocityY(-2000);
-                    this.jumpCount++;
-                    if (this.MY_PLAYER.sprite) {
-                        this.tweens.add({
-                            targets: this.MY_PLAYER.sprite,
-                            alpha: 0.7,
-                            duration: 100,
-                            yoyo: true,
-                            repeat: 1
-                        });
-                    }
-                }
-            }
-            this.lastMobileJumpDown = !!this.jumpButtonState?.isDown;
-        }
     }
 
     /**

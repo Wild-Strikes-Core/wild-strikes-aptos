@@ -34,7 +34,14 @@ const config: Phaser.Types.Core.GameConfig = {
             debug: true,
         },
     },
-
+    input: {
+        // Enable multi-touch support
+        activePointers: 5, // Allow up to 5 simultaneous touch points
+        touch: true,
+        mouse: true,
+        keyboard: true,
+        gamepad: false
+    },
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
