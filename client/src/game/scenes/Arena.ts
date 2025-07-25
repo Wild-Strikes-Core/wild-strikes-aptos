@@ -2096,9 +2096,6 @@ export default class Arena extends Phaser.Scene {
             }
             this.lastMobileJumpDown = !!this.jumpButtonState?.isDown;
         }
-        // --- MODIFIED: Running Logic ---
-        // Check sprint button state for mobile, or shift key for desktop
-        const isRunning = (this.isMobileDevice && this.sprintButtonState?.isDown) || this.KEYS.shift?.isDown;
     }
 
     /**
