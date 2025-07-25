@@ -1339,20 +1339,22 @@ export default class Arena extends Phaser.Scene {
                     data.player1.x,
                     data.player1.y
                 );
+                // Failsafe: If spawned below platform, move above
+                if (this.MY_PLAYER.sprite && this.platform && this.MY_PLAYER.sprite.y > this.platform.y) {
+                    const bodyHeight = this.MY_PLAYER.sprite.body ? this.MY_PLAYER.sprite.body.height : 0;
+                    this.MY_PLAYER.sprite.y = this.platform.y - bodyHeight;
+                    console.log("MY_PLAYER was below platform, moved to:", this.MY_PLAYER.sprite.x, this.MY_PLAYER.sprite.y);
+                }
 
                 this.OTHER_PLAYER.sprite = this.createPlayerSprite(
                     this,
                     data.player2.x,
                     data.player2.y
                 );
-
-                if (this.OTHER_PLAYER.sprite) {
-                    this.OTHER_PLAYER.sprite.setFlipX(true);
-                    console.log("Set player 2 sprite to flipX true");
-                }
-                if (this.MY_PLAYER.sprite) {
-                    this.MY_PLAYER.sprite.setFlipX(false);
-                    console.log("Set player 1 sprite to flipX false");
+                if (this.OTHER_PLAYER.sprite && this.platform && this.OTHER_PLAYER.sprite.y > this.platform.y) {
+                    const bodyHeight = this.OTHER_PLAYER.sprite.body ? this.OTHER_PLAYER.sprite.body.height : 0;
+                    this.OTHER_PLAYER.sprite.y = this.platform.y - bodyHeight;
+                    console.log("OTHER_PLAYER was below platform, moved to:", this.OTHER_PLAYER.sprite.x, this.OTHER_PLAYER.sprite.y);
                 }
             } else if (this.socket.id == data.player2.id) {
                 console.log("I am player 2 - creating sprites");
@@ -1361,19 +1363,21 @@ export default class Arena extends Phaser.Scene {
                     data.player2.x,
                     data.player2.y
                 );
+                if (this.MY_PLAYER.sprite && this.platform && this.MY_PLAYER.sprite.y > this.platform.y) {
+                    const bodyHeight = this.MY_PLAYER.sprite.body ? this.MY_PLAYER.sprite.body.height : 0;
+                    this.MY_PLAYER.sprite.y = this.platform.y - bodyHeight;
+                    console.log("MY_PLAYER was below platform, moved to:", this.MY_PLAYER.sprite.x, this.MY_PLAYER.sprite.y);
+                }
 
                 this.OTHER_PLAYER.sprite = this.createPlayerSprite(
                     this,
                     data.player1.x,
                     data.player1.y
                 );
-                if (this.MY_PLAYER.sprite) {
-                    this.MY_PLAYER.sprite.setFlipX(true);
-                    console.log("Set player 2 sprite to flipX true");
-                }
-                if (this.OTHER_PLAYER.sprite) {
-                    this.OTHER_PLAYER.sprite.setFlipX(false);
-                    console.log("Set player 1 sprite to flipX false");
+                if (this.OTHER_PLAYER.sprite && this.platform && this.OTHER_PLAYER.sprite.y > this.platform.y) {
+                    const bodyHeight = this.OTHER_PLAYER.sprite.body ? this.OTHER_PLAYER.sprite.body.height : 0;
+                    this.OTHER_PLAYER.sprite.y = this.platform.y - bodyHeight;
+                    console.log("OTHER_PLAYER was below platform, moved to:", this.OTHER_PLAYER.sprite.x, this.OTHER_PLAYER.sprite.y);
                 }
             }
 
