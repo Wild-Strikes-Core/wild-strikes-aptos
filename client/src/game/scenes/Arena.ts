@@ -726,6 +726,10 @@ export default class Arena extends Phaser.Scene {
     create() {
         console.log("Arena scene starting - initializing...");
         
+        // Set world bounds to prevent players from falling out of the world
+        this.physics.world.setBounds(0, 0, 1920, 1080, true, true, true, true);
+        console.log("World bounds set to 1920x1080");
+        
         // Initialize the scene content from the scene editor
         this.editorCreate();
         
@@ -1392,10 +1396,32 @@ export default class Arena extends Phaser.Scene {
                 if (this.MY_PLAYER.sprite) {
                     this.addPlatformCollider(this.MY_PLAYER.sprite);
                     console.log("Added platform collider to MY_PLAYER");
+                    // Debug: Log player spawn position and collider state after short delay
+                    this.time.delayedCall(300, () => {
+                        const s = this.MY_PLAYER.sprite!;
+                        console.log("MY_PLAYER spawn position:", s.x, s.y);
+                        if (s.body) {
+                            console.log("MY_PLAYER body.touching.down:", s.body.touching.down);
+                            console.log("MY_PLAYER body.blocked.down:", s.body.blocked.down);
+                        } else {
+                            console.log("MY_PLAYER body is null");
+                        }
+                    });
                 }
                 if (this.OTHER_PLAYER.sprite) {
                     this.addPlatformCollider(this.OTHER_PLAYER.sprite);
                     console.log("Added platform collider to OTHER_PLAYER");
+                    // Debug: Log other player spawn position and collider state after short delay
+                    this.time.delayedCall(300, () => {
+                        const s = this.OTHER_PLAYER.sprite!;
+                        console.log("OTHER_PLAYER spawn position:", s.x, s.y);
+                        if (s.body) {
+                            console.log("OTHER_PLAYER body.touching.down:", s.body.touching.down);
+                            console.log("OTHER_PLAYER body.blocked.down:", s.body.blocked.down);
+                        } else {
+                            console.log("OTHER_PLAYER body is null");
+                        }
+                    });
                 }
             }
 
@@ -2144,16 +2170,14 @@ export default class Arena extends Phaser.Scene {
             this.platform.setOrigin(0.5, 0); // Center origin horizontally
             this.platform.setImmovable(true);
 
-            // Adjust platform to match camera width with extra safety margin
-            const cameraWidth = this.cameras.main.width;
+            // Always set platform width to full world width for consistency
+            const worldWidth = 1920;
             const safetyMargin = 400; // Extra width on each side
-            const totalWidth = cameraWidth + safetyMargin * 2;
+            const totalWidth = worldWidth + safetyMargin * 2;
 
-            // Update both display width and physics body size
             this.platform.displayWidth = totalWidth;
             if (this.platform.body) {
-                (this.platform.body as Phaser.Physics.Arcade.StaticBody).width =
-                    totalWidth;
+                (this.platform.body as Phaser.Physics.Arcade.StaticBody).width = totalWidth;
                 this.platform.body.setSize(
                     totalWidth,
                     this.platform.body.height,
@@ -2161,8 +2185,8 @@ export default class Arena extends Phaser.Scene {
                 );
             }
 
-            // Position platform in the center of the camera view
-            this.platform.x = cameraWidth / 2;
+            // Position platform in the center of the world
+            this.platform.x = worldWidth / 2;
 
             // Ensure platform is enabled for physics
             if (this.platform.body) {
@@ -2195,8 +2219,8 @@ export default class Arena extends Phaser.Scene {
                 )
                 .forEach((collider) => collider.destroy());
 
-            // Add a fresh collider
-            const collider = this.physics.add.collider(sprite, this.platform);
+            // Add a fresh collider with explicit bounds checking
+            const collider = this.physics.add.collider(sprite, this.platform, undefined, undefined, this);
 
             // Store reference to help with debugging
             sprite.setData("platformCollider", collider);
