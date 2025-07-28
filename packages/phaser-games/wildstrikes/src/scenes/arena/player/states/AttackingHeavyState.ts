@@ -1,11 +1,12 @@
 import { PlayerState } from "./PlayerState";
+import { PlayerStates } from "./PlayerStates";
 
-export class AttackingLightState extends PlayerState {
+export class AttackingHeavyState extends PlayerState {
     private attackCooldown: number = 300;
     private lastAttackTime: number = 0;
 
     enter(): void {
-        console.log('Entering Light Attack State');
+        console.log('Entering Heavy Attack State');
         const player = this.getPlayer();
         
         if (!player) return;
@@ -13,21 +14,21 @@ export class AttackingLightState extends PlayerState {
         // Check attack cooldown
         const currentTime = this.getScene().time.now;
         if (currentTime - this.lastAttackTime < this.attackCooldown) {
-            console.log('Light attack blocked - cooldown');
-            this.playerManager.transitionTo('idle');
+            console.log('Heavy attack blocked - cooldown');
+            this.playerManager.transitionTo(PlayerStates.Idle);
             return;
         }
 
-        // Play light attack animation
-        this.getSpriteManager().playAttackingAnimation(player);
+        // Play heavy attack animation
+        this.getSpriteManager().playAttack2Animation(player);
         this.lastAttackTime = currentTime;
 
         // Set up animation complete callback
-        this.getSpriteManager().setLightAttackCompleteCallback(() => {
+        this.getSpriteManager().setHeavyAttackCompleteCallback(() => {
             this.onAttackComplete();
         });
 
-        console.log('Light attack executed');
+        console.log('Heavy attack executed');
     }
 
     update(): void {
@@ -45,7 +46,7 @@ export class AttackingLightState extends PlayerState {
         const player = this.getPlayer();
         
         if (!player || !keyObjects) {
-            this.playerManager.transitionTo('idle');
+            this.playerManager.transitionTo(PlayerStates.Idle);
             return;
         }
 
@@ -53,17 +54,17 @@ export class AttackingLightState extends PlayerState {
         const isOnGround = body.touching.down;
 
         if (!isOnGround) {
-            this.playerManager.transitionTo('jumping');
+            this.playerManager.transitionTo(PlayerStates.Jumping);
         } else if (keyObjects.crouch.isDown) {
             if (keyObjects.left.isDown || keyObjects.right.isDown) {
-                this.playerManager.transitionTo('crouchWalking');
+                this.playerManager.transitionTo(PlayerStates.CrouchWalking);
             } else {
-                this.playerManager.transitionTo('crouching');
+                this.playerManager.transitionTo(PlayerStates.Crouching);
             }
         } else if (keyObjects.left.isDown || keyObjects.right.isDown) {
-            this.playerManager.transitionTo('walking');
+            this.playerManager.transitionTo(PlayerStates.Walking);
         } else {
-            this.playerManager.transitionTo('idle');
+            this.playerManager.transitionTo(PlayerStates.Idle);
         }
     }
 
@@ -73,6 +74,6 @@ export class AttackingLightState extends PlayerState {
     }
 
     exit(): void {
-        console.log('Exiting Light Attack State');
+        console.log('Exiting Heavy Attack State');
     }
 }

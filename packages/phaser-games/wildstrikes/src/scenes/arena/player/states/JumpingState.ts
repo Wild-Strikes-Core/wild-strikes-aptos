@@ -1,4 +1,5 @@
 import { PlayerState } from "./PlayerState";
+import { PlayerStates } from "./PlayerStates";
 
 export class JumpingState extends PlayerState {
     private jumpCount: number = 0;
@@ -9,6 +10,11 @@ export class JumpingState extends PlayerState {
         const player = this.getPlayer();
         if (player) {
             const body = player.body as Phaser.Physics.Arcade.Body;
+            
+            // If we're on the ground, perform the initial jump
+            if (body.touching.down && this.jumpCount === 0) {
+                this.performJump();
+            }
             
             // Play appropriate animation based on velocity
             if (body.velocity.y < 0) {
@@ -55,17 +61,17 @@ export class JumpingState extends PlayerState {
             this.jumpCount = 0; // Reset jump count when landing
             if (keyObjects.crouch.isDown) {
                 if (keyObjects.left.isDown || keyObjects.right.isDown) {
-                    this.playerManager.transitionTo('crouchWalking');
+                    this.playerManager.transitionTo(PlayerStates.CrouchWalking);
                 } else {
-                    this.playerManager.transitionTo('crouching');
+                    this.playerManager.transitionTo(PlayerStates.Crouching);
                 }
             } else if (keyObjects.left.isDown || keyObjects.right.isDown) {
-                this.playerManager.transitionTo('walking');
+                this.playerManager.transitionTo(PlayerStates.Walking);
             } else {
-                this.playerManager.transitionTo('idle');
+                this.playerManager.transitionTo(PlayerStates.Idle);
             }
         } else if (keyObjects.dash.isDown) {
-            this.playerManager.transitionTo('dashing');
+            this.playerManager.transitionTo(PlayerStates.Dashing);
         }
     }
 
@@ -77,11 +83,18 @@ export class JumpingState extends PlayerState {
 
         // Handle double jump
         if (keyObjects.jump.isDown && this.jumpCount < this.jumpLimit) {
-            const jumpSpeed = -1300;
-            player.setVelocityY(jumpSpeed);
-            this.jumpCount++;
-            console.log(`Jump ${this.jumpCount}/${this.jumpLimit}`);
+            this.performJump();
         }
+    }
+
+    private performJump(): void {
+        const player = this.getPlayer();
+        if (!player) return;
+
+        const jumpSpeed = -1300;
+        player.setVelocityY(jumpSpeed);
+        this.jumpCount++;
+        console.log(`Jump ${this.jumpCount}/${this.jumpLimit}`);
     }
 
     public getJumpCount(): number {
@@ -90,6 +103,21 @@ export class JumpingState extends PlayerState {
 
     public setJumpCount(count: number): void {
         this.jumpCount = count;
+    }
+
+    // Public method for commands to perform jumps
+    public performJumpIfPossible(): boolean {
+        if (this.jumpCount < this.jumpLimit) {
+            this.performJump();
+            return true;
+        }
+        return false;
+    }
+
+    // Hook method called when the player lands on ground
+    public onLand(): void {
+        console.log('Player landed - resetting jump count');
+        this.jumpCount = 0;
     }
 
     exit(): void {

@@ -1,6 +1,6 @@
 import { Command } from "./Command";
 import { PlayerManager } from "../PlayerManager";
-import { AttackingHeavyState } from "../states";
+import { AttackingHeavyState, PlayerStates } from "../states";
 
 export class HeavyAttackCommand implements Command {
     execute(player: PlayerManager): void {
@@ -8,9 +8,9 @@ export class HeavyAttackCommand implements Command {
         if (!playerSprite || !player.isInputEnabled()) return;
 
         // Check if attack is available
-        const attackingHeavyState = player.getState('attackingHeavy') as AttackingHeavyState;
+        const attackingHeavyState = player.getState(PlayerStates.AttackingHeavy) as AttackingHeavyState;
         if (attackingHeavyState && attackingHeavyState.canAttack()) {
-            player.transitionTo('attackingHeavy');
+            player.transitionTo(PlayerStates.AttackingHeavy);
         }
     }
 }

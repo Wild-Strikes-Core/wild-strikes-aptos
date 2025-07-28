@@ -1,6 +1,13 @@
 import { PlayerManager } from "../PlayerManager";
 
-export abstract class PlayerState {
+export interface IPlayerState {
+    enter(): void;
+    update(): void;
+    handleInput(): void;
+    exit?(): void; // optional
+}
+
+export abstract class PlayerState implements IPlayerState {
     protected playerManager: PlayerManager;
 
     constructor(playerManager: PlayerManager) {

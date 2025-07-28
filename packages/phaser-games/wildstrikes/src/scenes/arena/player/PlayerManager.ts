@@ -1,6 +1,7 @@
 import { PlayerSpriteManager } from "./PlayerSpriteManager";
 import { 
-    PlayerState, 
+    PlayerState,
+    PlayerStates,
     IdleState, 
     WalkingState, 
     CrouchingState,
@@ -17,6 +18,7 @@ import {
     LightAttackCommand,
     HeavyAttackCommand
 } from "./commands";
+import { InputService } from "./input";
 
 export class PlayerManager {
     // State management
@@ -28,6 +30,9 @@ export class PlayerManager {
     private dashCommand: Command;
     private lightAttackCommand: Command;
     private heavyAttackCommand: Command;
+
+    // Input handling
+    private inputService: InputService;
 
     private player: Phaser.Physics.Arcade.Sprite | null = null;
     private spriteManager: PlayerSpriteManager;
@@ -46,8 +51,13 @@ export class PlayerManager {
         // Initialize commands
         this.initializeCommands();
         
+        // Initialize input service
+        this.inputService = new InputService(scene);
+        this.inputService.setCommandTarget(this);
+        this.inputService.setEnabled(enableInput);
+        
         // Set initial state to idle
-        this.currentState = this.states.get('idle')!;
+        this.currentState = this.states.get(PlayerStates.Idle)!;;
         
         // Only set up input controls if input is enabled
         if (this.enableInput) {
@@ -65,14 +75,14 @@ export class PlayerManager {
     }
 
     private initializeStates(): void {
-        this.states.set('idle', new IdleState(this));
-        this.states.set('walking', new WalkingState(this));
-        this.states.set('crouching', new CrouchingState(this));
-        this.states.set('crouchWalking', new CrouchWalkingState(this));
-        this.states.set('jumping', new JumpingState(this));
-        this.states.set('dashing', new DashingState(this));
-        this.states.set('attackingLight', new AttackingLightState(this));
-        this.states.set('attackingHeavy', new AttackingHeavyState(this));
+        this.states.set(PlayerStates.Idle, new IdleState(this));
+        this.states.set(PlayerStates.Walking, new WalkingState(this));
+        this.states.set(PlayerStates.Crouching, new CrouchingState(this));
+        this.states.set(PlayerStates.CrouchWalking, new CrouchWalkingState(this));
+        this.states.set(PlayerStates.Jumping, new JumpingState(this));
+        this.states.set(PlayerStates.Dashing, new DashingState(this));
+        this.states.set(PlayerStates.AttackingLight, new AttackingLightState(this));
+        this.states.set(PlayerStates.AttackingHeavy, new AttackingHeavyState(this));
     }
 
     private initializeCommands(): void {
@@ -132,27 +142,32 @@ export class PlayerManager {
         return this.enableInput;
     }
 
-    private setupInputHandlers(): void {
-        // Set up keyboard event listeners for special actions using commands
-        this.scene.input.keyboard?.on('keydown-SPACE', () => {
-            this.jumpCommand.execute(this);
-        }, this);
-        
-        this.scene.input.keyboard?.on('keydown-Q', () => {
-            this.dashCommand.execute(this);
-        }, this);
+    // Input service access methods
+    public getInputService(): InputService {
+        return this.inputService;
+    }
 
-        // Set up mouse event listeners for attacks using commands
-        this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (pointer.leftButtonDown()) {
-                this.lightAttackCommand.execute(this);
-            } else if (pointer.rightButtonDown()) {
-                this.heavyAttackCommand.execute(this);
+    public setInputEnabled(enabled: boolean): void {
+        this.enableInput = enabled;
+        this.inputService.setEnabled(enabled);
+    }
+
+    private setupInputHandlers(): void {
+        // Set up keyboard bindings using InputService
+        this.inputService.bindKeyboard('SPACE', this.jumpCommand, 'Jump/Double Jump');
+        this.inputService.bindKeyboard('Q', this.dashCommand, 'Dash');
+
+        // Set up mouse bindings using InputService
+        this.inputService.bindMouse({
+            leftClick: { 
+                command: this.lightAttackCommand, 
+                description: 'Light Attack' 
+            },
+            rightClick: { 
+                command: this.heavyAttackCommand, 
+                description: 'Heavy Attack' 
             }
         });
-        
-        // Prevent context menu on right click
-        this.scene.input.mouse?.disableContextMenu();
     }
 
     public update(): void {
@@ -172,10 +187,9 @@ export class PlayerManager {
         if (platform) {
             // Set up collision between player and platform
             this.scene.physics.add.collider(this.player, platform, () => {
-                // Reset jump count when player lands on platform
-                const jumpingState = this.states.get('jumping') as JumpingState;
-                if (jumpingState) {
-                    jumpingState.setJumpCount(0);
+                // Let the current state handle landing logic
+                if (this.currentState instanceof JumpingState) {
+                    this.currentState.onLand();
                 }
                 console.log('Player landed on platform');
             });
@@ -265,9 +279,9 @@ export class PlayerManager {
             this.player.destroy();
             this.player = null;
         }
-        // Clear input handlers
-        this.scene.input.keyboard?.removeAllListeners();
-        this.scene.input.off('pointerdown');
+        
+        // Clean up input service
+        this.inputService.destroy();
         
         // Clear sprite manager
         this.spriteManager.destroySprite(this.player);

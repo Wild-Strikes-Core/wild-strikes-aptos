@@ -1,6 +1,6 @@
 import { Command } from "./Command";
 import { PlayerManager } from "../PlayerManager";
-import { AttackingLightState } from "../states";
+import { AttackingLightState, PlayerStates } from "../states";
 
 export class LightAttackCommand implements Command {
     execute(player: PlayerManager): void {
@@ -8,9 +8,9 @@ export class LightAttackCommand implements Command {
         if (!playerSprite || !player.isInputEnabled()) return;
 
         // Check if attack is available
-        const attackingLightState = player.getState('attackingLight') as AttackingLightState;
+        const attackingLightState = player.getState(PlayerStates.AttackingLight) as AttackingLightState;
         if (attackingLightState && attackingLightState.canAttack()) {
-            player.transitionTo('attackingLight');
+            player.transitionTo(PlayerStates.AttackingLight);
         }
     }
 }

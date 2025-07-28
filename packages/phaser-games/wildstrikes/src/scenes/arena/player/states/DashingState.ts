@@ -1,4 +1,5 @@
 import { PlayerState } from "./PlayerState";
+import { PlayerStates } from "./PlayerStates";
 
 export class DashingState extends PlayerState {
     private dashDuration: number = 300;
@@ -15,7 +16,7 @@ export class DashingState extends PlayerState {
         // Check if dash is on cooldown
         if (this.isDashOnCooldown) {
             console.log('Dash on cooldown');
-            this.playerManager.transitionTo('idle');
+            this.playerManager.transitionTo(PlayerStates.Idle);
             return;
         }
 
@@ -56,7 +57,7 @@ export class DashingState extends PlayerState {
         const player = this.getPlayer();
         
         if (!player || !keyObjects) {
-            this.playerManager.transitionTo('idle');
+            this.playerManager.transitionTo(PlayerStates.Idle);
             return;
         }
 
@@ -64,17 +65,17 @@ export class DashingState extends PlayerState {
         const isOnGround = body.touching.down;
 
         if (!isOnGround) {
-            this.playerManager.transitionTo('jumping');
+            this.playerManager.transitionTo(PlayerStates.Jumping);
         } else if (keyObjects.crouch.isDown) {
             if (keyObjects.left.isDown || keyObjects.right.isDown) {
-                this.playerManager.transitionTo('crouchWalking');
+                this.playerManager.transitionTo(PlayerStates.CrouchWalking);
             } else {
-                this.playerManager.transitionTo('crouching');
+                this.playerManager.transitionTo(PlayerStates.Crouching);
             }
         } else if (keyObjects.left.isDown || keyObjects.right.isDown) {
-            this.playerManager.transitionTo('walking');
+            this.playerManager.transitionTo(PlayerStates.Walking);
         } else {
-            this.playerManager.transitionTo('idle');
+            this.playerManager.transitionTo(PlayerStates.Idle);
         }
     }
 

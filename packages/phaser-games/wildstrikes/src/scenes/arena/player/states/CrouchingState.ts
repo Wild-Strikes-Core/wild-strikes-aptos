@@ -1,4 +1,5 @@
 import { PlayerState } from "./PlayerState";
+import { PlayerStates } from "./PlayerStates";
 
 export class CrouchingState extends PlayerState {
     enter(): void {
@@ -30,19 +31,19 @@ export class CrouchingState extends PlayerState {
         if (!isCrouching) {
             // Released crouch key
             if (keyObjects.left.isDown || keyObjects.right.isDown) {
-                this.playerManager.transitionTo('walking');
+                this.playerManager.transitionTo(PlayerStates.Walking);
             } else {
-                this.playerManager.transitionTo('idle');
+                this.playerManager.transitionTo(PlayerStates.Idle);
             }
         } else if (keyObjects.left.isDown || keyObjects.right.isDown) {
             // Started moving while crouching
-            this.playerManager.transitionTo('crouchWalking');
+            this.playerManager.transitionTo(PlayerStates.CrouchWalking);
         } else if (keyObjects.jump.isDown && isOnGround) {
-            this.playerManager.transitionTo('jumping');
+            this.playerManager.transitionTo(PlayerStates.Jumping);
         } else if (keyObjects.dash.isDown) {
-            this.playerManager.transitionTo('dashing');
+            this.playerManager.transitionTo(PlayerStates.Dashing);
         } else if (!isOnGround) {
-            this.playerManager.transitionTo('jumping');
+            this.playerManager.transitionTo(PlayerStates.Jumping);
         }
     }
 

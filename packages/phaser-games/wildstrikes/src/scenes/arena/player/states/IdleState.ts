@@ -1,4 +1,5 @@
 import { PlayerState } from "./PlayerState";
+import { PlayerStates } from "./PlayerStates";
 
 export class IdleState extends PlayerState {
     enter(): void {
@@ -25,18 +26,18 @@ export class IdleState extends PlayerState {
         // Check for state transitions
         if (keyObjects.left.isDown || keyObjects.right.isDown) {
             if (keyObjects.crouch.isDown && isOnGround) {
-                this.playerManager.transitionTo('crouchWalking');
+                this.playerManager.transitionTo(PlayerStates.CrouchWalking);
             } else {
-                this.playerManager.transitionTo('walking');
+                this.playerManager.transitionTo(PlayerStates.Walking);
             }
         } else if (keyObjects.crouch.isDown && isOnGround) {
-            this.playerManager.transitionTo('crouching');
+            this.playerManager.transitionTo(PlayerStates.Crouching);
         } else if (keyObjects.jump.isDown && isOnGround) {
-            this.playerManager.transitionTo('jumping');
+            this.playerManager.transitionTo(PlayerStates.Jumping);
         } else if (keyObjects.dash.isDown) {
-            this.playerManager.transitionTo('dashing');
+            this.playerManager.transitionTo(PlayerStates.Dashing);
         } else if (!isOnGround) {
-            this.playerManager.transitionTo('jumping');
+            this.playerManager.transitionTo(PlayerStates.Jumping);
         }
     }
 

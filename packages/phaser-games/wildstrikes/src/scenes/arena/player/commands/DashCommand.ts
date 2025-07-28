@@ -1,6 +1,6 @@
 import { Command } from "./Command";
 import { PlayerManager } from "../PlayerManager";
-import { DashingState } from "../states";
+import { DashingState, PlayerStates } from "../states";
 
 export class DashCommand implements Command {
     execute(player: PlayerManager): void {
@@ -8,9 +8,9 @@ export class DashCommand implements Command {
         if (!playerSprite || !player.isInputEnabled()) return;
 
         // Check if dash is available
-        const dashingState = player.getState('dashing') as DashingState;
+        const dashingState = player.getState(PlayerStates.Dashing) as DashingState;
         if (dashingState && dashingState.canDash()) {
-            player.transitionTo('dashing');
+            player.transitionTo(PlayerStates.Dashing);
         }
     }
 }
