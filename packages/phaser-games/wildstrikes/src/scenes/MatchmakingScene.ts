@@ -62,7 +62,7 @@ export default class Matchmaking extends Phaser.Scene {
         });
 
         this.socket.on('matchmaking:found', (data: any) => {
-            console.log('Match found:', data);
+            console.log('🎯 Match found:', data);
             this.findingMatchLabel.setText('Match Found!');
             
             // Go to MatchFound scene with socket data
@@ -126,6 +126,10 @@ export default class Matchmaking extends Phaser.Scene {
     }
 
     private goToMatchFound(matchData:any): void {
+        console.log('🔄 Transitioning to MatchFound scene');
+        console.log('Socket being passed:', this.socket);
+        console.log('Match data:', matchData);
+        
         this.cameras.main.fadeOut(400, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
             this.scene.stop("Matchmaking");

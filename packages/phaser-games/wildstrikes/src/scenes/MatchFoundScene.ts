@@ -19,11 +19,19 @@ export default class MatchFound extends Phaser.Scene {
     }
 
     create(): void {
+        console.log('🏗️ MatchFound scene create() called');
         const gameData = this.scene.settings.data;
+        console.log('MatchFound received game data:', gameData);
+        
         if (gameData) {
-            this.socket = gameData.socket;
-            this.roomId = gameData.roomId;
-            this.opponentId = gameData.opponentId || '';
+            this.socket = (gameData as any).socket;
+            this.roomId = (gameData as any).roomId;
+            this.opponentId = (gameData as any).opponentId || '';
+            console.log('✅ Socket received:', this.socket);
+            console.log('✅ Room ID:', this.roomId);
+            console.log('✅ Opponent ID:', this.opponentId);
+        } else {
+            console.error('❌ No game data received in MatchFound scene');
         }
 
 
@@ -199,6 +207,11 @@ export default class MatchFound extends Phaser.Scene {
     }
 
     private transitionToBattle(): void {
+        console.log('🔄 Transitioning to Arena scene');
+        console.log('Socket being passed to Arena:', this.socket);
+        console.log('Room ID being passed:', this.roomId);
+        console.log('Opponent ID being passed:', this.opponentId);
+        
         this.cameras.main.flash(300, 255, 255, 255);
         this.cameras.main.once("cameraflashcomplete", () => {
             this.cameras.main.fadeOut(400);

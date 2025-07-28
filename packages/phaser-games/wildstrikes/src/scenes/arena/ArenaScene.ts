@@ -46,18 +46,22 @@ export default class Arena extends Phaser.Scene {
     }
 
     create(): void {
+        console.log('🏗️ Arena scene create() called');
         const gameData = this.scene.settings.data as any;
+        console.log('Game data received:', gameData);
+        
         if (gameData && gameData.isMultiplayer) {
+            console.log('🎮 Setting up MULTIPLAYER game');
             this.isMultiplayer = true;
             this.socket = gameData.socket;
             this.roomId = gameData.roomId;
             this.setupMultiplayerGame(gameData);
         } else {
+            console.log('🎮 Setting up SINGLE PLAYER game');
             this.setupSinglePlayerGame();
         }
 
         this.setupMobileControls();
-
     }
         
 
@@ -102,22 +106,47 @@ export default class Arena extends Phaser.Scene {
     }
 
     private setupMultiplayerGame(gameData: any): void {
+        console.log('🎮 Setting up multiplayer game...');
+        console.log('Game data:', gameData);
+        console.log('Socket:', this.socket);
+        console.log('Room ID:', this.roomId);
+        
         // Use random map for now (will be overridden by server)
         this.currentMapConfig = this.mapManager.getRandomMapConfig();
         this.mapManager.setupMap(this, this.currentMapConfig);
 
         this.activateMultiplayerListeners();
 
+        console.log('📤 Sending player:ready event...');
+        console.log('Socket connected:', this.socket?.connected);
+        console.log('Socket ID:', this.socket?.id);
         this.socket?.emit('player:ready', { playerId: this.socket.id });
     }
 
     private activateMultiplayerListeners(): void {
+        console.log('Setting up multiplayer listeners...');
+        console.log('Socket ID:', this.socket?.id);
+        console.log('Socket connected:', this.socket?.connected);
+        
+        if (!this.socket) {
+            console.error('❌ No socket available for multiplayer listeners');
+            return;
+        }
+        
+        if (!this.socket.connected) {
+            console.error('❌ Socket is not connected');
+            return;
+        }
+        
         this.socket.on('player:connected', (data) => {
-            console.log('Player connected:', data);
+            console.log('🎮 Player connected event received:', data);
+            console.log('Local socket ID:', this.socket?.id);
+            console.log('Player1 ID:', data.player?.id);
+            console.log('Player2 ID:', data.player2?.id);
 
             // Update to synchronized map if provided
             if (data.mapId !== undefined) {
-                console.log('Switching to synchronized map:', data.mapId);
+                console.log('🗺️ Switching to synchronized map:', data.mapId);
                 this.currentMapConfig = this.mapManager.allMapConfigs[data.mapId];
                 this.mapManager.setupMap(this, this.currentMapConfig);
             }
@@ -126,11 +155,18 @@ export default class Arena extends Phaser.Scene {
             const player1 = data.player;
             const player2 = data.player2;
 
+            console.log('🔍 Determining local player...');
+            console.log('Local ID:', localPlayerId);
+            console.log('Player1 ID:', player1.id);
+            console.log('Player2 ID:', player2.id);
+
             if (player1.id === localPlayerId) {
+                console.log('✅ We are player 1');
                 // We are player 1
                 this.spawnPlayer(player1.id, player1.spawnX, player1.spawnY, true);
                 this.spawnPlayer(player2.id, player2.spawnX, player2.spawnY, false);
             } else {
+                console.log('✅ We are player 2');
                 // We are player 2
                 this.spawnPlayer(player2.id, player2.spawnX, player2.spawnY, true);
                 this.spawnPlayer(player1.id, player1.spawnX, player1.spawnY, false);
@@ -240,7 +276,14 @@ export default class Arena extends Phaser.Scene {
             text: 'ATK',
             onPress: () => {
                 console.log('Attack button pressed!');
-                localPlayerManager?.triggerLightAttack();
+                console.log('Local player manager:', localPlayerManager);
+                if (localPlayerManager) {
+                    console.log('Current state before attack:', localPlayerManager.getCurrentStateName());
+                    localPlayerManager.triggerLightAttack();
+                    console.log('Current state after attack:', localPlayerManager.getCurrentStateName());
+                } else {
+                    console.error('Local player manager not found!');
+                }
             }
         });
 
@@ -254,7 +297,14 @@ export default class Arena extends Phaser.Scene {
             text: 'JUMP',
             onPress: () => {
                 console.log('Jump button pressed!');
-                localPlayerManager?.triggerJump();
+                console.log('Local player manager:', localPlayerManager);
+                if (localPlayerManager) {
+                    console.log('Current state before jump:', localPlayerManager.getCurrentStateName());
+                    localPlayerManager.triggerJump();
+                    console.log('Current state after jump:', localPlayerManager.getCurrentStateName());
+                } else {
+                    console.error('Local player manager not found!');
+                }
             }
         });
     }
@@ -262,11 +312,16 @@ export default class Arena extends Phaser.Scene {
 
     // for multiplayer-proof code
     spawnPlayer(playerId: string, spawnX: number, spawnY: number, isLocal: boolean = false) : void {
+        console.log(`🎯 Spawning player ${playerId}, isLocal: ${isLocal}, at (${spawnX}, ${spawnY})`);
         const playerManager = new PlayerManager(this, isLocal);
         playerManager.createPlayer(spawnX, spawnY);
         this.playerManager.set(playerId, playerManager);
+        console.log(`✅ Player ${playerId} spawned successfully`);
+        console.log(`📊 Total players in manager: ${this.playerManager.size}`);
+        
         if (isLocal) {
             this.localPlayer = playerId;
+            console.log(`🏠 Local player set to: ${playerId}`);
             
             this.cameras.main.startFollow(playerManager.getPlayerSprite(), true);
             this.cameras.main.setZoom(1.3, 1.3);
