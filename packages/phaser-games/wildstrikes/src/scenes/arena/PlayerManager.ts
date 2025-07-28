@@ -1,24 +1,33 @@
 import { PlayerSpriteManager } from "./PlayerSpriteManager";
+import { 
+    PlayerState, 
+    IdleState, 
+    WalkingState, 
+    CrouchingState,
+    CrouchWalkingState,
+    JumpingState, 
+    DashingState, 
+    AttackingLightState, 
+    AttackingHeavyState 
+} from "./states";
+import { 
+    Command,
+    JumpCommand,
+    DashCommand,
+    LightAttackCommand,
+    HeavyAttackCommand
+} from "./commands";
 
 export class PlayerManager {
-    private jumpCount: number = 0;
-    private jumpLimit: number = 2; // Allow double jump
-    private isJumping: boolean = false;
-    private isDashing: boolean = false;
-    private isAttackingLight: boolean = false;
-    private isAttackingHeavy: boolean = false;
-    private isMoving: boolean = false;
-    private isOnGround: boolean = false;
-    private isSprinting: boolean = false;
-    private isCrouching: boolean = false;
+    // State management
+    private currentState: PlayerState;
+    private states: Map<string, PlayerState> = new Map();
 
-    private dashDuration: number = 300; // Duration of dash in milliseconds
-    private dashCooldown: number = 1000; // Cooldown time after dash
-    private dashTimer: Phaser.Time.TimerEvent | null = null;
-    
-    // Attack cooldown properties
-    private attackCooldown: number = 300; // Minimum time between attacks in milliseconds
-    private lastAttackTime: number = 0;
+    // Command pattern
+    private jumpCommand: Command;
+    private dashCommand: Command;
+    private lightAttackCommand: Command;
+    private heavyAttackCommand: Command;
 
     private player: Phaser.Physics.Arcade.Sprite | null = null;
     private spriteManager: PlayerSpriteManager;
@@ -31,16 +40,14 @@ export class PlayerManager {
         this.enableInput = enableInput;
         this.spriteManager = new PlayerSpriteManager(scene);
         
-        // Set up callbacks for when attack animations complete
-        this.spriteManager.setLightAttackCompleteCallback(() => {
-            this.isAttackingLight = false;
-            console.log('Light attack state cleared by callback');
-        });
+        // Initialize states
+        this.initializeStates();
         
-        this.spriteManager.setHeavyAttackCompleteCallback(() => {
-            this.isAttackingHeavy = false;
-            console.log('Heavy attack state cleared by callback');
-        });
+        // Initialize commands
+        this.initializeCommands();
+        
+        // Set initial state to idle
+        this.currentState = this.states.get('idle')!;
         
         // Only set up input controls if input is enabled
         if (this.enableInput) {
@@ -57,6 +64,24 @@ export class PlayerManager {
         }
     }
 
+    private initializeStates(): void {
+        this.states.set('idle', new IdleState(this));
+        this.states.set('walking', new WalkingState(this));
+        this.states.set('crouching', new CrouchingState(this));
+        this.states.set('crouchWalking', new CrouchWalkingState(this));
+        this.states.set('jumping', new JumpingState(this));
+        this.states.set('dashing', new DashingState(this));
+        this.states.set('attackingLight', new AttackingLightState(this));
+        this.states.set('attackingHeavy', new AttackingHeavyState(this));
+    }
+
+    private initializeCommands(): void {
+        this.jumpCommand = new JumpCommand();
+        this.dashCommand = new DashCommand();
+        this.lightAttackCommand = new LightAttackCommand();
+        this.heavyAttackCommand = new HeavyAttackCommand();
+    }
+
     public createPlayer(x: number, y: number): Phaser.Physics.Arcade.Sprite {
         // Use SpriteManager to create the player sprite
         this.player = this.spriteManager.createPlayerSprite(x, y);
@@ -67,21 +92,62 @@ export class PlayerManager {
         // Set up collision with platform
         this.setupCollisions();
         
+        // Enter initial state
+        this.currentState.enter();
 
         return this.player;
     }
 
-    private setupInputHandlers(): void {
-        // Set up keyboard event listeners for special actions
-        this.scene.input.keyboard?.on('keydown-SPACE', this.handleJump, this);
-        this.scene.input.keyboard?.on('keydown-Q', this.handleDash, this);
+    // State transition method
+    public transitionTo(stateName: string): void {
+        const newState = this.states.get(stateName);
+        if (!newState) {
+            console.warn(`State '${stateName}' not found`);
+            return;
+        }
 
-        // Set up mouse event listeners for attacks
+        if (this.currentState) {
+            this.currentState.exit();
+        }
+
+        console.log(`Transitioning from ${this.currentState.constructor.name} to ${newState.constructor.name}`);
+        this.currentState = newState;
+        this.currentState.enter();
+    }
+
+    // Helper methods for states to access private properties
+    public getScene(): Phaser.Scene {
+        return this.scene;
+    }
+
+    public getSpriteManager(): PlayerSpriteManager {
+        return this.spriteManager;
+    }
+
+    public getKeyObjects(): { [key: string]: Phaser.Input.Keyboard.Key } {
+        return this.keyObjects;
+    }
+
+    public isInputEnabled(): boolean {
+        return this.enableInput;
+    }
+
+    private setupInputHandlers(): void {
+        // Set up keyboard event listeners for special actions using commands
+        this.scene.input.keyboard?.on('keydown-SPACE', () => {
+            this.jumpCommand.execute(this);
+        }, this);
+        
+        this.scene.input.keyboard?.on('keydown-Q', () => {
+            this.dashCommand.execute(this);
+        }, this);
+
+        // Set up mouse event listeners for attacks using commands
         this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             if (pointer.leftButtonDown()) {
-                this.handleLightAttack();
+                this.lightAttackCommand.execute(this);
             } else if (pointer.rightButtonDown()) {
-                this.handleHeavyAttack();
+                this.heavyAttackCommand.execute(this);
             }
         });
         
@@ -92,183 +158,9 @@ export class PlayerManager {
     public update(): void {
         if (!this.player) return;
         
-        this.handleMovement();
-        this.updateAnimations();
-        
-        // Don't reset velocity here - let physics handle it naturally
-    }
-
-    private handleMovement(): void {
-        if (!this.player || !this.enableInput) return;
-
-        this.isCrouching = this.keyObjects.crouch.isDown && this.isOnGround;
-        this.isSprinting = this.keyObjects.sprint.isDown;
-        
-        // if (this.isCrouching) {
-        //     const body = this.player.body as Phaser.Physics.Arcade.Body;
-        //     body.setSize(body.width, body.height * 0.6); // Reduce height when crouching
-        // }
-        
-        const baseSpeed = 300;
-        const crouchSpeed = 150;
-        const sprintMultiplier = 1.5;
-        
-        let speed = baseSpeed;
-        if (this.isCrouching) {
-            speed = crouchSpeed;
-        } else if (this.isSprinting) {
-            speed = baseSpeed * sprintMultiplier;
-        }
-
-        this.isMoving = false;
-
-        // Handle horizontal movement
-        if (this.keyObjects.left.isDown) {
-            this.player.setVelocityX(-speed);
-            this.spriteManager.flipSprite(this.player, true); // Face left
-            this.isMoving = true;
-        } else if (this.keyObjects.right.isDown) {
-            this.player.setVelocityX(speed);
-            this.spriteManager.flipSprite(this.player, false); // Face right
-            this.isMoving = true;
-        } else {
-            // Stop horizontal movement when no keys are pressed
-            this.player.setVelocityX(0);
-        }
-    }
-
-    private updateAnimations(): void {
-        if (!this.player) return;
-
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-        this.isOnGround = body.touching.down;
-
-        // Don't override animations if already attacking
-        if (this.isAttackingLight || this.isAttackingHeavy) {
-            return;
-        } else if (this.isDashing) {
-            this.spriteManager.playDashingAnimation(this.player);
-        } else if (this.isCrouching) {
-            if (this.isMoving) {
-                this.spriteManager.playCrouchWalkAnimation(this.player);
-            } 
-            else {
-                this.spriteManager.playCrouchFullAnimation(this.player);
-            }
-        } else if (!this.isOnGround) {
-            // In air - jumping or falling
-            if (body.velocity.y < 0) {
-                this.spriteManager.playJumpingAnimation(this.player);
-            } else {
-                this.spriteManager.playFallAnimation(this.player);
-            }
-        } else if (this.isMoving) {
-            if (this.isSprinting) {
-                this.spriteManager.playSprintingAnimation(this.player);
-            } else {
-                this.spriteManager.playWalkingAnimation(this.player);
-            }
-        } else {
-            // Player is on ground, not moving, not attacking - play idle
-            this.spriteManager.playIdleAnimation(this.player);
-        }
-    }
-
-    private handleJump(): void {
-        if (!this.player || !this.enableInput) return;
-
-        const jumpSpeed = -1300;
-        
-        // Allow jumping if we haven't exceeded jump limit
-        if (this.jumpCount < this.jumpLimit) {
-            this.player.setVelocityY(jumpSpeed);
-            this.jumpCount++;
-            this.isJumping = true;
-            
-            console.log(`Jump ${this.jumpCount}/${this.jumpLimit}`);
-        }
-    }
-
-    private handleDash(): void {
-        if (!this.player || this.isDashing || !this.enableInput) return;
-
-        // Check if dash is on cooldown
-        if (this.dashTimer && this.dashTimer.getRemaining() > 0) {
-            console.log('Dash on cooldown');
-            return;
-        }
-
-        this.isDashing = true;
-        const dashSpeed = this.player.flipX ? -2400 : 2400;
-        
-        // Apply dash velocity
-        this.player.setVelocityX(dashSpeed);
-        
-        console.log('Dash executed');
-
-        // End dash after duration
-        this.scene.time.delayedCall(this.dashDuration, () => {
-            this.isDashing = false;
-            
-            // Start cooldown timer
-            this.dashTimer = this.scene.time.delayedCall(this.dashCooldown, () => {
-                console.log('Dash cooldown finished');
-            });
-        });
-    }
-
-    private handleLightAttack(): void {
-        if (!this.player || !this.enableInput) return;
-
-        // Don't attack while dashing
-        if (this.isDashing) return;
-
-        // Don't attack if already attacking
-        if (this.isAttackingLight || this.isAttackingHeavy) {
-            console.log('Light attack blocked - already attacking');
-            return;
-        }
-
-        // Check attack cooldown
-        const currentTime = this.scene.time.now;
-        if (currentTime - this.lastAttackTime < this.attackCooldown) {
-            console.log('Light attack blocked - cooldown');
-            return;
-        }
-
-        // Set attacking state and trigger animation
-        this.isAttackingLight = true;
-        this.spriteManager.playAttackingAnimation(this.player);
-        this.lastAttackTime = currentTime;
-
-        console.log('Light attack executed');
-    }
-
-    private handleHeavyAttack(): void {
-        if (!this.player || !this.enableInput) return;
-
-        // Don't attack while dashing
-        if (this.isDashing) return;
-
-        // Don't attack if already attacking
-        if (this.isAttackingLight || this.isAttackingHeavy) {
-            console.log('Heavy attack blocked - already attacking');
-            return;
-        }
-
-        // Check attack cooldown
-        const currentTime = this.scene.time.now;
-        if (currentTime - this.lastAttackTime < this.attackCooldown) {
-            console.log('Heavy attack blocked - cooldown');
-            return;
-        }
-
-        // Set attacking state and trigger heavy attack animation
-        this.isAttackingHeavy = true;
-        this.spriteManager.playAttack2Animation(this.player);
-        this.lastAttackTime = currentTime;
-
-        console.log('Heavy attack executed');
+        // Delegate to current state
+        this.currentState.update();
+        this.currentState.handleInput();
     }
 
     private setupCollisions(): void {
@@ -281,9 +173,10 @@ export class PlayerManager {
             // Set up collision between player and platform
             this.scene.physics.add.collider(this.player, platform, () => {
                 // Reset jump count when player lands on platform
-                this.jumpCount = 0;
-                this.isJumping = false;
-                this.isOnGround = true;
+                const jumpingState = this.states.get('jumping') as JumpingState;
+                if (jumpingState) {
+                    jumpingState.setJumpCount(0);
+                }
                 console.log('Player landed on platform');
             });
             
@@ -297,33 +190,74 @@ export class PlayerManager {
         return this.player;
     }
 
-    // Getter methods for state access
+    // Updated getter methods for state access
     public getIsAttacking(): boolean {
-        return this.isAttackingLight || this.isAttackingHeavy;
+        return this.currentState instanceof AttackingLightState || 
+               this.currentState instanceof AttackingHeavyState;
     }
 
     public getIsAttackingLight(): boolean {
-        return this.isAttackingLight;
+        return this.currentState instanceof AttackingLightState;
     }
 
     public getIsAttackingHeavy(): boolean {
-        return this.isAttackingHeavy;
+        return this.currentState instanceof AttackingHeavyState;
     }
 
     public getIsMoving(): boolean {
-        return this.isMoving;
+        return this.currentState instanceof WalkingState || 
+               this.currentState instanceof CrouchWalkingState;
     }
 
     public getIsOnGround(): boolean {
-        return this.isOnGround;
+        if (!this.player) return false;
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        return body.touching.down;
     }
 
     public getIsDashing(): boolean {
-        return this.isDashing;
+        return this.currentState instanceof DashingState;
+    }
+
+    public getIsCrouching(): boolean {
+        return this.currentState instanceof CrouchingState || 
+               this.currentState instanceof CrouchWalkingState;
     }
 
     public getPlayerSprite(): Phaser.Physics.Arcade.Sprite | null {
         return this.player;
+    }
+
+    // Get current state (useful for debugging)
+    public getCurrentState(): PlayerState {
+        return this.currentState;
+    }
+
+    // Get a specific state by name (useful for commands)
+    public getState(stateName: string): PlayerState | undefined {
+        return this.states.get(stateName);
+    }
+
+    // Command access methods (useful for external systems like AI or input remapping)
+    public getJumpCommand(): Command {
+        return this.jumpCommand;
+    }
+
+    public getDashCommand(): Command {
+        return this.dashCommand;
+    }
+
+    public getLightAttackCommand(): Command {
+        return this.lightAttackCommand;
+    }
+
+    public getHeavyAttackCommand(): Command {
+        return this.heavyAttackCommand;
+    }
+
+    // Execute command directly (useful for AI or replay systems)
+    public executeCommand(command: Command): void {
+        command.execute(this);
     }
 
     public destroy(): void {
