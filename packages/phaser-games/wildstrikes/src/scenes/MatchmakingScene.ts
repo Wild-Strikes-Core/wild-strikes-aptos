@@ -1,4 +1,5 @@
-// Client-side only Matchmaking scene – networking stripped for animation polish
+import { socket } from "../shared-utils/socket";
+
 export default class Matchmaking extends Phaser.Scene {
     // Scene element references (renamed for clarity)
     private playerSprite!: Phaser.GameObjects.Image;
@@ -18,14 +19,52 @@ export default class Matchmaking extends Phaser.Scene {
      * Scene creation
      * ------------------------------------------------------------------ */
     create(): void {
+
+
         // Full-screen background
         const bg = this.add.image(0, 0, "2G_bg");
         bg.setOrigin(0, 0);
         bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
         bg.setDepth(-1000);
 
-        // Build UI that was originally auto-generated
-        this.editorCreate();
+        
+        this.playerSprite = this.add.image(528, 608, "M_charONE");
+        this.playerSprite.setScale(1.310153805177419);
+
+        // Player card background
+        this.add.image(160, 176, "M_playerCard");
+
+        // Cancel button
+        this.cancelButton = this.add.image(1424, 704, "M_btnCancel");
+        this.cancelButton.setScale(1.419003049417908);
+
+        // ‘Finding a Match’ text
+        this.findingMatchLabel = this.add.text(1168, 416, "Finding a Match", {
+            fontFamily: "Arial",
+            fontSize: "48px",
+            fontStyle: "bold",
+        });
+        this.findingMatchLabel.setScale(1.4657553250177893);
+
+        // Loader text (animated dots)
+        this.loaderText = this.add.text(1392, 496, "...", {
+            fontFamily: "Arial",
+            fontSize: "48px",
+            fontStyle: "bold",
+        });
+        this.loaderText.setScale(1.4657553250177893);
+
+        // Player name placeholder
+        this.playerNameLabel = this.add.text(32, 144, "Player Name", {
+            align: "center",
+            fontFamily: "Arial",
+            fontSize: "64px",
+            fontStyle: "bold",
+        });
+
+        this.connectMatchmakingSocket();
+
+        this.events.emit("scene-awake");
 
         this.animateEntrance();
         this.setupEntranceTransition();
@@ -33,7 +72,7 @@ export default class Matchmaking extends Phaser.Scene {
         this.animateLoader();
 
         // Simulate a match being found after a short delay
-        this.time.delayedCall(2500, () => this.goToMatchFound());
+        // this.time.delayedCall(2500, () => this.goToMatchFound());
 
         // Optional ambience - only play if audio is loaded
         if (this.sound.get("waiting-music") || this.cache.audio.exists("waiting-music")) {
@@ -50,8 +89,9 @@ export default class Matchmaking extends Phaser.Scene {
 
     private setupCancelButton(): void {
         this.cancelButton.setInteractive();
-
+        
         this.cancelButton.on("pointerdown", () => {
+            socket.emit("leave-matchmaking");
             this.cameras.main.fadeOut(180, 0, 0, 0);
             this.cameras.main.once("camerafadeoutcomplete", () => {
                 this.scene.stop("Matchmaking");
@@ -89,61 +129,53 @@ export default class Matchmaking extends Phaser.Scene {
         });
     }
 
-    private goToMatchFound(): void {
-        this.cameras.main.fadeOut(400, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => {
-            this.scene.stop("Matchmaking");
-            this.scene.start("MatchFound");
-        });
-    }
+
 
     private onShutdown(): void {
         // Only stop audio if it exists and is playing
         if (this.sound.get("waiting-music")) {
             this.sound.stopByKey("waiting-music");
         }
+
+        socket.off("match-found");
+        socket.off("opponent-disconnected");
     }
 
-    /* ------------------------------------------------------------------
-     * editorCreate – UI recreated from the original auto-generated code
-     * ------------------------------------------------------------------ */
+    private connectMatchmakingSocket(): void {
+        socket.off("match-found"); // avoid duplication
 
-    editorCreate(): void {
-        this.playerSprite = this.add.image(528, 608, "M_charONE");
-        this.playerSprite.setScale(1.310153805177419);
+        socket.on("match-found", (data) => {
+            console.log("Match found:", data);
+            
+            this.sound.stopByKey("waiting-music");
 
-        // Player card background
-        this.add.image(160, 176, "M_playerCard");
-
-        // Cancel button
-        this.cancelButton = this.add.image(1424, 704, "M_btnCancel");
-        this.cancelButton.setScale(1.419003049417908);
-
-        // ‘Finding a Match’ text
-        this.findingMatchLabel = this.add.text(1168, 416, "Finding a Match", {
-            fontFamily: "Arial",
-            fontSize: "48px",
-            fontStyle: "bold",
-        });
-        this.findingMatchLabel.setScale(1.4657553250177893);
-
-        // Loader text (animated dots)
-        this.loaderText = this.add.text(1392, 496, "...", {
-            fontFamily: "Arial",
-            fontSize: "48px",
-            fontStyle: "bold",
-        });
-        this.loaderText.setScale(1.4657553250177893);
-
-        // Player name placeholder
-        this.playerNameLabel = this.add.text(32, 144, "Player Name", {
-            align: "center",
-            fontFamily: "Arial",
-            fontSize: "64px",
-            fontStyle: "bold",
+            this.cameras.main.fadeOut(400, 0, 0, 0);
+            this.cameras.main.once("camerafadeoutcomplete", () => {
+                this.scene.stop("Matchmaking");
+                this.scene.start("MatchFound", {
+                    opponentId: data.opponentId,
+                    yourData: data.yourData,
+                    opponentData: data.opponentData,
+                });
+            });
         });
 
-        this.events.emit("scene-awake");
+        socket.on("opponent-disconnected", () => {
+            console.warn("Opponent disconnected during matchmaking");
+            this.cameras.main.fadeOut(400, 0, 0, 0);
+            this.cameras.main.once("camerafadeoutcomplete", () => {
+                this.scene.stop("Matchmaking");
+                this.scene.start("Home");
+            });
+        });
+
+        const playerData = [
+            this.playerNameLabel.text || "Anonymous", // You can enhance this
+            "M_charONE", // character ID or other info
+        ];
+
+        socket.emit("join-matchmaking", playerData);
     }
+
 }
 

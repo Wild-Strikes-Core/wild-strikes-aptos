@@ -10,9 +10,21 @@ export default class MatchFound extends Phaser.Scene {
     private enemyCharSprite!: Phaser.GameObjects.Image;
     private vsText!: Phaser.GameObjects.Text;
 
+    private yourData!: string[];
+    private opponentData!: string[];
+
     constructor() {
         super("MatchFound");
     }
+
+    init(data:{
+        opponentId: string,
+        yourData: string[],
+        opponentData: string[]
+    }) {
+        this.yourData = data.yourData;
+        this.opponentData = data.opponentData;
+    } 
 
     create(): void {
         // Full-screen background
@@ -44,7 +56,7 @@ export default class MatchFound extends Phaser.Scene {
         this.leftPlayerCard = this.add.image(146, 216, "M_playerCard");
 
         // Left player name
-        this.leftPlayerName = this.add.text(18, 184, "", {
+        this.leftPlayerName = this.add.text(18, 184, this.yourData[0], {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
@@ -55,7 +67,7 @@ export default class MatchFound extends Phaser.Scene {
         this.rightPlayerCard = this.add.image(1761, 216, "M_playerCard");
 
         // Right player name
-        this.rightPlayerName = this.add.text(1521, 184, "", {
+        this.rightPlayerName = this.add.text(1521, 184, this.opponentData[0], {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",

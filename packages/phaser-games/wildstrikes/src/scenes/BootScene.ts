@@ -38,6 +38,6 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     console.log('All assets loaded successfully');
 
-    this.scene.start('Arena');
+    this.scene.start('Start');
   }
 } 
