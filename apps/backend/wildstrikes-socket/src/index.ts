@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import { createServer } from "http";
 import express from "express";
-import { MatchmakingService } from "./services/MatchMakingService";
+import { MatchmakingService } from "./services/battle/MatchMakingService";
 
 const app = express();
 const server = createServer(app);
