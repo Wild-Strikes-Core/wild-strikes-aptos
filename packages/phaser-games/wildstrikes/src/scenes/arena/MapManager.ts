@@ -52,14 +52,27 @@ export class MapManager {
 
     // Sets up the map background and music
     public setupMap(scene: Phaser.Scene, mapConfig: MapConfig): void {
+        console.log("MapManager.setupMap called with:", mapConfig);
+        
         // Stop any existing music first
         this.stopCurrentMusic();
+
+        // Check if background asset exists
+        if (!scene.cache.json.exists(mapConfig.backgroundKey) && !scene.textures.exists(mapConfig.backgroundKey)) {
+            console.error(`Background asset "${mapConfig.backgroundKey}" not found in cache`);
+            console.log("Available textures:", scene.textures.getTextureKeys());
+            return;
+        }
+
+        console.log("Background asset found, creating background image...");
 
         // Set background image
         const bg = scene.add.image(0, 0, mapConfig.backgroundKey);
         bg.setOrigin(0, 0);
         bg.setDisplaySize(scene.cameras.main.width, scene.cameras.main.height);
         bg.setDepth(-1000);
+
+        console.log("Background image created:", bg);
 
         // Create platform with physics body
         const platform = scene.physics.add.staticGroup();
@@ -76,13 +89,19 @@ export class MapManager {
         // Store platform reference on scene for collision detection
         (scene as any).platform = platform;
 
+        console.log("Platform created");
+
         // Play background music - check if audio is loaded
         if (scene.cache.audio.exists(mapConfig.musicKey)) {
+            console.log("Playing background music:", mapConfig.musicKey);
             this.currentMusic = scene.sound.add(mapConfig.musicKey, { loop: true, volume: 0.3 });
             this.currentMusic.play();
         } else {
             console.warn(`Music key "${mapConfig.musicKey}" not found in cache`);
+            console.log("Available audio keys:", Object.keys(scene.cache.audio.entries.entries));
         }
+
+        console.log("Map setup complete");
     }
 
     // Clean up resources when scene is destroyed

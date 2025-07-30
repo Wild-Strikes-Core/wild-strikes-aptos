@@ -19,6 +19,7 @@ import {
     HeavyAttackCommand
 } from "./commands";
 import { InputService } from "./input";
+import { battleSocketClient } from "@phaser-games/wildstrikes/src/shared-utils/BattleSocketClient";
 
 export class PlayerManager {
     // State management
@@ -71,6 +72,7 @@ export class PlayerManager {
                 crouch: 'CTRL'
             }) as { [key: string]: Phaser.Input.Keyboard.Key };
             this.setupInputHandlers();
+            
         }
     }
 
@@ -93,19 +95,50 @@ export class PlayerManager {
     }
 
     public createPlayer(x: number, y: number): Phaser.Physics.Arcade.Sprite {
-        // Use SpriteManager to create the player sprite
-        this.player = this.spriteManager.createPlayerSprite(x, y);
+        console.log(`[DEBUG] PlayerManager.createPlayer called with position (${x}, ${y})`);
         
-        // Set depth for proper rendering order
-        this.player.setDepth(1);
-        
-        // Set up collision with platform
-        this.setupCollisions();
-        
-        // Enter initial state
-        this.currentState.enter();
-
-        return this.player;
+        try {
+            // Use SpriteManager to create the player sprite
+            console.log(`[DEBUG] Creating player sprite via SpriteManager`);
+            this.player = this.spriteManager.createPlayerSprite(x, y);
+            
+            if (!this.player) {
+                console.error(`[DEBUG] SpriteManager.createPlayerSprite returned null`);
+                return null;
+            }
+            
+            console.log(`[DEBUG] Player sprite created successfully:`, this.player);
+            
+            // Set depth for proper rendering order
+            this.player.setDepth(1);
+            console.log(`[DEBUG] Set player depth to 1`);
+            
+            // Add visual differentiation for local vs remote players
+            if (this.enableInput) {
+                // Local player gets a blue tint
+                this.player.setTint(0x00ffff);
+                console.log(`[DEBUG] Applied blue tint to local player`);
+            } else {
+                // Remote player gets a red tint
+                this.player.setTint(0xff0000);
+                console.log(`[DEBUG] Applied red tint to remote player`);
+            }
+            
+            // Set up collision with platform
+            console.log(`[DEBUG] Setting up collisions`);
+            this.setupCollisions();
+            
+            // Enter initial state
+            console.log(`[DEBUG] Entering initial state`);
+            this.currentState.enter();
+            
+            console.log(`[DEBUG] PlayerManager.createPlayer completed successfully`);
+            return this.player;
+        } catch (error) {
+            console.error(`[DEBUG] Error in PlayerManager.createPlayer:`, error);
+            console.error(`[DEBUG] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
+            return null;
+        }
     }
 
     // State transition method
@@ -116,11 +149,20 @@ export class PlayerManager {
             return;
         }
 
-        if (this.currentState) {
-            this.currentState.exit();
+        // Emit state change for network synchronization
+        if (this.enableInput && this.player) {
+            const body = this.player.body as Phaser.Physics.Arcade.Body;
+            battleSocketClient.emit("player-state-update", {
+                playerId: battleSocketClient.getId(),
+                state: stateName,
+                position: { x: this.player.x, y: this.player.y },
+                velocity: { x: body.velocity.x, y: body.velocity.y },
+                facing: this.player.flipX ? 'left' : 'right',
+                timestamp: Date.now()
+            });
         }
 
-        console.log(`Transitioning from ${this.currentState.constructor.name} to ${newState.constructor.name}`);
+        this.currentState.exit();
         this.currentState = newState;
         this.currentState.enter();
     }
@@ -168,14 +210,20 @@ export class PlayerManager {
                 description: 'Heavy Attack' 
             }
         });
+
+        // Note: Client prediction is now passive and doesn't interfere with normal input
     }
 
-    public update(): void {
+    // Client prediction is now passive and doesn't interfere with normal input handling
+    // It only tracks the current state for reconciliation purposes
+
+    public update(deltaTime?: number): void {
         if (!this.player) return;
         
-        // Delegate to current state
+        // Delegate to current state first (let normal physics handle movement)
         this.currentState.update();
         this.currentState.handleInput();
+        
     }
 
     private setupCollisions(): void {
@@ -283,10 +331,15 @@ export class PlayerManager {
         // Clean up input service
         this.inputService.destroy();
         
+        
         // Clear sprite manager
         this.spriteManager.destroySprite(this.player);
     }
 
-    // For multiplayer support (soon):
+    public getPlayerPosition(): { x: number, y: number } {
+        if (!this.player) return { x: 0, y: 0 };
+        return { x: this.player.x, y: this.player.y };
+    }
+
 
 }

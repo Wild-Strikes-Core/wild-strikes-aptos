@@ -30,7 +30,8 @@ export class PlayerSpriteManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
-        this.scene.time.delayedCall(100, () => this.createCharacterAnimations());
+        // Create animations immediately instead of with delay
+        this.createCharacterAnimations();
     }
 
     // Set callback for when light attack animation completes
@@ -85,16 +86,31 @@ export class PlayerSpriteManager {
     } as const;
 
     private createCharacterAnimations(): void {
+        console.log(`[DEBUG] createCharacterAnimations called`);
+        console.log(`[DEBUG] Checking for animation data files...`);
+        
+        // Check if character assets are loaded
+        const availableTextures = this.scene.textures.getTextureKeys();
+        console.log(`[DEBUG] Available textures:`, availableTextures);
+        
+        // Check if animation data files are loaded
+        const availableJson = this.scene.cache.json.entries.entries;
+        console.log(`[DEBUG] Available JSON files:`, Object.keys(availableJson));
+        
         Object.entries(PlayerSpriteManager.ANIMATION_MAPPINGS).forEach(([semanticKey, config]) => {
+            console.log(`[DEBUG] Processing animation: ${semanticKey} -> ${config.data}`);
+            
             // Create animations with semantic keys
             if (!this.scene.anims.exists(semanticKey)) {
+                console.log(`[DEBUG] Animation '${semanticKey}' does not exist, creating...`);
                 const animData = this.scene.cache.json.get(config.data);
                 
                 if (!animData) {
-                    console.warn(`Animation data not found for ${config.data}`);
+                    console.warn(`[DEBUG] Animation data not found for ${config.data}`);
                     return;
                 }
                 
+                console.log(`[DEBUG] Found animation data for ${config.data}:`, animData);
                 const frameCount = animData.anims[0].frames.length;
                 
                 // Attack animations should never repeat
@@ -103,18 +119,26 @@ export class PlayerSpriteManager {
                     repeatValue = 0; // No repeat for attack, hit, or death animations
                 }
                 
-                console.log(`Creating animation ${semanticKey} (${config.legacy}) with ${frameCount} frames, repeat: ${repeatValue}`);
+                console.log(`[DEBUG] Creating animation ${semanticKey} (${config.legacy}) with ${frameCount} frames, repeat: ${repeatValue}`);
                 
-                this.scene.anims.create({
-                    key: semanticKey,
-                    frames: this.scene.anims.generateFrameNumbers(config.texture, { start: 0, end: frameCount - 1 }),
-                    frameRate: animData.anims[0].frameRate || 10,
-                    repeat: repeatValue
-                });
+                try {
+                    this.scene.anims.create({
+                        key: semanticKey,
+                        frames: this.scene.anims.generateFrameNumbers(config.texture, { start: 0, end: frameCount - 1 }),
+                        frameRate: animData.anims[0].frameRate || 10,
+                        repeat: repeatValue
+                    });
+                    console.log(`[DEBUG] Successfully created animation: ${semanticKey}`);
+                } catch (error) {
+                    console.error(`[DEBUG] Failed to create animation ${semanticKey}:`, error);
+                }
+            } else {
+                console.log(`[DEBUG] Animation '${semanticKey}' already exists`);
             }
             
             // Also create legacy key for backward compatibility (if different from semantic key)
             if (config.legacy !== semanticKey && !this.scene.anims.exists(config.legacy)) {
+                console.log(`[DEBUG] Creating legacy animation: ${config.legacy}`);
                 // Create alias animation with same configuration as semantic version
                 const animData = this.scene.cache.json.get(config.data);
                 if (animData) {
@@ -124,16 +148,22 @@ export class PlayerSpriteManager {
                         repeatValue = 0;
                     }
                     
-                    this.scene.anims.create({
-                        key: config.legacy,
-                        frames: this.scene.anims.generateFrameNumbers(config.texture, { start: 0, end: frameCount - 1 }),
-                        frameRate: animData.anims[0].frameRate || 10,
-                        repeat: repeatValue
-                    });
-                    console.log(`Created legacy alias: ${config.legacy} -> ${semanticKey}`);
+                    try {
+                        this.scene.anims.create({
+                            key: config.legacy,
+                            frames: this.scene.anims.generateFrameNumbers(config.texture, { start: 0, end: frameCount - 1 }),
+                            frameRate: animData.anims[0].frameRate || 10,
+                            repeat: repeatValue
+                        });
+                        console.log(`[DEBUG] Successfully created legacy animation: ${config.legacy}`);
+                    } catch (error) {
+                        console.error(`[DEBUG] Failed to create legacy animation ${config.legacy}:`, error);
+                    }
                 }
             }
         });
+        
+        console.log(`[DEBUG] createCharacterAnimations completed`);
     }
 
     // ========================================
@@ -162,37 +192,69 @@ export class PlayerSpriteManager {
     }
 
     public createPlayerSprite(x: number, y: number, texture: string = '_Idle'): Phaser.Physics.Arcade.Sprite {
-        // Create the physics-enabled sprite
-        const sprite = this.scene.physics.add.sprite(x, y, texture);
+        console.log(`[DEBUG] PlayerSpriteManager.createPlayerSprite called with position (${x}, ${y}), texture: ${texture}`);
         
-        // Set up interactive area for click/touch detection
-        sprite.setInteractive({ 
-            hitArea: new Phaser.Geom.Rectangle(0, 0, 120, 80), 
-            hitAreaCallback: Phaser.Geom.Rectangle.Contains 
-        });
-        
-        // Configure sprite display properties
-        sprite.setScale(3);
-        sprite.setOrigin(0.5, 1); // Center horizontally, bottom vertically for ground alignment
-        
-        // Configure physics body
-        if (sprite.body) {
-            const body = sprite.body as Phaser.Physics.Arcade.Body;
-            body.setGravityY(10000);           // Reasonable gravity
-            body.setSize(30, 40);            // Collision box size
-            body.setOffset(45, 40);          // Center the collision box
-            body.setCollideWorldBounds(true); // Keep player in bounds
-            body.setBounce(0.1);             // Small bounce on landing
-            body.setDragX(200);              // Air resistance for horizontal movement
+        try {
+            // Check if the texture exists
+            if (!this.scene.textures.exists(texture)) {
+                console.error(`[DEBUG] Texture '${texture}' does not exist!`);
+                console.log(`[DEBUG] Available textures:`, this.scene.textures.getTextureKeys());
+                return null;
+            }
+            
+            console.log(`[DEBUG] Texture '${texture}' exists, creating physics sprite`);
+            
+            // Create the physics-enabled sprite
+            const sprite = this.scene.physics.add.sprite(x, y, texture);
+            
+            if (!sprite) {
+                console.error(`[DEBUG] Failed to create physics sprite`);
+                return null;
+            }
+            
+            console.log(`[DEBUG] Physics sprite created successfully:`, sprite);
+            
+            // Set up interactive area for click/touch detection
+            sprite.setInteractive({ 
+                hitArea: new Phaser.Geom.Rectangle(0, 0, 120, 80), 
+                hitAreaCallback: Phaser.Geom.Rectangle.Contains 
+            });
+            console.log(`[DEBUG] Set up interactivity`);
+            
+            // Configure sprite display properties
+            sprite.setScale(3);
+            sprite.setOrigin(0.5, 1); // Center horizontally, bottom vertically for ground alignment
+            console.log(`[DEBUG] Set scale and origin`);
+            
+            // Configure physics body
+            if (sprite.body) {
+                const body = sprite.body as Phaser.Physics.Arcade.Body;
+                body.setGravityY(10000);           // Reasonable gravity
+                body.setSize(30, 40);            // Collision box size
+                body.setOffset(45, 40);          // Center the collision box
+                body.setCollideWorldBounds(true); // Keep player in bounds
+                body.setBounce(0.1);             // Small bounce on landing
+                body.setDragX(200);              // Air resistance for horizontal movement
+                console.log(`[DEBUG] Configured physics body`);
+            } else {
+                console.warn(`[DEBUG] Sprite body is null, physics not configured`);
+            }
+            
+            // Initialize sprite data
+            sprite.setData('currentState', 'idle');
+            console.log(`[DEBUG] Set sprite data`);
+            
+            // Start with idle animation
+            console.log(`[DEBUG] Playing idle animation`);
+            this.playIdleAnimation(sprite);
+            
+            console.log(`[DEBUG] PlayerSpriteManager.createPlayerSprite completed successfully`);
+            return sprite;
+        } catch (error) {
+            console.error(`[DEBUG] Error in PlayerSpriteManager.createPlayerSprite:`, error);
+            console.error(`[DEBUG] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
+            return null;
         }
-        
-        // Initialize sprite data
-        sprite.setData('currentState', 'idle');
-        
-        // Start with idle animation
-        this.playIdleAnimation(sprite);
-        
-        return sprite;
     }
 
     // ========================================
@@ -323,6 +385,8 @@ export class PlayerSpriteManager {
     }
 
     public playIdleAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
+        console.log(`[DEBUG] playIdleAnimation called for sprite:`, sprite);
+        console.log(`[DEBUG] Attempting to play 'player_idle' animation`);
         this.playAnimationWithReset(sprite, 'player_idle', 'idle');
     }
 

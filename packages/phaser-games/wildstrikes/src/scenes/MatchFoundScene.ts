@@ -12,6 +12,11 @@ export default class MatchFound extends Phaser.Scene {
 
     private yourData!: string[];
     private opponentData!: string[];
+    private opponentId: string;
+    private yourId: string;
+    private mapConfig!: any;
+    private p1SpawnPosition!: { x: number; y: number };
+    private p2SpawnPosition!: { x: number; y: number };
 
     constructor() {
         super("MatchFound");
@@ -19,11 +24,30 @@ export default class MatchFound extends Phaser.Scene {
 
     init(data:{
         opponentId: string,
+        yourId: string,
         yourData: string[],
-        opponentData: string[]
+        opponentData: string[],
+        mapConfig: any,
+        p1SpawnPosition?: { x: number; y: number },
+        p2SpawnPosition?: { x: number; y: number }
     }) {
+        console.log("=== MATCH FOUND SCENE INIT ===");
+        console.log(`Your ID: ${data.yourId}`);
+        console.log(`Opponent ID: ${data.opponentId}`);
+        console.log(`Your Data:`, data.yourData);
+        console.log(`Opponent Data:`, data.opponentData);
+        console.log(`P1 Spawn: (${data.p1SpawnPosition?.x}, ${data.p1SpawnPosition?.y})`);
+        console.log(`P2 Spawn: (${data.p2SpawnPosition?.x}, ${data.p2SpawnPosition?.y})`);
+        console.log(`Map Config:`, data.mapConfig);
+        console.log("================================");
+
         this.yourData = data.yourData;
+        this.yourId = data.yourId;
+        this.opponentId = data.opponentId;
         this.opponentData = data.opponentData;
+        this.mapConfig = data.mapConfig;
+        this.p1SpawnPosition = data.p1SpawnPosition;
+        this.p2SpawnPosition = data.p2SpawnPosition;
     } 
 
     create(): void {
@@ -181,14 +205,32 @@ export default class MatchFound extends Phaser.Scene {
     }
 
     private transitionToBattle(): void {
+        console.log("=== TRANSITIONING TO ARENA ===");
+        console.log(`Passing data to Arena scene:`);
+        console.log(`- Your ID: ${this.yourId}`);
+        console.log(`- Opponent ID: ${this.opponentId}`);
+        console.log(`- P1 Spawn: (${this.p1SpawnPosition?.x}, ${this.p1SpawnPosition?.y})`);
+        console.log(`- P2 Spawn: (${this.p2SpawnPosition?.x}, ${this.p2SpawnPosition?.y})`);
+        console.log(`- Map Config:`, this.mapConfig);
+        console.log("================================");
+
         this.cameras.main.flash(300, 255, 255, 255);
         this.cameras.main.once("cameraflashcomplete", () => {
             this.cameras.main.fadeOut(400);
             this.cameras.main.once("camerafadeoutcomplete", () => {
-                this.scene.start("Arena");
+                this.scene.start("Arena", {
+                    mapConfig: this.mapConfig,
+                    yourData: this.yourData,
+                    opponentData: this.opponentData,
+                    yourId: this.yourId,
+                    opponentId: this.opponentId,
+                    p1SpawnPosition: this.p1SpawnPosition,
+                    p2SpawnPosition: this.p2SpawnPosition,
+                });
             });
         });
     }
+
 
     private addIdleAnimation(charSprite: Phaser.GameObjects.Image, isEnemy = false): void {
         const originalY = charSprite.y;

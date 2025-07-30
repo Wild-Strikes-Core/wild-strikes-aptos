@@ -11,6 +11,11 @@ export default class Matchmaking extends Phaser.Scene {
     private loaderDots: string[] = [".", "..", "..."];
     private loaderIndex = 0;
 
+    private mapConfig!: string[];
+    private p1SpawnPosition!: { x: number; y: number };
+    private p2SpawnPosition!: { x: number; y: number };
+
+
     constructor() {
         super("Matchmaking");
     }
@@ -144,8 +149,36 @@ export default class Matchmaking extends Phaser.Scene {
     private connectMatchmakingSocket(): void {
         socket.off("match-found"); // avoid duplication
 
+                // Map selection event
+        socket.on("map-selected", (MapSelectedData) => {
+            console.log("=== MAP SELECTED BY SERVER ===");
+            console.log("Full MapSelectedData:", MapSelectedData);
+            console.log(`Map Config:`, MapSelectedData.mapConfig);
+            console.log(`Player 1 (${MapSelectedData.players[0].socketId}): (${MapSelectedData.players[0].spawnPosition.x}, ${MapSelectedData.players[0].spawnPosition.y})`);
+            console.log(`Player 2 (${MapSelectedData.players[1].socketId}): (${MapSelectedData.players[1].spawnPosition.x}, ${MapSelectedData.players[1].spawnPosition.y})`);
+            console.log(`My Socket ID: ${socket.id}`);
+            console.log(`First player is me: ${MapSelectedData.players[0].socketId === socket.id}`);
+            console.log("================================");
+            
+            this.mapConfig = MapSelectedData.mapConfig;
+            
+            // The first player in the array is always the local player
+            // The second player is always the opponent
+            this.p1SpawnPosition = MapSelectedData.players[0].spawnPosition;
+            this.p2SpawnPosition = MapSelectedData.players[1].spawnPosition;
+        });
+
         socket.on("match-found", (data) => {
-            console.log("Match found:", data);
+            console.log("=== MATCH FOUND EVENT ===");
+            console.log("Full match data:", data);
+            console.log(`Your ID: ${data.yourId}`);
+            console.log(`Opponent ID: ${data.opponentId}`);
+            console.log(`Your Data:`, data.yourData);
+            console.log(`Opponent Data:`, data.opponentData);
+            console.log(`Map Config:`, this.mapConfig);
+            console.log(`P1 Spawn: (${this.p1SpawnPosition?.x}, ${this.p1SpawnPosition?.y})`);
+            console.log(`P2 Spawn: (${this.p2SpawnPosition?.x}, ${this.p2SpawnPosition?.y})`);
+            console.log("================================");
             
             this.sound.stopByKey("waiting-music");
 
@@ -154,8 +187,12 @@ export default class Matchmaking extends Phaser.Scene {
                 this.scene.stop("Matchmaking");
                 this.scene.start("MatchFound", {
                     opponentId: data.opponentId,
-                    yourData: data.yourData,
                     opponentData: data.opponentData,
+                    yourId: data.yourId,
+                    yourData: data.yourData,
+                    mapConfig: this.mapConfig,
+                    p1SpawnPosition: this.p1SpawnPosition,
+                    p2SpawnPosition: this.p2SpawnPosition,
                 });
             });
         });

@@ -2,6 +2,8 @@ import { MapManager } from "./MapManager";
 import { AssetLoader } from "../../AssetLoader";
 import { DebugMode } from "./DebugMode";
 import { PlayerManager } from "./player/PlayerManager";
+import { NetworkStateManager } from "./player/NetworkStateManager";
+import { battleSocketClient} from "../../shared-utils/BattleSocketClient";
 
 // ========================================
 // INTERFACES & TYPES
@@ -31,57 +33,6 @@ interface CameraConfig {
     followOffset: { x: number; y: number };
     bounds: { x: number; y: number; width: number; height: number };
     lerpSpeed: number;
-}
-
-// ========================================
-// VALIDATION & UTILITIES
-// ========================================
-
-class PlayerSpawnValidator {
-    private static readonly MIN_SPAWN_DISTANCE = 100;
-    private static readonly MAX_PLAYERS = 8;
-    private static readonly RESERVED_IDS = ['system', 'server', 'ai'];
-
-    static validateSpawnRequest(
-        playerId: string, 
-        spawnConfig: SpawnConfig, 
-        existingPlayers: Map<string, PlayerContext>
-    ): { valid: boolean; error?: string } {
-        // Check for duplicate ID
-        if (existingPlayers.has(playerId)) {
-            return { valid: false, error: `Player with ID '${playerId}' already exists` };
-        }
-
-        // Check for reserved IDs
-        if (this.RESERVED_IDS.includes(playerId.toLowerCase())) {
-            return { valid: false, error: `Player ID '${playerId}' is reserved` };
-        }
-
-        // Check maximum players
-        if (existingPlayers.size >= this.MAX_PLAYERS) {
-            return { valid: false, error: `Maximum players (${this.MAX_PLAYERS}) reached` };
-        }
-
-        // Check spawn position conflicts
-        const tooClose = Array.from(existingPlayers.values()).some(player => {
-            const distance = Phaser.Math.Distance.Between(
-                spawnConfig.x, spawnConfig.y,
-                player.spawnPosition.x, player.spawnPosition.y
-            );
-            return distance < this.MIN_SPAWN_DISTANCE;
-        });
-
-        if (tooClose) {
-            return { valid: false, error: `Spawn position too close to existing player` };
-        }
-
-        // Validate spawn bounds (assuming scene dimensions)
-        if (spawnConfig.x < 0 || spawnConfig.x > 1920 || spawnConfig.y < 0 || spawnConfig.y > 1080) {
-            return { valid: false, error: `Spawn position out of bounds` };
-        }
-
-        return { valid: true };
-    }
 }
 
 class LocalPlayerController {
@@ -150,19 +101,61 @@ export default class Arena extends Phaser.Scene {
 
     private mapManager: MapManager;
     private debugMode: DebugMode;
+    private networkStateManager: NetworkStateManager;
 
     // Enhanced player management with context
-    private playerContexts: Map<string, PlayerContext> = new Map();
+    private playerContexts: Map<string, PlayerContext> = new Map(); // 
     private localPlayerId: string | null = null;
     private localPlayerController: LocalPlayerController | null = null;
+    
+    private yourData!: string[];
+    private opponentData!: string[];
+    private yourId!: string;
+    private opponentId!: string;
+    private p1SpawnPosition!: { x: number; y: number };
+    private p2SpawnPosition!: { x: number; y: number };
 
     private currentMapConfig: any;
     
     // Enable/disable debug mode - set to false for production
     private static readonly DEBUG_ENABLED = true;
 
+    init(data?: {
+        mapConfig?: any;
+        yourData?: string[];
+        opponentData?: string[];
+        opponentId?: string;
+        yourId?: string;
+        p1SpawnPosition?: { x: number; y: number };
+        p2SpawnPosition?: { x: number; y: number };
+        }): void {
+        console.log("=== ARENA SCENE INIT ===");
+        console.log("Received data:", data);
+        
+        this.currentMapConfig = data.mapConfig;
+        this.yourData = data.yourData;
+        this.yourId = data.yourId;
+        this.opponentId = data.opponentId;
+        this.opponentData = data.opponentData;
+        this.p1SpawnPosition = data.p1SpawnPosition;
+        this.p2SpawnPosition = data.p2SpawnPosition;
+
+        // Validate required data
+        if (!this.yourId || !this.opponentId) {
+            console.error("❌ Missing player IDs in Arena init");
+        }
+        if (!this.p1SpawnPosition || !this.p2SpawnPosition) {
+            console.error("❌ Missing spawn positions in Arena init");
+        }
+        if (!this.currentMapConfig) {
+            console.error("❌ Missing map config in Arena init");
+        }
+
+        console.log("=== ARENA INIT COMPLETE ===");
+    }
+
+
     preload(): void {
-        this.mapManager = new MapManager();
         
         // Load gameplay and audio assets needed for the arena
         const loader = new AssetLoader(this.load);
@@ -175,39 +168,115 @@ export default class Arena extends Phaser.Scene {
     }
 
     create(): void {
-        // Get a random map configuration
-        this.currentMapConfig = this.mapManager.getRandomMapConfig();
+        battleSocketClient.connect();
+        const isConnected: boolean = battleSocketClient.isSocketConnected();
+        console.log(`🔌 Socket connected: ${isConnected}`);
+        console.log(`🆔 Socket ID: ${battleSocketClient.getId()}`);
 
-        // Set up the map background and music
-        this.mapManager.setupMap(this, this.currentMapConfig);
+        // Initialize map manager
+        this.mapManager = new MapManager();
+
+        // Initialize network state manager for multiplayer sync
+        this.networkStateManager = new NetworkStateManager(this);
+
+        console.log("Arena scene created");
 
         // Initialize debug mode if enabled
         if (Arena.DEBUG_ENABLED) {
             this.debugMode = new DebugMode(this);
             this.debugMode.enable();
-            this.debugMode.initialize(this.mapManager, this.currentMapConfig);
         }
 
-        // Create players using the new enhanced system
-        const spawnX = this.cameras.main.width / 2; // Center horizontally
-        const spawnY = 200; // High up in the air
-        
-        this.spawnPlayer('playerONE', {
-            x: spawnX,
-            y: spawnY,
-            team: 'blue',
-            name: 'Local Player',
-            health: 100
-        }, true);
+        // Always set up network listeners to receive player data from server
 
-        this.spawnPlayer('playerTWO', {
-            x: spawnX + 300,
-            y: spawnY,
-            team: 'red',
-            name: 'AI Player',
-            health: 100
-        }, false);
+        // If we received mapConfig directly, use it immediately for map setup
+        if (this.currentMapConfig) {
+            console.log("Using mapConfig received from MatchFound scene");
+            this.setupMapAndPlayers();
+           // Send ready signal to start the battle
+            console.log("Sending ready signal to start battle...");
+            battleSocketClient.startBattle();
+        } else {
+            console.log("No mapConfig received, will wait for server selection");
+        }
+
+
     }
+
+    private setupMapAndPlayers(): void {
+        console.log("Setting up map with config:", this.currentMapConfig);
+
+        // Convert server map config to client map config
+        const clientMapConfig = this.convertServerMapToClientMap(this.currentMapConfig);
+
+        // Set up the map background and music
+        this.mapManager.setupMap(this, clientMapConfig);
+
+        console.log("Map setup complete, initializing debug mode...");
+
+        // Initialize debug mode with the selected map
+        if (Arena.DEBUG_ENABLED && this.debugMode) {
+            this.debugMode.initialize(this.mapManager, clientMapConfig);
+        }
+
+        // Create players using spawn points from server
+        console.log("=== PLAYER SPAWNING DEBUG ===");
+        console.log(`Your ID: ${this.yourId} (Local Player)`);
+        console.log(`Opponent ID: ${this.opponentId} (Remote Player)`);
+        console.log(`P1 Spawn Position: (${this.p1SpawnPosition.x}, ${this.p1SpawnPosition.y})`);
+        console.log(`P2 Spawn Position: (${this.p2SpawnPosition.x}, ${this.p2SpawnPosition.y})`);
+        console.log(`Your Data:`, this.yourData);
+        console.log(`Opponent Data:`, this.opponentData);
+        console.log("================================");
+
+        // Spawn local player (you) at P1 position
+        console.log(`🎯 Spawning LOCAL player (${this.yourId}) at P1 position: (${this.p1SpawnPosition.x}, ${this.p1SpawnPosition.y})`);
+        const localSpawnSuccess = this.spawnPlayer(this.yourId, this.p1SpawnPosition, true);
+        console.log(`Local player spawn ${localSpawnSuccess ? 'SUCCESS' : 'FAILED'}`);
+
+        // Set up network state manager with local player
+        if (localSpawnSuccess) {
+            const localPlayerContext = this.playerContexts.get(this.yourId);
+            if (localPlayerContext) {
+                this.networkStateManager.setLocalPlayer(localPlayerContext.manager);
+                console.log('Network state manager configured with local player');
+            }
+        }
+
+        // Spawn opponent as remote player at P2 position ONLY
+        console.log(`🎯 Spawning OPPONENT (${this.opponentId}) as REMOTE player at P2 position: (${this.p2SpawnPosition.x}, ${this.p2SpawnPosition.y})`);
+        this.networkStateManager.spawnRemotePlayer(this.opponentId, this.p2SpawnPosition);
+        
+        // Don't spawn opponent locally - let the network manager handle it
+        console.log(`Remote opponent spawn initiated`);
+
+        if (localSpawnSuccess) {
+            console.log("✅ Local player spawned successfully!");
+            // Log final positions after a short delay to ensure everything is set up
+            this.time.delayedCall(100, () => {
+                this.logPlayerPositions();
+            });
+        } else {
+            console.error("❌ Local player spawning failed!");
+        }
+    }
+
+
+    private convertServerMapToClientMap(serverMap: any): any {
+        console.log("Converting server map to client map:", serverMap);
+        
+        // Convert server map format to client MapConfig format
+        const clientMap = {
+            name: serverMap.name,
+            backgroundKey: serverMap.backgroundImage,
+            musicKey: serverMap.backgroundMusic
+        };
+        
+        console.log("Converted to client map:", clientMap);
+        return clientMap;
+    }
+
+ 
     update(time: number, delta: number): void {
         // Update debug mode if enabled
         if (Arena.DEBUG_ENABLED && this.debugMode) {
@@ -216,13 +285,39 @@ export default class Arena extends Phaser.Scene {
 
         // Update all player managers
         this.playerContexts.forEach((playerContext) => {
-            playerContext.manager.update();
+            playerContext.manager.update(delta);
             playerContext.lastUpdate = time;
         });
 
         // Update local player controller
         if (this.localPlayerController) {
             this.localPlayerController.updateCamera();
+        }
+
+        // Update network state manager for multiplayer sync
+        if (this.networkStateManager) {
+            this.networkStateManager.update();
+        }
+
+        // Debug: Test network sync every 2 seconds
+        if (this.time.now % 2000 < 16) {
+            console.log("🔍 Testing network sync...");
+            const localPlayer = this.getLocalPlayer();
+            if (localPlayer) {
+                console.log(`📍 Local player position: (${localPlayer.x.toFixed(1)}, ${localPlayer.y.toFixed(1)})`);
+            }
+            
+            const remotePlayers = this.networkStateManager.getRemotePlayers();
+            console.log(`🌐 Remote players count: ${remotePlayers.size}`);
+            remotePlayers.forEach((remoteData, playerId) => {
+                const sprite = remoteData.manager.getPlayerSprite();
+                if (sprite) {
+                    console.log(`📍 Remote player ${playerId}: (${sprite.x.toFixed(1)}, ${sprite.y.toFixed(1)})`);
+                }
+            });
+
+            // Test manual network sync
+            this.networkStateManager.testNetworkSync();
         }
     }
 
@@ -238,6 +333,11 @@ export default class Arena extends Phaser.Scene {
         // Clean up map manager
         if (this.mapManager) {
             this.mapManager.destroy();
+        }
+
+        // Clean up network state manager
+        if (this.networkStateManager) {
+            this.networkStateManager.destroy();
         }
 
         // Clean up local player controller
@@ -269,26 +369,43 @@ export default class Arena extends Phaser.Scene {
      * @returns Whether the spawn was successful
      */
     spawnPlayer(playerId: string, spawnConfig: SpawnConfig, isLocal: boolean = false): boolean {
-        // Validate spawn request
-        const validation = PlayerSpawnValidator.validateSpawnRequest(playerId, spawnConfig, this.playerContexts);
-        if (!validation.valid) {
-            console.error(`Failed to spawn player '${playerId}': ${validation.error}`);
+        console.log(`🎮 SPAWNING PLAYER: '${playerId}' at (${spawnConfig.x}, ${spawnConfig.y}) - ${isLocal ? 'LOCAL' : 'REMOTE'}`);
+
+        // Validate spawn configuration
+        if (!spawnConfig || typeof spawnConfig.x !== 'number' || typeof spawnConfig.y !== 'number') {
+            console.error(`❌ Invalid spawn config for player '${playerId}':`, spawnConfig);
             return false;
         }
 
+        // Check if player already exists
+        if (this.playerContexts.has(playerId)) {
+            console.warn(`⚠️ Player '${playerId}' already exists, removing old instance`);
+            this.removePlayer(playerId);
+        }
+
         try {
+            console.log(`📦 Creating PlayerManager for '${playerId}' (input enabled: ${isLocal})`);
             // Create player manager
             const playerManager = new PlayerManager(this, isLocal);
-            playerManager.createPlayer(spawnConfig.x, spawnConfig.y);
+            
+            console.log(`🎯 Creating player sprite at position (${spawnConfig.x}, ${spawnConfig.y})`);
+            const playerSprite = playerManager.createPlayer(spawnConfig.x, spawnConfig.y);
+            
+            if (!playerSprite) {
+                console.error(`❌ PlayerManager.createPlayer returned null for '${playerId}'`);
+                return false;
+            }
+            
+            console.log(`✅ Player sprite created successfully for '${playerId}' at (${playerSprite.x}, ${playerSprite.y})`);
 
             // Create player context
             const playerContext: PlayerContext = {
                 id: playerId,
                 manager: playerManager,
                 isLocal,
-                team: spawnConfig.team || 'neutral',
+                team: spawnConfig.team || (isLocal ? 'player1' : 'player2'),
                 health: spawnConfig.health || 100,
-                name: spawnConfig.name || playerId,
+                name: spawnConfig.name || (isLocal ? 'You' : 'Opponent'),
                 spawnPosition: { x: spawnConfig.x, y: spawnConfig.y },
                 lastUpdate: this.time.now
             };
@@ -298,15 +415,23 @@ export default class Arena extends Phaser.Scene {
 
             // Set up local player specifics
             if (isLocal) {
+                console.log(`🎮 Setting up local player controller for '${playerId}'`);
                 this.localPlayerId = playerId;
                 this.localPlayerController = new LocalPlayerController(this, this.cameras.main, playerContext);
             }
 
-            console.log(`Successfully spawned player '${playerId}' at (${spawnConfig.x}, ${spawnConfig.y})`);
+            console.log(`🎉 Successfully spawned player '${playerId}' (${isLocal ? 'LOCAL' : 'REMOTE'}) at (${spawnConfig.x}, ${spawnConfig.y})`);
+            console.log(`📊 Total players in arena: ${this.playerContexts.size}`);
+            
+            // Log player details
+            const sprite = playerContext.manager.getPlayerSprite();
+            console.log(`📍 Final sprite position: (${sprite?.x}, ${sprite?.y})`);
+            
             return true;
 
         } catch (error) {
-            console.error(`Error spawning player '${playerId}':`, error);
+            console.error(`❌ Error spawning player '${playerId}':`, error);
+            console.error(`🔍 Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
             return false;
         }
     }
@@ -578,5 +703,34 @@ Teams: ${Object.entries(stats.teamCounts).map(([team, count]) => `${team}:${coun
 
 Players:
 ${playerList}`;
+    }
+
+    /**
+     * Log current player positions for debugging
+     */
+    logPlayerPositions(): void {
+        console.log("=== CURRENT PLAYER POSITIONS ===");
+        
+        // Log local players
+        this.playerContexts.forEach((context, playerId) => {
+            const sprite = context.manager.getPlayerSprite();
+            console.log(`🎮 LOCAL ${playerId}: ${context.name} @ (${sprite?.x?.toFixed(1) || '?'}, ${sprite?.y?.toFixed(1) || '?'})`);
+        });
+        
+        // Log remote players from network manager
+        const remotePlayers = this.networkStateManager.getRemotePlayers();
+        remotePlayers.forEach((remoteData, playerId) => {
+            const sprite = remoteData.manager.getPlayerSprite();
+            console.log(`👤 REMOTE ${playerId}: @ (${sprite?.x?.toFixed(1) || '?'}, ${sprite?.y?.toFixed(1) || '?'})`);
+        });
+        
+        console.log("================================");
+    }
+
+    /**
+     * Get the network state manager
+     */
+    getNetworkStateManager(): NetworkStateManager {
+        return this.networkStateManager;
     }
 }
