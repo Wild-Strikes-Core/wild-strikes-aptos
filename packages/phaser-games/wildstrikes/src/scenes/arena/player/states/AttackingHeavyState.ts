@@ -1,3 +1,4 @@
+import { battleSocketClient } from "@phaser-games/wildstrikes/src/shared-utils/BattleSocketClient";
 import { PlayerState } from "./PlayerState";
 import { PlayerStates } from "./PlayerStates";
 
@@ -10,7 +11,7 @@ export class AttackingHeavyState extends PlayerState {
         const player = this.getPlayer();
         
         if (!player) return;
-
+    
         // Check attack cooldown
         const currentTime = this.getScene().time.now;
         if (currentTime - this.lastAttackTime < this.attackCooldown) {
@@ -18,16 +19,26 @@ export class AttackingHeavyState extends PlayerState {
             this.playerManager.transitionTo(PlayerStates.Idle);
             return;
         }
-
+    
+        // Send attack event to server
+        const body = player.body as Phaser.Physics.Arcade.Body;
+        battleSocketClient.emit('player-attack', {
+            type: 'heavy',
+            damage: 30,
+            range: 120,
+            position: { x: player.x, y: player.y },
+            animation: 'heavy-attack'
+        });
+    
         // Play heavy attack animation
         this.getSpriteManager().playAttack2Animation(player);
         this.lastAttackTime = currentTime;
-
+    
         // Set up animation complete callback
         this.getSpriteManager().setHeavyAttackCompleteCallback(() => {
             this.onAttackComplete();
         });
-
+    
         console.log('Heavy attack executed');
     }
 

@@ -35,17 +35,31 @@ export class PlayerManager {
     // Input handling
     private inputService: InputService;
 
+    private targetPosition: { x: number; y: number } | null = null;
+    private targetVelocity: { x: number; y: number } | null = null;
+    private interpolationTime: number = 0;
+    private interpolationDuration: number = 100; // 100ms interpolation
+    private lastNetworkUpdate: number = 0;
+    private isInterpolating: boolean = false;
+    private lastNetworkAnimation: string | null = null;
+
     private player: Phaser.Physics.Arcade.Sprite | null = null;
     private spriteManager: PlayerSpriteManager;
 
     private keyObjects: { [key: string]: Phaser.Input.Keyboard.Key } = {};
     private enableInput: boolean;
 
-    constructor(private scene: Phaser.Scene, enableInput: boolean = true) {
+    private spawnPosition: { x: number, y: number };
+
+    private roomId: string;
+
+    constructor(private scene: Phaser.Scene, enableInput: boolean = true, roomId: string) {
         this.scene = scene;
         this.enableInput = enableInput;
         this.spriteManager = new PlayerSpriteManager(scene);
         
+        this.roomId = roomId;
+
         // Initialize states
         this.initializeStates();
         
@@ -58,7 +72,7 @@ export class PlayerManager {
         this.inputService.setEnabled(enableInput);
         
         // Set initial state to idle
-        this.currentState = this.states.get(PlayerStates.Idle)!;;
+        this.currentState = this.states.get(PlayerStates.Idle)!;
         
         // Only set up input controls if input is enabled
         if (this.enableInput) {
@@ -94,77 +108,187 @@ export class PlayerManager {
         this.heavyAttackCommand = new HeavyAttackCommand();
     }
 
-    public createPlayer(x: number, y: number): Phaser.Physics.Arcade.Sprite {
-        console.log(`[DEBUG] PlayerManager.createPlayer called with position (${x}, ${y})`);
-        
-        try {
-            // Use SpriteManager to create the player sprite
-            console.log(`[DEBUG] Creating player sprite via SpriteManager`);
-            this.player = this.spriteManager.createPlayerSprite(x, y);
-            
-            if (!this.player) {
-                console.error(`[DEBUG] SpriteManager.createPlayerSprite returned null`);
-                return null;
-            }
-            
-            console.log(`[DEBUG] Player sprite created successfully:`, this.player);
-            
-            // Set depth for proper rendering order
-            this.player.setDepth(1);
-            console.log(`[DEBUG] Set player depth to 1`);
-            
-            // Add visual differentiation for local vs remote players
-            if (this.enableInput) {
-                // Local player gets a blue tint
-                this.player.setTint(0x00ffff);
-                console.log(`[DEBUG] Applied blue tint to local player`);
-            } else {
-                // Remote player gets a red tint
-                this.player.setTint(0xff0000);
-                console.log(`[DEBUG] Applied red tint to remote player`);
-            }
-            
-            // Set up collision with platform
-            console.log(`[DEBUG] Setting up collisions`);
-            this.setupCollisions();
-            
-            // Enter initial state
-            console.log(`[DEBUG] Entering initial state`);
-            this.currentState.enter();
-            
-            console.log(`[DEBUG] PlayerManager.createPlayer completed successfully`);
-            return this.player;
-        } catch (error) {
-            console.error(`[DEBUG] Error in PlayerManager.createPlayer:`, error);
-            console.error(`[DEBUG] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
-            return null;
-        }
+    public setSpawnPosition(x: number, y: number): void {
+        this.spawnPosition = { x, y };
     }
 
-    // State transition method
+    public createPlayer(x: number, y: number): Phaser.Physics.Arcade.Sprite {
+        this.player = this.spriteManager.createPlayerSprite(x, y);
+        this.player.setDepth(1);
+        if (this.enableInput) {
+            this.player.setTint(0x00ffff);
+        } else {
+            this.player.setTint(0xff0000);
+        }
+        this.setupCollisions();        
+        this.currentState.enter();
+        return this.player;
+    }
+
     public transitionTo(stateName: string): void {
         const newState = this.states.get(stateName);
         if (!newState) {
-            console.warn(`State '${stateName}' not found`);
             return;
         }
-
+    
         // Emit state change for network synchronization
         if (this.enableInput && this.player) {
             const body = this.player.body as Phaser.Physics.Arcade.Body;
-            battleSocketClient.emit("player-state-update", {
-                playerId: battleSocketClient.getId(),
-                state: stateName,
-                position: { x: this.player.x, y: this.player.y },
+            
+            const networkStateName = stateName
+                .replace(/([a-z])([A-Z])/g, '$1-$2')
+                .toLowerCase();
+            
+            const networkData = {
+                state: networkStateName,
+                position: { 
+                    x: this.player.x, 
+                    y: this.player.y,
+                    facing: this.player.flipX ? 'left' : 'right'
+                },
                 velocity: { x: body.velocity.x, y: body.velocity.y },
-                facing: this.player.flipX ? 'left' : 'right',
-                timestamp: Date.now()
-            });
+                timestamp: Date.now(),
+                roomId: this.roomId
+            };
+            
+            console.log(`[NETWORK] Sending state update:`, networkData);
+            battleSocketClient.emit("player-state-update", networkData);
         }
-
+    
         this.currentState.exit();
         this.currentState = newState;
         this.currentState.enter();
+    }
+
+    public updateFromNetwork(networkState: any): void {
+        if (!this.player || this.enableInput) return; // Don't update local player from network
+    
+        const currentTime = Date.now();
+        
+        // Throttle network updates to prevent excessive processing
+        if (currentTime - this.lastNetworkUpdate < 16) return; // ~60fps max
+        
+        // Store the current position as starting point for interpolation
+        const startPosition = { x: this.player.x, y: this.player.y };
+        
+        // Update target position and velocity for interpolation
+        if (networkState.position) {
+            this.targetPosition = { 
+                x: networkState.position.x, 
+                y: networkState.position.y 
+            };
+            
+            // Update velocity if provided
+            if (networkState.velocity) {
+                this.targetVelocity = { 
+                    x: networkState.velocity.x, 
+                    y: networkState.velocity.y 
+                };
+            }
+        }
+    
+        // Update facing direction immediately (no interpolation needed)
+        if (networkState.position?.facing) {
+            this.player.setFlipX(networkState.position.facing === 'left');
+        }
+    
+        // Update animation/state visually only
+        if (networkState.state) {
+            switch (networkState.state) {
+                case 'idle':
+                    this.spriteManager.playIdleAnimation(this.player);
+                    break;
+                case 'walking':
+                    this.spriteManager.playWalkingAnimation(this.player);
+                    break;
+                case 'jumping':
+                    this.spriteManager.playJumpingAnimation(this.player);
+                    break;
+                case 'attacking-light':
+                    this.spriteManager.playAttackingAnimation(this.player);
+                    break;
+                case 'attacking-heavy':
+                    this.spriteManager.playAttack2Animation(this.player);
+                    break;
+                case 'dashing':
+                    this.spriteManager.playDashingAnimation(this.player);
+                    break;
+                case 'crouching':
+                    this.spriteManager.playCrouchFullAnimation(this.player);
+                    break;
+                case 'crouch-walking':
+                    this.spriteManager.playCrouchWalkAnimation(this.player);
+                    break;
+                default:
+                    this.spriteManager.playIdleAnimation(this.player);
+                    break;
+            }
+        }
+    
+        // Start interpolation with shorter duration for smoother movement
+        this.interpolationTime = 0;
+        this.interpolationDuration = 50; // Reduced from 100ms to 50ms for smoother movement
+        this.lastNetworkUpdate = currentTime;
+        this.isInterpolating = true;
+    }
+
+    private updateInterpolation(deltaTime: number): void {
+        if (!this.player || this.enableInput || !this.isInterpolating || !this.targetPosition) return;
+    
+        this.interpolationTime += deltaTime;
+        const progress = Math.min(this.interpolationTime / this.interpolationDuration, 1);
+    
+        // Use smoother easing function
+        const easedProgress = this.easeOutQuart(progress);
+    
+        // Interpolate position
+        const startX = this.player.x;
+        const startY = this.player.y;
+        const targetX = this.targetPosition.x;
+        const targetY = this.targetPosition.y;
+    
+        const newX = startX + (targetX - startX) * easedProgress;
+        const newY = startY + (targetY - startY) * easedProgress;
+    
+        this.player.setPosition(newX, newY);
+    
+        // Interpolate velocity if available
+        if (this.targetVelocity) {
+            const body = this.player.body as Phaser.Physics.Arcade.Body;
+            const startVelX = body.velocity.x;
+            const startVelY = body.velocity.y;
+            
+            const newVelX = startVelX + (this.targetVelocity.x - startVelX) * easedProgress;
+            const newVelY = startVelY + (this.targetVelocity.y - startVelY) * easedProgress;
+            
+            this.player.setVelocity(newVelX, newVelY);
+        }
+    
+        // Stop interpolation when complete
+        if (progress >= 1) {
+            this.isInterpolating = false;
+            this.targetPosition = null;
+            this.targetVelocity = null;
+        }
+    }
+
+    private easeOutQuart(t: number): number {
+        return 1 - Math.pow(1 - t, 4);
+    }
+
+    private convertNetworkStateToLocal(networkState: string): string {
+        // Convert kebab-case back to camelCase
+        const stateMap: { [key: string]: string } = {
+            'idle': PlayerStates.Idle,
+            'walking': PlayerStates.Walking,
+            'jumping': PlayerStates.Jumping,
+            'attacking-light': PlayerStates.AttackingLight,
+            'attacking-heavy': PlayerStates.AttackingHeavy,
+            'dashing': PlayerStates.Dashing,
+            'crouching': PlayerStates.Crouching,
+            'crouch-walking': PlayerStates.CrouchWalking
+        };
+        return stateMap[networkState] || PlayerStates.Idle;
     }
 
     // Helper methods for states to access private properties
@@ -220,10 +344,19 @@ export class PlayerManager {
     public update(deltaTime?: number): void {
         if (!this.player) return;
         
+        // Update interpolation for remote players
+        if (!this.enableInput) {
+            this.updateInterpolation(deltaTime || 16);
+        }
+        
+        // Send continuous updates for local player during movement
+        if (this.enableInput) {
+            this.sendContinuousUpdate();
+        }
+        
         // Delegate to current state first (let normal physics handle movement)
         this.currentState.update();
         this.currentState.handleInput();
-        
     }
 
     private setupCollisions(): void {
@@ -239,12 +372,40 @@ export class PlayerManager {
                 if (this.currentState instanceof JumpingState) {
                     this.currentState.onLand();
                 }
-                console.log('Player landed on platform');
             });
             
-            console.log('Player-platform collision set up successfully');
         } else {
             console.warn('Platform not found on scene for collision setup');
+        }
+    }
+
+    private sendContinuousUpdate(): void {
+        if (!this.enableInput || !this.player) return;
+        
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        const currentState = this.currentState.constructor.name.toLowerCase();
+        
+        // Only send continuous updates for movement states and reduce frequency
+        const movementStates = ['walking', 'jumping', 'dashing', 'crouchwalking'];
+        if (movementStates.some(state => currentState.includes(state))) {
+            // Add throttling to reduce network traffic
+            const now = Date.now();
+            if (now - this.lastNetworkUpdate < 50) return; // Only send every 50ms max
+            
+            const networkData = {
+                state: currentState.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
+                position: { 
+                    x: this.player.x, 
+                    y: this.player.y,
+                    facing: this.player.flipX ? 'left' : 'right'
+                },
+                velocity: { x: body.velocity.x, y: body.velocity.y },
+                timestamp: now,
+                roomId: this.roomId
+            };
+            
+            battleSocketClient.emit("player-state-update", networkData);
+            this.lastNetworkUpdate = now;
         }
     }
 

@@ -173,6 +173,7 @@ export default class Matchmaking extends Phaser.Scene {
             console.log("Full match data:", data);
             console.log(`Your ID: ${data.yourId}`);
             console.log(`Opponent ID: ${data.opponentId}`);
+            console.log(`Room ID: ${data.roomId}`); // ✅ Add this log
             console.log(`Your Data:`, data.yourData);
             console.log(`Opponent Data:`, data.opponentData);
             console.log(`Map Config:`, this.mapConfig);
@@ -181,7 +182,7 @@ export default class Matchmaking extends Phaser.Scene {
             console.log("================================");
             
             this.sound.stopByKey("waiting-music");
-
+        
             this.cameras.main.fadeOut(400, 0, 0, 0);
             this.cameras.main.once("camerafadeoutcomplete", () => {
                 this.scene.stop("Matchmaking");
@@ -193,6 +194,7 @@ export default class Matchmaking extends Phaser.Scene {
                     mapConfig: this.mapConfig,
                     p1SpawnPosition: this.p1SpawnPosition,
                     p2SpawnPosition: this.p2SpawnPosition,
+                    roomId: data.roomId 
                 });
             });
         });

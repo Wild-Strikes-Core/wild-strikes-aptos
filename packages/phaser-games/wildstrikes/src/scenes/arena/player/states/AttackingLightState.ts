@@ -1,5 +1,6 @@
 import { PlayerState } from "./PlayerState";
 import { PlayerStates } from "./PlayerStates";
+import { battleSocketClient } from "../../../../shared-utils/BattleSocketClient";
 
 export class AttackingLightState extends PlayerState {
     private attackCooldown: number = 300;
@@ -10,7 +11,7 @@ export class AttackingLightState extends PlayerState {
         const player = this.getPlayer();
         
         if (!player) return;
-
+    
         // Check attack cooldown
         const currentTime = this.getScene().time.now;
         if (currentTime - this.lastAttackTime < this.attackCooldown) {
@@ -18,16 +19,26 @@ export class AttackingLightState extends PlayerState {
             this.playerManager.transitionTo(PlayerStates.Idle);
             return;
         }
-
+    
+        // Send attack event to server
+        const body = player.body as Phaser.Physics.Arcade.Body;
+        battleSocketClient.emit('player-attack', {
+            type: 'light',
+            damage: 15,
+            range: 80,
+            position: { x: player.x, y: player.y },
+            animation: 'light-attack'
+        });
+    
         // Play light attack animation
         this.getSpriteManager().playAttackingAnimation(player);
         this.lastAttackTime = currentTime;
-
+    
         // Set up animation complete callback
         this.getSpriteManager().setLightAttackCompleteCallback(() => {
             this.onAttackComplete();
         });
-
+    
         console.log('Light attack executed');
     }
 

@@ -18,6 +18,8 @@ export default class MatchFound extends Phaser.Scene {
     private p1SpawnPosition!: { x: number; y: number };
     private p2SpawnPosition!: { x: number; y: number };
 
+    private roomId: string;
+
     constructor() {
         super("MatchFound");
     }
@@ -29,7 +31,8 @@ export default class MatchFound extends Phaser.Scene {
         opponentData: string[],
         mapConfig: any,
         p1SpawnPosition?: { x: number; y: number },
-        p2SpawnPosition?: { x: number; y: number }
+        p2SpawnPosition?: { x: number; y: number },
+        roomId: string
     }) {
         console.log("=== MATCH FOUND SCENE INIT ===");
         console.log(`Your ID: ${data.yourId}`);
@@ -48,6 +51,7 @@ export default class MatchFound extends Phaser.Scene {
         this.mapConfig = data.mapConfig;
         this.p1SpawnPosition = data.p1SpawnPosition;
         this.p2SpawnPosition = data.p2SpawnPosition;
+        this.roomId = data.roomId;
     } 
 
     create(): void {
@@ -218,14 +222,15 @@ export default class MatchFound extends Phaser.Scene {
         this.cameras.main.once("cameraflashcomplete", () => {
             this.cameras.main.fadeOut(400);
             this.cameras.main.once("camerafadeoutcomplete", () => {
-                this.scene.start("Arena", {
+                this.scene.start('Arena', {
                     mapConfig: this.mapConfig,
                     yourData: this.yourData,
                     opponentData: this.opponentData,
-                    yourId: this.yourId,
                     opponentId: this.opponentId,
+                    yourId: this.yourId,
                     p1SpawnPosition: this.p1SpawnPosition,
                     p2SpawnPosition: this.p2SpawnPosition,
+                    roomId: this.roomId
                 });
             });
         });
