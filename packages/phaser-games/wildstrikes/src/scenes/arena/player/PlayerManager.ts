@@ -12,12 +12,16 @@ import {
     AttackingHeavyState 
 } from "./states";
 import { 
-    Command,
+    ScalableCommand,
+    CommandType
+} from "./commands/CommandTypes";
+import { 
     JumpCommand,
     DashCommand,
     LightAttackCommand,
     HeavyAttackCommand
 } from "./commands";
+import { CommandFactory } from "./commands/CommandFactory";
 import { InputService } from "./input";
 import { battleSocketClient } from "@phaser-games/wildstrikes/src/shared-utils/BattleSocketClient";
 
@@ -26,11 +30,11 @@ export class PlayerManager {
     private currentState: PlayerState;
     private states: Map<string, PlayerState> = new Map();
 
-    // Command pattern
-    private jumpCommand: Command;
-    private dashCommand: Command;
-    private lightAttackCommand: Command;
-    private heavyAttackCommand: Command;
+    // Command pattern - now using ScalableCommand
+    private jumpCommand: ScalableCommand;
+    private dashCommand: ScalableCommand;
+    private lightAttackCommand: ScalableCommand;
+    private heavyAttackCommand: ScalableCommand;
 
     // Input handling
     private inputService: InputService;
@@ -102,10 +106,28 @@ export class PlayerManager {
     }
 
     private initializeCommands(): void {
-        this.jumpCommand = new JumpCommand();
-        this.dashCommand = new DashCommand();
-        this.lightAttackCommand = new LightAttackCommand();
-        this.heavyAttackCommand = new HeavyAttackCommand();
+        // Create commands with LOCAL_INPUT type for local players
+        this.jumpCommand = CommandFactory.createCommand('jump', CommandType.LOCAL_INPUT);
+        this.dashCommand = CommandFactory.createCommand('dash', CommandType.LOCAL_INPUT);
+        this.lightAttackCommand = CommandFactory.createCommand('lightAttack', CommandType.LOCAL_INPUT);
+        this.heavyAttackCommand = CommandFactory.createCommand('heavyAttack', CommandType.LOCAL_INPUT);
+    }
+
+    // Add new methods for different command execution contexts
+    public executeLocalCommand(command: ScalableCommand): void {
+        if (command.getCommandType() !== CommandType.LOCAL_INPUT) {
+            console.warn('Attempting to execute non-local command on local player');
+            return;
+        }
+        command.execute(this);
+    }
+
+    public executeRemoteCommand(command: ScalableCommand): void {
+        if (command.getCommandType() !== CommandType.REMOTE_SYNC) {
+            console.warn('Attempting to execute non-remote command on remote player');
+            return;
+        }
+        command.execute(this);
     }
 
     public setSpawnPosition(x: number, y: number): void {
@@ -140,6 +162,7 @@ export class PlayerManager {
                 .toLowerCase();
             
             const networkData = {
+                id: this.getPlayerId(), // Add player ID for routing
                 state: networkStateName,
                 position: { 
                     x: this.player.x, 
@@ -162,23 +185,34 @@ export class PlayerManager {
 
     public updateFromNetwork(networkState: any): void {
         if (!this.player || this.enableInput) return; // Don't update local player from network
-    
+
         const currentTime = Date.now();
         
         // Throttle network updates to prevent excessive processing
         if (currentTime - this.lastNetworkUpdate < 16) return; // ~60fps max
         
-        // Store the current position as starting point for interpolation
-        const startPosition = { x: this.player.x, y: this.player.y };
+        console.log(`[NETWORK] Received state update:`, networkState);
         
-        // Update target position and velocity for interpolation
+        // Create command from network data
+        const command = CommandFactory.createFromNetworkData(networkState);
+        
+        // Execute the command if it exists
+        if (command) {
+            console.log(`[NETWORK] Executing command:`, command.constructor.name);
+            this.executeRemoteCommand(command);
+        } else {
+            console.log(`[NETWORK] No command created for state:`, networkState.state);
+            // For states that don't need commands (idle, walking, crouching), just update position and animation
+            this.updateRemotePlayerState(networkState);
+        }
+
+        // Handle position interpolation (keep existing logic)
         if (networkState.position) {
             this.targetPosition = { 
                 x: networkState.position.x, 
                 y: networkState.position.y 
             };
             
-            // Update velocity if provided
             if (networkState.velocity) {
                 this.targetVelocity = { 
                     x: networkState.velocity.x, 
@@ -186,50 +220,49 @@ export class PlayerManager {
                 };
             }
         }
-    
-        // Update facing direction immediately (no interpolation needed)
+
+        // Update facing direction immediately
         if (networkState.position?.facing) {
             this.player.setFlipX(networkState.position.facing === 'left');
         }
-    
-        // Update animation/state visually only
-        if (networkState.state) {
-            switch (networkState.state) {
-                case 'idle':
-                    this.spriteManager.playIdleAnimation(this.player);
-                    break;
-                case 'walking':
-                    this.spriteManager.playWalkingAnimation(this.player);
-                    break;
-                case 'jumping':
-                    this.spriteManager.playJumpingAnimation(this.player);
-                    break;
-                case 'attacking-light':
-                    this.spriteManager.playAttackingAnimation(this.player);
-                    break;
-                case 'attacking-heavy':
-                    this.spriteManager.playAttack2Animation(this.player);
-                    break;
-                case 'dashing':
-                    this.spriteManager.playDashingAnimation(this.player);
-                    break;
-                case 'crouching':
-                    this.spriteManager.playCrouchFullAnimation(this.player);
-                    break;
-                case 'crouch-walking':
-                    this.spriteManager.playCrouchWalkAnimation(this.player);
-                    break;
-                default:
-                    this.spriteManager.playIdleAnimation(this.player);
-                    break;
-            }
-        }
-    
-        // Start interpolation with shorter duration for smoother movement
+
+        // Start interpolation
         this.interpolationTime = 0;
-        this.interpolationDuration = 50; // Reduced from 100ms to 50ms for smoother movement
+        this.interpolationDuration = 50;
         this.lastNetworkUpdate = currentTime;
         this.isInterpolating = true;
+    }
+
+    private updateRemotePlayerState(networkState: any): void {
+        if (!this.player) return;
+
+        // Update position and velocity immediately
+        if (networkState.position) {
+            this.player.setPosition(networkState.position.x, networkState.position.y);
+        }
+        if (networkState.velocity) {
+            this.player.setVelocity(networkState.velocity.x, networkState.velocity.y);
+        }
+
+        // Update animation based on state
+        const spriteManager = this.getSpriteManager();
+        switch (networkState.state) {
+            case 'idle':
+                spriteManager.playIdleAnimation(this.player);
+                break;
+            case 'walking':
+                spriteManager.playWalkingAnimation(this.player);
+                break;
+            case 'crouching':
+                spriteManager.playCrouchFullAnimation(this.player);
+                break;
+            case 'crouch-walking':
+                spriteManager.playCrouchWalkAnimation(this.player);
+                break;
+            default:
+                spriteManager.playIdleAnimation(this.player);
+                break;
+        }
     }
 
     private updateInterpolation(deltaTime: number): void {
@@ -393,6 +426,7 @@ export class PlayerManager {
             if (now - this.lastNetworkUpdate < 50) return; // Only send every 50ms max
             
             const networkData = {
+                id: this.getPlayerId(), // Add player ID for routing
                 state: currentState.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
                 position: { 
                     x: this.player.x, 
@@ -462,24 +496,28 @@ export class PlayerManager {
     }
 
     // Command access methods (useful for external systems like AI or input remapping)
-    public getJumpCommand(): Command {
+    public getJumpCommand(): ScalableCommand {
         return this.jumpCommand;
     }
 
-    public getDashCommand(): Command {
+    public getDashCommand(): ScalableCommand {
         return this.dashCommand;
     }
 
-    public getLightAttackCommand(): Command {
+    public getLightAttackCommand(): ScalableCommand {
         return this.lightAttackCommand;
     }
 
-    public getHeavyAttackCommand(): Command {
+    public getHeavyAttackCommand(): ScalableCommand {
         return this.heavyAttackCommand;
     }
 
     // Execute command directly (useful for AI or replay systems)
-    public executeCommand(command: Command): void {
+    public executeCommand(command: ScalableCommand): void {
+        if (!command.canExecute(this)) {
+            console.warn(`Command cannot be executed: ${command.constructor.name}`);
+            return;
+        }
         command.execute(this);
     }
 
@@ -500,6 +538,19 @@ export class PlayerManager {
     public getPlayerPosition(): { x: number, y: number } {
         if (!this.player) return { x: 0, y: 0 };
         return { x: this.player.x, y: this.player.y };
+    }
+
+    public getPlayerId(): string {
+        // Get player ID from the scene's player contexts
+        const arenaScene = this.scene as any;
+        if (arenaScene.playerContexts) {
+            for (const [id, context] of arenaScene.playerContexts) {
+                if (context.manager === this) {
+                    return id;
+                }
+            }
+        }
+        return 'unknown';
     }
 
 

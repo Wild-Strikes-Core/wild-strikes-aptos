@@ -26,8 +26,6 @@ export class JumpingState extends PlayerState {
     }
 
     update(): void {
-        if (!this.isInputEnabled()) return;
-
         const player = this.getPlayer();
         const keyObjects = this.getKeyObjects();
         
@@ -36,29 +34,39 @@ export class JumpingState extends PlayerState {
         const body = player.body as Phaser.Physics.Arcade.Body;
         const isOnGround = body.touching.down;
 
-        // Handle horizontal movement while in air
-        const baseSpeed = 300;
-        const isSprinting = keyObjects.sprint.isDown;
-        const speed = isSprinting ? baseSpeed * 1.5 : baseSpeed;
+        // Handle horizontal movement while in air (only for local players)
+        if (this.isInputEnabled()) {
+            const baseSpeed = 300;
+            const isSprinting = keyObjects.sprint.isDown;
+            const speed = isSprinting ? baseSpeed * 1.5 : baseSpeed;
 
-        if (keyObjects.left.isDown) {
-            player.setVelocityX(-speed);
-            this.getSpriteManager().flipSprite(player, true);
-        } else if (keyObjects.right.isDown) {
-            player.setVelocityX(speed);
-            this.getSpriteManager().flipSprite(player, false);
+            if (keyObjects.left.isDown) {
+                player.setVelocityX(-speed);
+                this.getSpriteManager().flipSprite(player, true);
+            } else if (keyObjects.right.isDown) {
+                player.setVelocityX(speed);
+                this.getSpriteManager().flipSprite(player, false);
+            }
         }
 
-        // Update animation based on velocity
+        // Update animation based on velocity (for both local and remote players)
         if (body.velocity.y < 0) {
             this.getSpriteManager().playJumpingAnimation(player);
         } else {
             this.getSpriteManager().playFallAnimation(player);
         }
 
-        // Check for state transitions
+        // Check for state transitions (for both local and remote players)
         if (isOnGround) {
             this.jumpCount = 0; // Reset jump count when landing
+            
+            // For remote players, always transition to idle when landing
+            if (!this.isInputEnabled()) {
+                this.playerManager.transitionTo(PlayerStates.Idle);
+                return;
+            }
+            
+            // For local players, check input for state transitions
             if (keyObjects.crouch.isDown) {
                 if (keyObjects.left.isDown || keyObjects.right.isDown) {
                     this.playerManager.transitionTo(PlayerStates.CrouchWalking);
@@ -70,7 +78,8 @@ export class JumpingState extends PlayerState {
             } else {
                 this.playerManager.transitionTo(PlayerStates.Idle);
             }
-        } else if (keyObjects.dash.isDown) {
+        } else if (this.isInputEnabled() && keyObjects.dash.isDown) {
+            // Only allow dash input for local players
             this.playerManager.transitionTo(PlayerStates.Dashing);
         }
     }

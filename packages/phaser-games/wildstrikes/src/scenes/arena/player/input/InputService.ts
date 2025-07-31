@@ -1,7 +1,7 @@
-import { Command } from "../commands";
+import { ScalableCommand } from "../commands/CommandTypes";
 
 export interface InputBinding {
-    command: Command;
+    command: ScalableCommand;
     description?: string;
 }
 
@@ -53,7 +53,7 @@ export class InputService {
     }
 
     // Keyboard input methods
-    public bindKeyboard(key: string, command: Command, description?: string): void {
+    public bindKeyboard(key: string, command: ScalableCommand, description?: string): void {
         this.keyboardBindings[key] = { command, description };
         
         // Set up the actual keyboard event listener

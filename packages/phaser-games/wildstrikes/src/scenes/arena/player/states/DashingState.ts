@@ -13,20 +13,21 @@ export class DashingState extends PlayerState {
         
         if (!player) return;
 
-        // Check if dash is on cooldown
-        if (this.isDashOnCooldown) {
+        // Check if dash is on cooldown (only for local players)
+        if (this.isInputEnabled() && this.isDashOnCooldown) {
             console.log('Dash on cooldown');
             this.playerManager.transitionTo(PlayerStates.Idle);
             return;
         }
 
+        // Set dash velocity (for both local and remote players)
         const dashSpeed = player.flipX ? -2400 : 2400;
         player.setVelocityX(dashSpeed);
         
         this.getSpriteManager().playDashingAnimation(player);
         console.log('Dash executed');
 
-        // End dash after duration
+        // End dash after duration (for both local and remote players)
         this.getScene().time.delayedCall(this.dashDuration, () => {
             this.exitDash();
         });
@@ -45,12 +46,14 @@ export class DashingState extends PlayerState {
     }
 
     private exitDash(): void {
-        // Start cooldown timer
-        this.isDashOnCooldown = true;
-        this.dashTimer = this.getScene().time.delayedCall(this.dashCooldown, () => {
-            this.isDashOnCooldown = false;
-            console.log('Dash cooldown finished');
-        });
+        // Start cooldown timer (only for local players)
+        if (this.isInputEnabled()) {
+            this.isDashOnCooldown = true;
+            this.dashTimer = this.getScene().time.delayedCall(this.dashCooldown, () => {
+                this.isDashOnCooldown = false;
+                console.log('Dash cooldown finished');
+            });
+        }
 
         // Transition to appropriate state
         const keyObjects = this.getKeyObjects();
@@ -61,6 +64,13 @@ export class DashingState extends PlayerState {
             return;
         }
 
+        // For remote players, always transition to idle when dash completes
+        if (!this.isInputEnabled()) {
+            this.playerManager.transitionTo(PlayerStates.Idle);
+            return;
+        }
+
+        // For local players, check input for state transitions
         const body = player.body as Phaser.Physics.Arcade.Body;
         const isOnGround = body.touching.down;
 
