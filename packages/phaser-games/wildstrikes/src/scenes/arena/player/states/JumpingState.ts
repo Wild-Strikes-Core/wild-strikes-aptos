@@ -36,9 +36,7 @@ export class JumpingState extends PlayerState {
 
         // Handle horizontal movement while in air (only for local players)
         if (this.isInputEnabled()) {
-            const baseSpeed = 300;
-            const isSprinting = keyObjects.sprint.isDown;
-            const speed = isSprinting ? baseSpeed * 1.5 : baseSpeed;
+            const speed = 450; // Use sprint speed as default
 
             if (keyObjects.left.isDown) {
                 player.setVelocityX(-speed);
@@ -74,7 +72,7 @@ export class JumpingState extends PlayerState {
                     this.playerManager.transitionTo(PlayerStates.Crouching);
                 }
             } else if (keyObjects.left.isDown || keyObjects.right.isDown) {
-                this.playerManager.transitionTo(PlayerStates.Walking);
+                this.playerManager.transitionTo(PlayerStates.Sprinting);
             } else {
                 this.playerManager.transitionTo(PlayerStates.Idle);
             }

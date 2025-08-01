@@ -38,16 +38,18 @@ export class CommandFactory {
             'jumping': 'jump',
             'dashing': 'dash',
             'attacking-light': 'lightAttack',
-            'attacking-heavy': 'heavyAttack'
+            'attacking-heavy': 'heavyAttack',
+            'sprinting': 'none', // Handle via state transition
+            'idle': 'none',      // Handle via state transition
+            'crouching': 'none', // Handle via state transition
+            'crouch-walking': 'none' // Handle via state transition
         };
         
         const command = stateToCommand[state];
         if (!command) {
-            // For states like 'idle', 'walking', 'crouching', 'crouch-walking', etc., we don't need commands
-            // Just handle position updates
             console.log(`State ${state} doesn't require a command, skipping`);
             return 'none';
         }
         return command;
     }
-} 
+}

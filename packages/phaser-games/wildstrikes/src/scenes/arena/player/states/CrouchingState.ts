@@ -31,7 +31,7 @@ export class CrouchingState extends PlayerState {
         if (!isCrouching) {
             // Released crouch key
             if (keyObjects.left.isDown || keyObjects.right.isDown) {
-                this.playerManager.transitionTo(PlayerStates.Walking);
+                this.playerManager.transitionTo(PlayerStates.Sprinting);
             } else {
                 this.playerManager.transitionTo(PlayerStates.Idle);
             }

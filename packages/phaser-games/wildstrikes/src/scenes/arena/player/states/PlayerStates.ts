@@ -1,6 +1,6 @@
 export enum PlayerStates {
     Idle = 'idle',
-    Walking = 'walking',
+    Sprinting = 'sprinting',
     Crouching = 'crouching',
     CrouchWalking = 'crouchWalking',
     Jumping = 'jumping',

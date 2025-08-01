@@ -3,7 +3,7 @@ import {
     PlayerState,
     PlayerStates,
     IdleState, 
-    WalkingState, 
+    SprintingState, 
     CrouchingState,
     CrouchWalkingState,
     JumpingState, 
@@ -15,12 +15,6 @@ import {
     ScalableCommand,
     CommandType
 } from "./commands/CommandTypes";
-import { 
-    JumpCommand,
-    DashCommand,
-    LightAttackCommand,
-    HeavyAttackCommand
-} from "./commands";
 import { CommandFactory } from "./commands/CommandFactory";
 import { InputService } from "./input";
 import { battleSocketClient } from "@phaser-games/wildstrikes/src/shared-utils/BattleSocketClient";
@@ -86,7 +80,6 @@ export class PlayerManager {
                 up: 'W',
                 jump: 'SPACE',
                 dash: 'Q',
-                sprint: 'SHIFT',
                 crouch: 'CTRL'
             }) as { [key: string]: Phaser.Input.Keyboard.Key };
             this.setupInputHandlers();
@@ -96,7 +89,7 @@ export class PlayerManager {
 
     private initializeStates(): void {
         this.states.set(PlayerStates.Idle, new IdleState(this));
-        this.states.set(PlayerStates.Walking, new WalkingState(this));
+        this.states.set(PlayerStates.Sprinting, new SprintingState(this));
         this.states.set(PlayerStates.Crouching, new CrouchingState(this));
         this.states.set(PlayerStates.CrouchWalking, new CrouchWalkingState(this));
         this.states.set(PlayerStates.Jumping, new JumpingState(this));
@@ -193,75 +186,38 @@ export class PlayerManager {
         
         console.log(`[NETWORK] Received state update:`, networkState);
         
-        // Create command from network data
-        const command = CommandFactory.createFromNetworkData(networkState);
+        // Convert network state to local state name
+        const localStateName = this.convertNetworkStateToLocal(networkState.state);
         
-        // Execute the command if it exists
-        if (command) {
-            console.log(`[NETWORK] Executing command:`, command.constructor.name);
-            this.executeRemoteCommand(command);
-        } else {
-            console.log(`[NETWORK] No command created for state:`, networkState.state);
-            // For states that don't need commands (idle, walking, crouching), just update position and animation
-            this.updateRemotePlayerState(networkState);
-        }
-
-        // Handle position interpolation (keep existing logic)
-        if (networkState.position) {
-            this.targetPosition = { 
-                x: networkState.position.x, 
-                y: networkState.position.y 
-            };
-            
+        // Always transition to the appropriate state for remote players
+        if (localStateName && this.states.has(localStateName)) {
+            // Update position and velocity for interpolation
+            if (networkState.position) {
+                this.targetPosition = { 
+                    x: networkState.position.x, 
+                    y: networkState.position.y 
+                };
+            }
             if (networkState.velocity) {
                 this.targetVelocity = { 
                     x: networkState.velocity.x, 
                     y: networkState.velocity.y 
                 };
             }
-        }
-
-        // Update facing direction immediately
-        if (networkState.position?.facing) {
-            this.player.setFlipX(networkState.position.facing === 'left');
-        }
-
-        // Start interpolation
-        this.interpolationTime = 0;
-        this.interpolationDuration = 50;
-        this.lastNetworkUpdate = currentTime;
-        this.isInterpolating = true;
-    }
-
-    private updateRemotePlayerState(networkState: any): void {
-        if (!this.player) return;
-
-        // Update position and velocity immediately
-        if (networkState.position) {
-            this.player.setPosition(networkState.position.x, networkState.position.y);
-        }
-        if (networkState.velocity) {
-            this.player.setVelocity(networkState.velocity.x, networkState.velocity.y);
-        }
-
-        // Update animation based on state
-        const spriteManager = this.getSpriteManager();
-        switch (networkState.state) {
-            case 'idle':
-                spriteManager.playIdleAnimation(this.player);
-                break;
-            case 'walking':
-                spriteManager.playWalkingAnimation(this.player);
-                break;
-            case 'crouching':
-                spriteManager.playCrouchFullAnimation(this.player);
-                break;
-            case 'crouch-walking':
-                spriteManager.playCrouchWalkAnimation(this.player);
-                break;
-            default:
-                spriteManager.playIdleAnimation(this.player);
-                break;
+            
+            // Update facing direction immediately
+            if (networkState.position?.facing) {
+                this.player.setFlipX(networkState.position.facing === 'left');
+            }
+            
+            // Transition to the appropriate state (this will handle animation)
+            this.transitionTo(localStateName);
+            
+            // Start interpolation
+            this.interpolationTime = 0;
+            this.interpolationDuration = 100; // Increased for smoother movement
+            this.lastNetworkUpdate = currentTime;
+            this.isInterpolating = true;
         }
     }
 
@@ -313,7 +269,7 @@ export class PlayerManager {
         // Convert kebab-case back to camelCase
         const stateMap: { [key: string]: string } = {
             'idle': PlayerStates.Idle,
-            'walking': PlayerStates.Walking,
+            'sprinting': PlayerStates.Sprinting,
             'jumping': PlayerStates.Jumping,
             'attacking-light': PlayerStates.AttackingLight,
             'attacking-heavy': PlayerStates.AttackingHeavy,
@@ -419,7 +375,7 @@ export class PlayerManager {
         const currentState = this.currentState.constructor.name.toLowerCase();
         
         // Only send continuous updates for movement states and reduce frequency
-        const movementStates = ['walking', 'jumping', 'dashing', 'crouchwalking'];
+        const movementStates = ['sprinting', 'jumping', 'dashing', 'crouchwalking'];
         if (movementStates.some(state => currentState.includes(state))) {
             // Add throttling to reduce network traffic
             const now = Date.now();
@@ -462,7 +418,7 @@ export class PlayerManager {
     }
 
     public getIsMoving(): boolean {
-        return this.currentState instanceof WalkingState || 
+        return this.currentState instanceof SprintingState || 
                this.currentState instanceof CrouchWalkingState;
     }
 

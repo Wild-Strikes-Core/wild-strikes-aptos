@@ -1,9 +1,9 @@
 import { PlayerState } from "./PlayerState";
 import { PlayerStates } from "./PlayerStates";
 
-export class WalkingState extends PlayerState {
+export class SprintingState extends PlayerState {
     enter(): void {
-        console.log('Entering Walking State');
+        console.log('Entering Sprinting State');
     }
 
     update(): void {
@@ -16,31 +16,25 @@ export class WalkingState extends PlayerState {
 
         const body = player.body as Phaser.Physics.Arcade.Body;
         const isOnGround = body.touching.down;
-        const isSprinting = keyObjects.sprint.isDown;
 
-        // Calculate movement speed
-        const baseSpeed = 300;
-        const sprintMultiplier = 1.5;
-        
-        let speed = isSprinting ? baseSpeed * sprintMultiplier : baseSpeed;
+        // Always use sprint speed (no more walking speed)
+        const sprintSpeed = 450; // Increased from 300 * 1.5 = 450
         let isMoving = false;
 
         // Handle horizontal movement
         if (keyObjects.left.isDown) {
-            player.setVelocityX(-speed);
+            player.setVelocityX(-sprintSpeed);
             this.getSpriteManager().flipSprite(player, true);
             isMoving = true;
         } else if (keyObjects.right.isDown) {
-            player.setVelocityX(speed);
+            player.setVelocityX(sprintSpeed);
             this.getSpriteManager().flipSprite(player, false);
             isMoving = true;
         }
 
-        // Update animations
-        if (isSprinting && isMoving) {
+        // Always play sprinting animation when moving
+        if (isMoving) {
             this.getSpriteManager().playSprintingAnimation(player);
-        } else if (isMoving) {
-            this.getSpriteManager().playWalkingAnimation(player);
         }
 
         // Check for state transitions
@@ -62,6 +56,6 @@ export class WalkingState extends PlayerState {
     }
 
     exit(): void {
-        console.log('Exiting Walking State');
+        console.log('Exiting Sprinting State');
     }
 }

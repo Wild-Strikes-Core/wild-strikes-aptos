@@ -1,7 +1,7 @@
 export { PlayerState } from "./PlayerState";
 export { PlayerStates } from "./PlayerStates";
 export { IdleState } from "./IdleState";
-export { WalkingState } from "./WalkingState";
+export { SprintingState } from "./SprintingState";
 export { CrouchingState } from "./CrouchingState";
 export { CrouchWalkingState } from "./CrouchWalkingState";
 export { JumpingState } from "./JumpingState";

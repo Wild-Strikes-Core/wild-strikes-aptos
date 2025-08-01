@@ -1,8 +1,9 @@
+// packages/phaser-games/wildstrikes/src/scenes/arena/player/commands/SprintCommand.ts
 import { ScalableCommand, CommandType } from "./CommandTypes";
 import { PlayerManager } from "../PlayerManager";
-import { AttackingLightState, PlayerStates } from "../states";
+import { PlayerStates } from "../states";
 
-export class LightAttackCommand implements ScalableCommand {
+export class SprintCommand implements ScalableCommand {
     private commandType: CommandType;
     private networkData?: any;
 
@@ -23,21 +24,22 @@ export class LightAttackCommand implements ScalableCommand {
     }
 
     executeLocal(player: PlayerManager): void {
+        // Original local player logic
         const playerSprite = player.getPlayerSprite();
         if (!playerSprite || !player.isInputEnabled()) return;
 
-        const attackingLightState = player.getState(PlayerStates.AttackingLight) as AttackingLightState;
-        if (attackingLightState && attackingLightState.canAttack()) {
-            player.transitionTo(PlayerStates.AttackingLight);
-        }
+        // Transition to sprinting state
+        player.transitionTo(PlayerStates.Sprinting);
     }
 
     executeRemote(player: PlayerManager): void {
-        if (player.isInputEnabled()) return;
+        // Remote player logic - just display
+        if (player.isInputEnabled()) return; // Don't execute on local players
 
         const playerSprite = player.getPlayerSprite();
         if (!playerSprite) return;
 
+        // Apply network data if provided
         if (this.networkData) {
             if (this.networkData.position) {
                 playerSprite.setPosition(this.networkData.position.x, this.networkData.position.y);
@@ -47,8 +49,8 @@ export class LightAttackCommand implements ScalableCommand {
             }
         }
 
-        // Transition to attacking state - let the state handle animation
-        player.transitionTo(PlayerStates.AttackingLight);
+        // For remote players, transition to sprinting state to handle the animation properly
+        player.transitionTo(PlayerStates.Sprinting);
     }
 
     canExecute(player: PlayerManager): boolean {

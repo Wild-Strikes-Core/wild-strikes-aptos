@@ -28,7 +28,7 @@ export class IdleState extends PlayerState {
             if (keyObjects.crouch.isDown && isOnGround) {
                 this.playerManager.transitionTo(PlayerStates.CrouchWalking);
             } else {
-                this.playerManager.transitionTo(PlayerStates.Walking);
+                this.playerManager.transitionTo(PlayerStates.Sprinting); // Changed from Walking
             }
         } else if (keyObjects.crouch.isDown && isOnGround) {
             this.playerManager.transitionTo(PlayerStates.Crouching);

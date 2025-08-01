@@ -12,27 +12,29 @@ export class AttackingLightState extends PlayerState {
         
         if (!player) return;
     
-        // Check attack cooldown
-        const currentTime = this.getScene().time.now;
-        if (currentTime - this.lastAttackTime < this.attackCooldown) {
-            console.log('Light attack blocked - cooldown');
-            this.playerManager.transitionTo(PlayerStates.Idle);
-            return;
+        // Check attack cooldown (only for local players)
+        if (this.isInputEnabled()) {
+            const currentTime = this.getScene().time.now;
+            if (currentTime - this.lastAttackTime < this.attackCooldown) {
+                console.log('Light attack blocked - cooldown');
+                this.playerManager.transitionTo(PlayerStates.Idle);
+                return;
+            }
+            this.lastAttackTime = currentTime;
+    
+            // Send attack event to server
+            const body = player.body as Phaser.Physics.Arcade.Body;
+            battleSocketClient.emit('player-attack', {
+                type: 'light',
+                damage: 15,
+                range: 80,
+                position: { x: player.x, y: player.y },
+                animation: 'light-attack'
+            });
         }
     
-        // Send attack event to server
-        const body = player.body as Phaser.Physics.Arcade.Body;
-        battleSocketClient.emit('player-attack', {
-            type: 'light',
-            damage: 15,
-            range: 80,
-            position: { x: player.x, y: player.y },
-            animation: 'light-attack'
-        });
-    
-        // Play light attack animation
+        // Play light attack animation (for both local and remote players)
         this.getSpriteManager().playAttackingAnimation(player);
-        this.lastAttackTime = currentTime;
     
         // Set up animation complete callback
         this.getSpriteManager().setLightAttackCompleteCallback(() => {
@@ -52,7 +54,13 @@ export class AttackingLightState extends PlayerState {
     }
 
     private onAttackComplete(): void {
-        // Transition to appropriate state after attack
+        // For remote players, always transition to idle
+        if (!this.isInputEnabled()) {
+            this.playerManager.transitionTo(PlayerStates.Idle);
+            return;
+        }
+
+        // Transition to appropriate state after attack (local players only)
         const keyObjects = this.getKeyObjects();
         const player = this.getPlayer();
         
@@ -73,13 +81,18 @@ export class AttackingLightState extends PlayerState {
                 this.playerManager.transitionTo(PlayerStates.Crouching);
             }
         } else if (keyObjects.left.isDown || keyObjects.right.isDown) {
-            this.playerManager.transitionTo(PlayerStates.Walking);
+            this.playerManager.transitionTo(PlayerStates.Sprinting);
         } else {
             this.playerManager.transitionTo(PlayerStates.Idle);
         }
     }
 
     public canAttack(): boolean {
+        // Remote players can always attack (no cooldown check)
+        if (!this.isInputEnabled()) {
+            return true;
+        }
+        
         const currentTime = this.getScene().time.now;
         return currentTime - this.lastAttackTime >= this.attackCooldown;
     }

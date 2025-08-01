@@ -47,15 +47,8 @@ export class HeavyAttackCommand implements ScalableCommand {
             }
         }
 
-        // Play animation with completion callback for remote players
-        const spriteManager = player.getSpriteManager();
-        spriteManager.setHeavyAttackCompleteCallback(() => {
-            // Transition to idle after animation completes (for remote players)
-            console.log('[REMOTE] Heavy attack animation completed, transitioning to idle');
-            player.transitionTo(PlayerStates.Idle);
-        });
-        
-        spriteManager.playAttack2Animation(playerSprite);
+        // Transition to attacking state - let the state handle animation
+        player.transitionTo(PlayerStates.AttackingHeavy);
     }
 
     canExecute(player: PlayerManager): boolean {

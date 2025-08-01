@@ -83,7 +83,7 @@ export class DashingState extends PlayerState {
                 this.playerManager.transitionTo(PlayerStates.Crouching);
             }
         } else if (keyObjects.left.isDown || keyObjects.right.isDown) {
-            this.playerManager.transitionTo(PlayerStates.Walking);
+            this.playerManager.transitionTo(PlayerStates.Sprinting);
         } else {
             this.playerManager.transitionTo(PlayerStates.Idle);
         }
