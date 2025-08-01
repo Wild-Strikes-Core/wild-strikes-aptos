@@ -149,14 +149,29 @@ export class PlayerManager {
         const newState = this.states.get(stateName);
         if (!newState) return;
 
-        // Only sync command-driven states (never contextual like idle, crouch, falling)
-        const commandDrivenStates = [
+        // Send network updates for command-driven states and movement states
+        const networkSyncStates = [
             PlayerStates.Jumping,
             PlayerStates.Dashing,
             PlayerStates.AttackingLight,
-            PlayerStates.AttackingHeavy
+            PlayerStates.AttackingHeavy,
+            PlayerStates.Sprinting,  // Add sprinting to network sync
+            PlayerStates.Idle        // Add idle to network sync
         ];
-        if (this.enableInput && this.player && commandDrivenStates.includes(stateName as PlayerStates)) {
+        
+        // Check if we should send a network update
+        let shouldSendNetworkUpdate = this.enableInput && this.player && networkSyncStates.includes(stateName as PlayerStates);
+        
+        // For dashing, check cooldown before sending network update
+        if (shouldSendNetworkUpdate && stateName === PlayerStates.Dashing) {
+            const dashingState = this.states.get(PlayerStates.Dashing) as any;
+            if (dashingState && typeof dashingState.canDash === 'function' && !dashingState.canDash()) {
+                console.log('[NETWORK] Not sending dashing state due to cooldown');
+                shouldSendNetworkUpdate = false;
+            }
+        }
+        
+        if (shouldSendNetworkUpdate) {
             const body = this.player.body as Phaser.Physics.Arcade.Body;
             const networkStateName = stateName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
             const networkData = {
@@ -173,6 +188,9 @@ export class PlayerManager {
             };
             console.log(`[NETWORK] Sending state update:`, networkData);
             battleSocketClient.emit("player-state-update", networkData);
+            
+            // Reset lastSentCommand to ensure proper state tracking
+            this.lastSentCommand = stateName.toLowerCase();
         }
 
         // Animation restart guard: only restart animation if state actually changed
@@ -183,6 +201,17 @@ export class PlayerManager {
         }
     }
 
+    private canTransitionToState(stateName: string): boolean {
+        // Check if the transition would be blocked by local cooldown logic
+        if (stateName === PlayerStates.Dashing) {
+            const currentDashingState = this.currentState as any;
+            if (currentDashingState && typeof currentDashingState.canDash === 'function') {
+                return currentDashingState.canDash();
+            }
+        }
+        return true; // Allow all other transitions
+    }
+
     public updateFromNetwork(networkState: any): void {
         if (!this.player || this.enableInput) return; // Don't update local player from network
 
@@ -190,58 +219,42 @@ export class PlayerManager {
         // Throttle network updates to prevent excessive processing
         if (currentTime - this.lastNetworkUpdate < 16) return;
         console.log(`[NETWORK] Received state update:`, networkState);
+        
         // Convert network state to local state name
         const localStateName = this.convertNetworkStateToLocal(networkState.state);
-        // Only transition to command-driven states for remote players
-        const commandDrivenStates = [
-            PlayerStates.Jumping,
-            PlayerStates.Dashing,
-            PlayerStates.AttackingLight,
-            PlayerStates.AttackingHeavy
-        ];
-        if (localStateName && this.states.has(localStateName) && commandDrivenStates.includes(localStateName as PlayerStates)) {
-            if (networkState.position) {
-                this.targetPosition = {
-                    x: networkState.position.x,
-                    y: networkState.position.y
-                };
+        
+        // Check if the transition would be blocked by local cooldown logic
+        if (localStateName === PlayerStates.Dashing) {
+            const dashingState = this.states.get(PlayerStates.Dashing) as any;
+            if (dashingState && typeof dashingState.canDash === 'function' && !dashingState.canDash()) {
+                console.log('[NETWORK] Blocking dashing state due to local cooldown');
+                return; // Don't transition to dashing if it's on cooldown
             }
-            if (networkState.velocity) {
-                this.targetVelocity = {
-                    x: networkState.velocity.x,
-                    y: networkState.velocity.y
-                };
-            }
-            if (networkState.position?.facing) {
-                this.player.setFlipX(networkState.position.facing === 'left');
-            }
-            this.transitionTo(localStateName);
-            this.interpolationTime = 0;
-            this.interpolationDuration = 100;
-            this.lastNetworkUpdate = currentTime;
-            this.isInterpolating = true;
-        } else {
-            // For contextual states, just interpolate position/velocity, don't transition state
-            if (networkState.position) {
-                this.targetPosition = {
-                    x: networkState.position.x,
-                    y: networkState.position.y
-                };
-            }
-            if (networkState.velocity) {
-                this.targetVelocity = {
-                    x: networkState.velocity.x,
-                    y: networkState.velocity.y
-                };
-            }
-            if (networkState.position?.facing) {
-                this.player.setFlipX(networkState.position.facing === 'left');
-            }
-            this.interpolationTime = 0;
-            this.interpolationDuration = 100;
-            this.lastNetworkUpdate = currentTime;
-            this.isInterpolating = true;
         }
+
+        // Update position and velocity
+        if (networkState.position) {
+            this.targetPosition = {
+                x: networkState.position.x,
+                y: networkState.position.y
+            };
+        }
+        if (networkState.velocity) {
+            this.targetVelocity = {
+                x: networkState.velocity.x,
+                y: networkState.velocity.y
+            };
+        }
+        if (networkState.position?.facing) {
+            this.player.setFlipX(networkState.position.facing === 'left');
+        }
+        
+        // Transition to the new state
+        this.transitionTo(localStateName);
+        this.interpolationTime = 0;
+        this.interpolationDuration = 100;
+        this.lastNetworkUpdate = currentTime;
+        this.isInterpolating = true;
 
         // Update damage percentage
         if (networkState.damagePercentage !== undefined) {
@@ -299,14 +312,21 @@ export class PlayerManager {
     }
 
     private convertNetworkStateToLocal(networkState: string): string {
-        // Convert kebab-case back to camelCase
+        // Convert various network state formats to local state names
         const stateMap: { [key: string]: string } = {
             'idle': PlayerStates.Idle,
+            'idlestate': PlayerStates.Idle,
             'sprinting': PlayerStates.Sprinting,
+            'sprintingstate': PlayerStates.Sprinting,
+            'sprinting-state': PlayerStates.Sprinting,
             'jumping': PlayerStates.Jumping,
+            'jumpingstate': PlayerStates.Jumping,
+            'jumping-state': PlayerStates.Jumping,
             'attacking-light': PlayerStates.AttackingLight,
             'attacking-heavy': PlayerStates.AttackingHeavy,
             'dashing': PlayerStates.Dashing,
+            'dashingstate': PlayerStates.Dashing,
+            'dashing-state': PlayerStates.Dashing,
             'crouching': PlayerStates.Crouching,
             'crouch-walking': PlayerStates.CrouchWalking
         };

@@ -4,15 +4,31 @@ import { PlayerStates } from "./PlayerStates";
 export class SprintingState extends PlayerState {
     enter(): void {
         console.log('Entering Sprinting State');
+        
+        // For remote players, play the animation immediately when entering the state
+        if (!this.isInputEnabled()) {
+            const player = this.getPlayer();
+            if (player) {
+                this.getSpriteManager().playSprintingAnimation(player);
+            }
+        }
     }
 
     update(): void {
-        if (!this.isInputEnabled()) return;
-
         const player = this.getPlayer();
+        
+        if (!player) return;
+
+        // Only handle input and movement for local players
+        if (!this.isInputEnabled()) {
+            // For remote players, just ensure the animation is playing
+            // The animation will continue playing until the state changes
+            return;
+        }
+
         const keyObjects = this.getKeyObjects();
         
-        if (!player || !keyObjects) return;
+        if (!keyObjects) return;
 
         const body = player.body as Phaser.Physics.Arcade.Body;
         const isOnGround = body.touching.down;
