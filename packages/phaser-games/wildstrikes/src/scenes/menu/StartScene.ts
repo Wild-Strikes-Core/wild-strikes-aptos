@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import bgClouds from '../components/bg-clouds';
+import bgClouds from '../../components/bg-clouds';
 import { BaseScene } from './BaseScene';
-import { Animations } from '../effects/Animations';
+import { Animations } from '../../effects/Animations';
 
 export class StartScene extends BaseScene {
   private PLAY_BUTTON!: Phaser.GameObjects.Image;

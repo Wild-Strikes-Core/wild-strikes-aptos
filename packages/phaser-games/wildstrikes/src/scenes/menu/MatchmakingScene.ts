@@ -1,4 +1,4 @@
-import { socket } from "../shared-utils/socket";
+import { socket } from "../../shared-utils/socket";
 
 export default class Matchmaking extends Phaser.Scene {
     // Scene element references (renamed for clarity)

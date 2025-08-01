@@ -1,4 +1,4 @@
-import { PlayerManager } from "../player/PlayerManager";
+import { PlayerManager } from "./PlayerManager";
 
 export interface PlayerContext {
     id: string;

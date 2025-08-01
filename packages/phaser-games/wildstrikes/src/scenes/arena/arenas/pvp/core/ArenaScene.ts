@@ -1,9 +1,9 @@
-import { MapManager } from "./MapManager";
-import { AssetLoader } from "../../AssetLoader";
-import { ArenaCameraManager } from "./camera/ArenaCameraManager";
-import { BattleNetworkManager } from "./network/BattleNetworkManager";
-import { PlayerContextManager } from "./players/PlayerContextManager";
-import { BattleConfig, DEFAULT_CAMERA_CONFIG } from "./config/BattleConfig";
+import { MapManager } from "../maps/MapManager";
+import { AssetLoader } from "../../../../../AssetLoader";
+import { ArenaCameraManager } from "../systems/camera/CameraManager";
+import { BattleNetworkManager } from "../systems/network/BattleNetworkManager";
+import { PlayerContextManager } from "../entities/player/PlayerContextManager";
+import { BattleConfig, DEFAULT_CAMERA_CONFIG } from "../config/BattleConfig";
 
 export default class Arena extends Phaser.Scene {
     private mapManager: MapManager;

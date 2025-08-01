@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
-import { BootScene } from './scenes/BootScene';
-import { StartScene } from './scenes/StartScene';
-import { HomeScene } from './scenes/HomeScene';
-import MatchmakingScene from './scenes/MatchmakingScene';
-import MatchFoundScene from './scenes/MatchFoundScene';
-import VictoryScene from './scenes/VictoryScene';
-import DefeatScene from './scenes/DefeatScene';
-import ArenaScene from './scenes/arena/ArenaScene';
+import { BootScene } from './scenes/menu/BootScene';
+import { StartScene } from './scenes/menu/StartScene';
+import { HomeScene } from './scenes/menu/HomeScene';
+import MatchmakingScene from './scenes/menu/MatchmakingScene';
+import MatchFoundScene from './scenes/menu/MatchFoundScene';
+import VictoryScene from './scenes/arena/arenas/pvp/core/VictoryScene';
+import DefeatScene from './scenes/arena/arenas/pvp/core/DefeatScene';
+import ArenaScene from './scenes/arena/arenas/pvp/core/ArenaScene';
 
 class WildstrikesGame extends Phaser.Game {
   constructor(container: HTMLElement) {

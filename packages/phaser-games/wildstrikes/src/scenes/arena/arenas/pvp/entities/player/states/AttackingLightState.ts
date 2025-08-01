@@ -1,6 +1,6 @@
 import { PlayerState } from "./PlayerState";
 import { PlayerStates } from "./PlayerStates";
-import { battleSocketClient } from "../../../../shared-utils/BattleSocketClient";
+import { battleSocketClient } from "../../../../../../../shared-utils/BattleSocketClient";
 
 export class AttackingLightState extends PlayerState {
     private attackCooldown: number = 300;

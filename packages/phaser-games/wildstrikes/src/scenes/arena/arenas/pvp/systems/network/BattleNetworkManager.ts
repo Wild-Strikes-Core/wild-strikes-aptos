@@ -1,4 +1,4 @@
-import { battleSocketClient } from "../../../shared-utils/BattleSocketClient";
+import { battleSocketClient } from "../../../../../../shared-utils/BattleSocketClient";
 
 export interface BattleNetworkConfig {
     localPlayerId: string;
@@ -64,4 +64,4 @@ export class BattleNetworkManager {
         });
         this.eventHandlers.clear();
     }
-} 
+}   

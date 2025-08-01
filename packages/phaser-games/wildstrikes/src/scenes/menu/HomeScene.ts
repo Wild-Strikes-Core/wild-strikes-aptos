@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import bgClouds from '../components/bg-clouds';
+import bgClouds from '../../components/bg-clouds';
 import { BaseScene } from './BaseScene';
-import { AssetLoader } from '../AssetLoader';
+import { AssetLoader } from '../../AssetLoader';
 
 export class HomeScene extends BaseScene {
   // UI Layers

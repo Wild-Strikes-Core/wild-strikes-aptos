@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { AssetLoader } from '../AssetLoader';
+import { AssetLoader } from '../../AssetLoader';
 
 /**
  * BootScene is the first scene to run. It is responsible for
