@@ -11,10 +11,10 @@ type PlayerPosition = {
 
 type PlayerState = {
     socketId: string;
-    hp: number;
-    maxHp: number;
+    damagePercentage: number;  // 0-300%+ (Brawlhalla style)
     position: PlayerPosition;
     state: 'idle' | 'walking' | 'jumping' | 'attacking-light' | 'attacking-heavy' | 'dashing' | 'crouching' | 'defeated';
+    isAlive: boolean;
 };
 
 type BattleState = {
@@ -45,25 +45,25 @@ export class BattleService {
             players: {
                 [p1]: { 
                     socketId: p1, 
-                    hp: 100, 
-                    maxHp: 100,
+                    damagePercentage: 0, 
                     position: { 
                         x: mapConfig?.spawnPoints.player1.x || 0, 
                         y: mapConfig?.spawnPoints.player1.y || 0, 
                         facing: 'right' 
                     },
                     state: 'idle',
+                    isAlive: true,
                 },
                 [p2]: { 
                     socketId: p2, 
-                    hp: 100, 
-                    maxHp: 100,
+                    damagePercentage: 0, 
                     position: { 
                         x: mapConfig?.spawnPoints.player2.x || 0, 
                         y: mapConfig?.spawnPoints.player2.y || 0, 
                         facing: 'left' 
                     },
                     state: 'idle',
+                    isAlive: true,
                 },
             },
         };
@@ -84,7 +84,7 @@ export class BattleService {
         
         // Update the player state with the received data
         battle.players[playerId] = {
-            ...battle.players[playerId], // Keep existing data like hp, maxHp
+            ...battle.players[playerId], // Keep existing data like damagePercentage, isAlive
             socketId: playerId,
             position: playerState.position,
             state: playerState.state,
@@ -108,6 +108,20 @@ export class BattleService {
         
         this.io.to(roomId).emit("player-state-update", broadcastData);
         
+    }
+
+    // Simple handleAttack method (just for data structure)
+    handleAttack(roomId: string, attackerId: string, attackData: any) {
+        const battle = this.battles.get(roomId);
+        if (!battle || battle.gameState !== 'active') return;
+
+        console.log(`[BATTLE] Attack received from ${attackerId}:`, attackData);
+        
+        // For now, just broadcast the attack event
+        this.io.to(roomId).emit("attack-broadcast", {
+            attackerId,
+            attackData
+        });
     }
 
     getBattleState(roomId: string): BattleState | undefined {
@@ -153,10 +167,10 @@ export class BattleService {
             startTime: battle.startTime,
             players: Object.values(battle.players).map(p => ({
                 socketId: p.socketId,
-                hp: p.hp,
-                maxHp: p.maxHp,
+                damagePercentage: p.damagePercentage,
                 position: p.position,
                 state: p.state,
+                isAlive: p.isAlive,
             })),
         };
     }

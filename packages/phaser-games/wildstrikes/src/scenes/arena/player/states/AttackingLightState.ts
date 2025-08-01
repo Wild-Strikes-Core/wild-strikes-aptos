@@ -29,7 +29,9 @@ export class AttackingLightState extends PlayerState {
                 damage: 15,
                 range: 80,
                 position: { x: player.x, y: player.y },
-                animation: 'light-attack'
+                animation: 'light-attack',
+                knockbackForce: 50,  // Base knockback force
+                knockbackAngle: 45   // Knockback angle in degrees
             });
         }
     

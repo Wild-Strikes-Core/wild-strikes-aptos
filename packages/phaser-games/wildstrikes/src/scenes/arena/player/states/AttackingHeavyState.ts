@@ -29,7 +29,9 @@ export class AttackingHeavyState extends PlayerState {
                 damage: 30,
                 range: 120,
                 position: { x: player.x, y: player.y },
-                animation: 'heavy-attack'
+                animation: 'heavy-attack',
+                knockbackForce: 100,  // Higher knockback for heavy attacks
+                knockbackAngle: 45    // Knockback angle in degrees
             });
         }
     

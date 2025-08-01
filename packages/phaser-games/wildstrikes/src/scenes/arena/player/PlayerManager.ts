@@ -38,6 +38,7 @@ export class PlayerManager {
     private interpolationTime: number = 0;
     private interpolationDuration: number = 100; // 100ms interpolation
     private lastNetworkUpdate: number = 0;
+    private lastSentCommand: string | null = null; // For command diffing
     private isInterpolating: boolean = false;
     private lastNetworkAnimation: string | null = null;
 
@@ -50,6 +51,10 @@ export class PlayerManager {
     private spawnPosition: { x: number, y: number };
 
     private roomId: string;
+
+    // Brawlhalla-style damage system properties
+    private damagePercentage: number = 0;
+    private isAlive: boolean = true;
 
     constructor(private scene: Phaser.Scene, enableInput: boolean = true, roomId: string) {
         this.scene = scene;
@@ -142,23 +147,23 @@ export class PlayerManager {
 
     public transitionTo(stateName: string): void {
         const newState = this.states.get(stateName);
-        if (!newState) {
-            return;
-        }
-    
-        // Emit state change for network synchronization
-        if (this.enableInput && this.player) {
+        if (!newState) return;
+
+        // Only sync command-driven states (never contextual like idle, crouch, falling)
+        const commandDrivenStates = [
+            PlayerStates.Jumping,
+            PlayerStates.Dashing,
+            PlayerStates.AttackingLight,
+            PlayerStates.AttackingHeavy
+        ];
+        if (this.enableInput && this.player && commandDrivenStates.includes(stateName as PlayerStates)) {
             const body = this.player.body as Phaser.Physics.Arcade.Body;
-            
-            const networkStateName = stateName
-                .replace(/([a-z])([A-Z])/g, '$1-$2')
-                .toLowerCase();
-            
+            const networkStateName = stateName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
             const networkData = {
-                id: this.getPlayerId(), // Add player ID for routing
+                id: this.getPlayerId(),
                 state: networkStateName,
-                position: { 
-                    x: this.player.x, 
+                position: {
+                    x: this.player.x,
                     y: this.player.y,
                     facing: this.player.flipX ? 'left' : 'right'
                 },
@@ -166,58 +171,86 @@ export class PlayerManager {
                 timestamp: Date.now(),
                 roomId: this.roomId
             };
-            
             console.log(`[NETWORK] Sending state update:`, networkData);
             battleSocketClient.emit("player-state-update", networkData);
         }
-    
-        this.currentState.exit();
-        this.currentState = newState;
-        this.currentState.enter();
+
+        // Animation restart guard: only restart animation if state actually changed
+        if (this.currentState !== newState) {
+            this.currentState.exit();
+            this.currentState = newState;
+            this.currentState.enter();
+        }
     }
 
     public updateFromNetwork(networkState: any): void {
         if (!this.player || this.enableInput) return; // Don't update local player from network
 
         const currentTime = Date.now();
-        
         // Throttle network updates to prevent excessive processing
-        if (currentTime - this.lastNetworkUpdate < 16) return; // ~60fps max
-        
+        if (currentTime - this.lastNetworkUpdate < 16) return;
         console.log(`[NETWORK] Received state update:`, networkState);
-        
         // Convert network state to local state name
         const localStateName = this.convertNetworkStateToLocal(networkState.state);
-        
-        // Always transition to the appropriate state for remote players
-        if (localStateName && this.states.has(localStateName)) {
-            // Update position and velocity for interpolation
+        // Only transition to command-driven states for remote players
+        const commandDrivenStates = [
+            PlayerStates.Jumping,
+            PlayerStates.Dashing,
+            PlayerStates.AttackingLight,
+            PlayerStates.AttackingHeavy
+        ];
+        if (localStateName && this.states.has(localStateName) && commandDrivenStates.includes(localStateName as PlayerStates)) {
             if (networkState.position) {
-                this.targetPosition = { 
-                    x: networkState.position.x, 
-                    y: networkState.position.y 
+                this.targetPosition = {
+                    x: networkState.position.x,
+                    y: networkState.position.y
                 };
             }
             if (networkState.velocity) {
-                this.targetVelocity = { 
-                    x: networkState.velocity.x, 
-                    y: networkState.velocity.y 
+                this.targetVelocity = {
+                    x: networkState.velocity.x,
+                    y: networkState.velocity.y
                 };
             }
-            
-            // Update facing direction immediately
             if (networkState.position?.facing) {
                 this.player.setFlipX(networkState.position.facing === 'left');
             }
-            
-            // Transition to the appropriate state (this will handle animation)
             this.transitionTo(localStateName);
-            
-            // Start interpolation
             this.interpolationTime = 0;
-            this.interpolationDuration = 100; // Increased for smoother movement
+            this.interpolationDuration = 100;
             this.lastNetworkUpdate = currentTime;
             this.isInterpolating = true;
+        } else {
+            // For contextual states, just interpolate position/velocity, don't transition state
+            if (networkState.position) {
+                this.targetPosition = {
+                    x: networkState.position.x,
+                    y: networkState.position.y
+                };
+            }
+            if (networkState.velocity) {
+                this.targetVelocity = {
+                    x: networkState.velocity.x,
+                    y: networkState.velocity.y
+                };
+            }
+            if (networkState.position?.facing) {
+                this.player.setFlipX(networkState.position.facing === 'left');
+            }
+            this.interpolationTime = 0;
+            this.interpolationDuration = 100;
+            this.lastNetworkUpdate = currentTime;
+            this.isInterpolating = true;
+        }
+
+        // Update damage percentage
+        if (networkState.damagePercentage !== undefined) {
+            this.damagePercentage = networkState.damagePercentage;
+        }
+
+        // Update alive status
+        if (networkState.isAlive !== undefined) {
+            this.isAlive = networkState.isAlive;
         }
     }
 
@@ -374,28 +407,28 @@ export class PlayerManager {
         const body = this.player.body as Phaser.Physics.Arcade.Body;
         const currentState = this.currentState.constructor.name.toLowerCase();
         
-        // Only send continuous updates for movement states and reduce frequency
-        const movementStates = ['sprinting', 'jumping', 'dashing', 'crouchwalking'];
+        // Only send continuous updates for movement states (not contextual)
+        const movementStates = ['sprinting', 'jumping', 'dashing'];
         if (movementStates.some(state => currentState.includes(state))) {
-            // Add throttling to reduce network traffic
             const now = Date.now();
-            if (now - this.lastNetworkUpdate < 50) return; // Only send every 50ms max
-            
-            const networkData = {
-                id: this.getPlayerId(), // Add player ID for routing
-                state: currentState.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
-                position: { 
-                    x: this.player.x, 
-                    y: this.player.y,
-                    facing: this.player.flipX ? 'left' : 'right'
-                },
-                velocity: { x: body.velocity.x, y: body.velocity.y },
-                timestamp: now,
-                roomId: this.roomId
-            };
-            
-            battleSocketClient.emit("player-state-update", networkData);
-            this.lastNetworkUpdate = now;
+            // Command diffing: only send if command changed or enough time passed
+            if (this.lastSentCommand !== currentState || now - this.lastNetworkUpdate > 50) {
+                const networkData = {
+                    id: this.getPlayerId(),
+                    state: currentState.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
+                    position: {
+                        x: this.player.x,
+                        y: this.player.y,
+                        facing: this.player.flipX ? 'left' : 'right'
+                    },
+                    velocity: { x: body.velocity.x, y: body.velocity.y },
+                    timestamp: now,
+                    roomId: this.roomId
+                };
+                battleSocketClient.emit("player-state-update", networkData);
+                this.lastNetworkUpdate = now;
+                this.lastSentCommand = currentState;
+            }
         }
     }
 
@@ -497,16 +530,15 @@ export class PlayerManager {
     }
 
     public getPlayerId(): string {
-        // Get player ID from the scene's player contexts
-        const arenaScene = this.scene as any;
-        if (arenaScene.playerContexts) {
-            for (const [id, context] of arenaScene.playerContexts) {
-                if (context.manager === this) {
-                    return id;
-                }
-            }
-        }
-        return 'unknown';
+        return this.roomId;
+    }
+
+    public getDamagePercentage(): number {
+        return this.damagePercentage;
+    }
+
+    public isPlayerAlive(): boolean {
+        return this.isAlive;
     }
 
 
