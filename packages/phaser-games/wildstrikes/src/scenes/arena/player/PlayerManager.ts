@@ -149,6 +149,15 @@ export class PlayerManager {
         const newState = this.states.get(stateName);
         if (!newState) return;
 
+        // Check if the transition would be blocked by local cooldown logic
+        if (!this.canTransitionToState(stateName)) {
+            console.log(`[NETWORK] Blocking transition to ${stateName} due to local cooldown`);
+            return; // Don't transition if blocked by local logic
+        }
+
+        // Get the current state name before transition
+        const previousState = this.currentState.constructor.name.toLowerCase();
+        
         // Send network updates for command-driven states and movement states
         const networkSyncStates = [
             PlayerStates.Jumping,
@@ -195,6 +204,13 @@ export class PlayerManager {
 
         // Animation restart guard: only restart animation if state actually changed
         if (this.currentState !== newState) {
+            // Stop continuous updates for the previous state
+            const movementStates = ['sprinting', 'jumping', 'dashing'];
+            if (this.enableInput && movementStates.some(state => previousState.includes(state))) {
+                console.log(`[NETWORK] Stopping continuous updates for ${previousState} -> ${stateName}`);
+                this.lastSentCommand = null;
+            }
+            
             this.currentState.exit();
             this.currentState = newState;
             this.currentState.enter();
@@ -429,7 +445,9 @@ export class PlayerManager {
         
         // Only send continuous updates for movement states (not contextual)
         const movementStates = ['sprinting', 'jumping', 'dashing'];
-        if (movementStates.some(state => currentState.includes(state))) {
+        const isMovementState = movementStates.some(state => currentState.includes(state));
+        
+        if (isMovementState) {
             const now = Date.now();
             // Command diffing: only send if command changed or enough time passed
             if (this.lastSentCommand !== currentState || now - this.lastNetworkUpdate > 50) {
@@ -445,9 +463,16 @@ export class PlayerManager {
                     timestamp: now,
                     roomId: this.roomId
                 };
+                console.log(`[NETWORK] Sending continuous update:`, networkData);
                 battleSocketClient.emit("player-state-update", networkData);
                 this.lastNetworkUpdate = now;
                 this.lastSentCommand = currentState;
+            }
+        } else {
+            // If we're not in a movement state, reset lastSentCommand to ensure clean state transitions
+            if (this.lastSentCommand && movementStates.some(state => this.lastSentCommand!.includes(state))) {
+                console.log(`[NETWORK] Stopping continuous updates for ${this.lastSentCommand} -> ${currentState}`);
+                this.lastSentCommand = null;
             }
         }
     }
