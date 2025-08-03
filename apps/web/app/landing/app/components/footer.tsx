@@ -46,15 +46,15 @@ export default function Footer() {
                   <a href="https://wild-strikes-1.gitbook.io/wild-strikes/?fbclid=IwY2xjawLnCq1leHRuA2FlbQIxMABicmlkETFYdHoxSkJac3liRHFKMjcxAR7dbuzzkslH6c6yVFXvKIjlriQALsWoPUOqZYQYyLEQfIked26fs5bE1UncSw_aem_GCN9mVULQZFDe010jAd8SQ" target="_blank" rel="noopener noreferrer">
                     WHITEPAPER
                   </a>
-                  <a href="https://codeofconduct.com" target="_blank" rel="noopener noreferrer">
+                  <a href="#" target="_blank" rel="noopener noreferrer">
                     CODE OF CONDUCT
                   </a>
                 </div>
                 <div className="footer-column">
-                  <a href="https://termsofservice.com" target="_blank" rel="noopener noreferrer">
+                  <a href="/terms-and-conditions" target="_blank" rel="noopener noreferrer">
                     TERMS OF SERVICE
                   </a>
-                  <a href="https://privacypolicy.com" target="_blank" rel="noopener noreferrer">
+                  <a href="#" target="_blank" rel="noopener noreferrer">
                     PRIVACY POLICY
                   </a>
                 </div>

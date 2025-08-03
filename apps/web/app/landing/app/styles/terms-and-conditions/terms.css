@@ -1,0 +1,122 @@
+/* HERO SECTION STYLES */
+.terms-and-conditions-hero {
+  background-image: url("/assets/Website-page/bg-1.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 100px 20px 60px;
+  text-align: center;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* LIGHT OVERLAY TEXTURE */
+.terms-and-conditions-hero::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+  z-index: 0;
+}
+
+/* INNER TEXT CONTAINER */
+.terms-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* HERO TEXT LINE */
+.hero-tagline {
+  margin: 0;
+}
+
+TEXT COLOR RESET
+.highlight {
+  background: none;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: white;
+}
+
+/* TERMS CONTENT STYLES */
+/* TERMS & CONDITIONS SECTION STYLES */
+.terms-conditions {
+  position: relative;
+  padding: 60px 20px;
+  color: #222;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+/* BACKGROUND IMAGE BEHAVIOR */
+.features-bg {
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+}
+
+/* INNER CONTENT WRAPPER */
+.terms-conditions .content {
+  position: relative;
+  z-index: 1;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* TEXT BLOCK STYLING */
+.terms-conditions .features-content {
+  font-size: 1rem;
+  line-height: 1.75;
+  text-align: justify;
+  color: #fff;
+}
+
+/* SECTION HEADINGS */
+.terms-conditions h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #ffffff;
+}
+
+/* SUBSECTION TITLES */
+.terms-conditions .text-xl {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+}
+
+/* PARAGRAPH DEFAULTS */
+.terms-conditions p {
+  margin-bottom: 1rem;
+  text-indent: 1.5rem;
+  color: #e5e5e5;
+}
+
+/* INDENTED PARAGRAPH BLOCKS */
+.terms-conditions .indent-level-1 {
+  padding-left: 1rem;
+}
+
+.terms-conditions .indent-level-2 {
+  padding-left: 3rem;
+}
+
+/* STRONG TEXT */
+.terms-conditions strong {
+  font-weight: 600;
+  color: #fff;
+}
+
+/* EMAIL LINKS */
+.terms-conditions a {
+  color: #38bdf8;
+  text-decoration: underline;
+}
