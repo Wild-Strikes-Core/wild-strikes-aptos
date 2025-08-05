@@ -24,16 +24,16 @@ export default function Home() {
 
       {/* Terms and Conditions Section */}
       <section className="terms-conditions">
-        <Image
-          src="/assets/Website-page/bg-3.png"
-          alt="Features Background"
-          fill
-          className="features-bg"
-          priority
-        />
-        <div className="content">
-          {/* terms content goes here */}
-        </div>
+      <Image
+        src="/assets/Website-page/bg-3.png"
+        alt="Features Background"
+        fill
+        className="features-bg"
+        priority
+      />
+      <div className="content">
+        {/* terms content goes here */}
+      </div>
         <div className="content">
           <div className="max-w-4xl mx-auto px-4">
             <div

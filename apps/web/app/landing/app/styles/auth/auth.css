@@ -1,0 +1,169 @@
+/* auth.css */
+.auth-container {
+  display: flex;
+  height: 100vh;
+  background: #0f0c29; /* Dark background */
+}
+
+/* Left Image Section */
+.auth-left {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-bg-image {
+  object-fit: cover;
+  filter: brightness(0.7);
+}
+
+.game-logo-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2;
+}
+
+.game-logo {
+  max-width: 80%;
+  height: auto;
+}
+
+/* Right Auth Section */
+.auth-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.auth-title {
+  color: #fff;
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+/* Authentication Methods */
+.auth-method {
+  margin-bottom: rem;
+}
+
+/* Google Button */
+.google-auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 1rem;
+  background: #0c5de0;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.google-auth-btn:hover {
+  background: #002983;
+}
+
+/* Wallet Options Styling */
+.wallet-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wallet-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.wallet-option:hover {
+  background: rgba(108, 99, 255, 0.15);
+}
+
+.wallet-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.wallet-name {
+  color: #fff;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.connect-button {
+  background: transparent;
+  color: #6C63FF;
+  border: 1px solid #6C63FF;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.connect-button:hover {
+  background: rgba(108, 99, 255, 0.1);
+}
+
+/* Divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 2rem 0;
+  color: #6c757d;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #6c757d;
+}
+
+.auth-divider span {
+  padding: 0 1rem;
+}
+
+/* Text Styles */
+.auth-disclaimer {
+  color: #adb5bd;
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.auth-disclaimer a {
+  color: #6C63FF;
+  text-decoration: none;
+}
+
+.aptos-credit {
+  color: #6c757d;
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: 0.5rem;
+}
