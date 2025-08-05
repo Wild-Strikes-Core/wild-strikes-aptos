@@ -36,7 +36,7 @@ export class StartScene extends BaseScene {
     }
 
     // --- UI Elements ---
-    this.PLAY_BUTTON = this.add.image(centerX, centerY + 200, 'Purple_Green_Pixel_Illustration_Game_Presentation-removebg-preview').setScale(0.86);
+    this.PLAY_BUTTON = this.add.image(centerX, centerY + 200, 'connect-btn').setScale(0.86);
     this.MAIN_LOGO = this.add.image(centerX, centerY - 120, 'newLogo').setScale(1.74);
 
     this.events.emit('scene-awake');

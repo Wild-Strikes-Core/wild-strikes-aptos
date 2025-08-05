@@ -21,7 +21,7 @@ export default class Start extends Phaser.Scene {
         this.PLAY_BUTTON = this.add.image(
             960,
             832,
-            "Purple_Green_Pixel_Illustration_Game_Presentation-removebg-preview"
+            "connect-btn"
         );
         this.PLAY_BUTTON.scaleX = 0.8596074937886975;
         this.PLAY_BUTTON.scaleY = 0.8596074937886975;
