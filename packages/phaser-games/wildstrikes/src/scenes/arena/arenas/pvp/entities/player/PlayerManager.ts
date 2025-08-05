@@ -165,7 +165,9 @@ export class PlayerManager {
             PlayerStates.AttackingLight,
             PlayerStates.AttackingHeavy,
             PlayerStates.Sprinting,  // Add sprinting to network sync
-            PlayerStates.Idle        // Add idle to network sync
+            PlayerStates.Idle,       // Add idle to network sync
+            PlayerStates.Crouching,
+            PlayerStates.CrouchWalking
         ];
         
         // Check if we should send a network update
@@ -205,7 +207,7 @@ export class PlayerManager {
         // Animation restart guard: only restart animation if state actually changed
         if (this.currentState !== newState) {
             // Stop continuous updates for the previous state
-            const movementStates = ['sprinting', 'jumping', 'dashing'];
+            const movementStates = ['sprinting', 'jumping', 'dashing', 'crouching', 'crouchwalking'];
             if (this.enableInput && movementStates.some(state => previousState.includes(state))) {
                 console.log(`[NETWORK] Stopping continuous updates for ${previousState} -> ${stateName}`);
                 this.lastSentCommand = null;
@@ -344,7 +346,12 @@ export class PlayerManager {
             'dashingstate': PlayerStates.Dashing,
             'dashing-state': PlayerStates.Dashing,
             'crouching': PlayerStates.Crouching,
-            'crouch-walking': PlayerStates.CrouchWalking
+            'crouchingstate': PlayerStates.Crouching,
+            'crouching-state': PlayerStates.Crouching,
+            'crouch-walking': PlayerStates.CrouchWalking,
+            'crouchwalking': PlayerStates.CrouchWalking,
+            'crouchwalkingstate': PlayerStates.CrouchWalking,
+            'crouch-walking-state': PlayerStates.CrouchWalking
         };
         return stateMap[networkState] || PlayerStates.Idle;
     }
@@ -444,13 +451,13 @@ export class PlayerManager {
         const currentState = this.currentState.constructor.name.toLowerCase();
         
         // Only send continuous updates for movement states (not contextual)
-        const movementStates = ['sprinting', 'jumping', 'dashing'];
+        const movementStates = ['sprinting', 'jumping', 'dashing', 'crouching', 'crouchwalking'];
         const isMovementState = movementStates.some(state => currentState.includes(state));
         
         if (isMovementState) {
             const now = Date.now();
-            // Command diffing: only send if command changed or enough time passed
-            if (this.lastSentCommand !== currentState || now - this.lastNetworkUpdate > 50) {
+            // Always send at least every 33ms (30Hz), even if no state/command change
+            if (now - this.lastNetworkUpdate > 33) {
                 const networkData = {
                     id: this.getPlayerId(),
                     state: currentState.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
