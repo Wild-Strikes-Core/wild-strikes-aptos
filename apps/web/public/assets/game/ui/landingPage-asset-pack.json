@@ -37,9 +37,9 @@
                 "normalMap": ""
             },
             {
-                "url": "assets/game/ui/landing/Purple_Green_Pixel_Illustration_Game_Presentation-removebg-preview.png",
+                "url": "assets/game/ui/landing/connect-btn.png",
                 "type": "image",
-                "key": "Purple_Green_Pixel_Illustration_Game_Presentation-removebg-preview",
+                "key": "connect-btn",
                 "normalMap": ""
             },
             {
@@ -53,6 +53,7 @@
                 "key": "WildStrike-Logo-trans",
                 "normalMap": ""
             }
+            
         ]
     },
     "meta": {
