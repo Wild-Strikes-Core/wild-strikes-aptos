@@ -21,6 +21,15 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     // Centralised asset loading
+    const bar = this.add.rectangle(726, 524, 4, 28, 0xffffff);
+
+    // Listen for loading progress updates
+    this.load.on("progress", (progress: number) => {
+        // Update the progress bar width based on loading percentage
+        // The bar grows from 4px to 464px when fully loaded
+        bar.width = 4 + 460 * progress;
+    });
+
     const loader = new AssetLoader(this.load);
     // Only load the minimal assets needed to display the splash / loading screen.
     // Additional groups (ui, gameplay, chars, …) can be lazily loaded in their
@@ -32,12 +41,14 @@ export class BootScene extends Phaser.Scene {
     // Load audio assets separately using proper Phaser loading methods
     loader.loadGroup('ui-audio');
     loader.loadGroup('gameplay-audio');
+
+    
   }
 
 
   create(): void {
     console.log('All assets loaded successfully');
 
-    this.scene.start('Matchmaking');
+    this.scene.start('StartMenu');
   }
 } 
