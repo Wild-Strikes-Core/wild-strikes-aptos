@@ -1,7 +1,16 @@
 // apps/web/app/landing/app/javascript/whitelist/whitelist.js
+console.log('Whitelist script loaded'); // Debug: Check if script loads
+
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM loaded, looking for email input'); // Debug: Check if DOM event fires
+  
   const emailInput = document.getElementById('email');
-  if (!emailInput) return;
+  console.log('Email input found:', emailInput); // Debug: Check if element exists
+  
+  if (!emailInput) {
+    console.error('Email input with id="email" not found!');
+    return;
+  }
   
   // Create container for input with submit button
   const inputContainer = document.createElement('div');
@@ -23,6 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
   submitButton.style.color = '#333';
   submitButton.style.display = 'none';
   submitButton.style.transition = 'color 0.3s ease';
+  submitButton.style.zIndex = '10';
+  submitButton.style.padding = '5px';
+  submitButton.style.minWidth = '30px';
+  submitButton.style.minHeight = '30px';
   
   // Create error message element
   const errorDiv = document.createElement('div');
@@ -34,6 +47,11 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Wrap the input with the container
   const parent = emailInput.parentElement;
+  if (!parent) {
+    console.error('Email input has no parent element');
+    return;
+  }
+  
   parent.replaceChild(inputContainer, emailInput);
   inputContainer.appendChild(emailInput);
   inputContainer.appendChild(submitButton);
@@ -50,20 +68,24 @@ document.addEventListener('DOMContentLoaded', function() {
   // Update button visibility and validation
   function updateEmailUI() {
     const email = emailInput.value.trim();
+    console.log('Email value:', email); // Debug log
     
     if (email === '') {
       submitButton.style.display = 'none';
       errorDiv.style.display = 'none';
     } else {
       submitButton.style.display = 'block';
+      console.log('Submit button should be visible'); // Debug log
       
       if (isValidEmail(email)) {
         submitButton.style.color = '#38b000';
         errorDiv.style.display = 'none';
+        console.log('Email is valid - button green'); // Debug log
       } else {
         submitButton.style.color = '#ff6b6b';
         errorDiv.textContent = 'Please enter a valid email address';
         errorDiv.style.display = 'block';
+        console.log('Email is invalid - button red'); // Debug log
       }
     }
   }

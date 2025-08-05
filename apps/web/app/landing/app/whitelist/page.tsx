@@ -7,6 +7,7 @@ import "../styles/footer.css";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
 import "../styles/whitelist/whitelist.css"; // Import the CSS for terms and conditions
+import EmailWhitelistComponent from "./EmailWhitelistComponent";
 
 export default function Home() {
   return (
@@ -52,7 +53,7 @@ export default function Home() {
       {/* CLOUD SECTION */}
       <section className="cloud-section">
         <Image
-          src="/assets/Website-page/whitelist/cloudd.png"
+          src="/assets/Website-page/whitelist/clouddd.png"
           alt="Whitelist Cloud"
           fill
           className="cloud-image"
@@ -123,21 +124,9 @@ export default function Home() {
             >
               EMAIL
             </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="Enter your email to register"
-              style={{
-                fontSize: "18px",
-                padding: "1rem",
-                width: "100%",
-                borderRadius: "8px",
-                border: "2px solid #000",
-                backgroundColor: "#e6ecf0",
-                color: "#000000",
-                outline: "none",
-              }}
-            />
+            
+            {/* Use the React component instead of static input */}
+            <EmailWhitelistComponent />
 
 
             {/* Newsletter Checkbox */}
