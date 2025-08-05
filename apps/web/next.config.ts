@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { NextConfig } from "next";
 import { platform } from 'os';
 

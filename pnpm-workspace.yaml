@@ -2,7 +2,7 @@
 packages:
   - "apps/*"
   - "apps/web/app/landing"
-  - "apps/backend/socketio"
+  - "apps/backend/wildstrikes-socket"
   - "apps/backend/wildstrikes-backend"
   - "packages/*"
   - "packages/phaser-games/wildstrikes"
