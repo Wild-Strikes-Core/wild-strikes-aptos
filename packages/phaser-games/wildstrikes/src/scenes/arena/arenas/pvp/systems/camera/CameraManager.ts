@@ -31,7 +31,7 @@ export class BattleNetworkManager {
     }
 
     private setupEventHandlers(): void {
-        this.on("battle-start", (data: any) => {
+        this.on("server:start-battle", (data: any) => {
             console.log("[BATTLE NETWORK] Battle started", data);
         });
 
@@ -44,18 +44,9 @@ export class BattleNetworkManager {
         });
     }
 
-    public onPlayerStateUpdate(handler: (playerState: any) => void): void {
-        battleSocketClient.on("player-state-update", handler);
-    }
-
     public on(event: string, handler: (data: any) => void): void {
         this.eventHandlers.set(event, handler);
         battleSocketClient.on(event, handler);
-    }
-
-    public sendPlayerState(state: any): void {
-        // Send local player state to server
-        battleSocketClient.emit("player-state", state);
     }
 
     public destroy(): void {
@@ -94,12 +85,10 @@ export class PlayerContextManager {
     public setupPlayers(config: PlayerSpawnConfig): Map<string, PlayerContext> {
         this.localPlayerId = config.localPlayerId;
 
-        const localPlayer = new PlayerManager(this.scene, true, config.roomId);
-        const opponentPlayer = new PlayerManager(this.scene, false, config.roomId);
+        const localPlayer = new PlayerManager(this.scene, true, config.roomId, config.localPlayerId);
+        const opponentPlayer = new PlayerManager(this.scene, false, config.roomId, config.opponentId);
 
-        localPlayer.setSpawnPosition(config.localSpawnPosition.x, config.localSpawnPosition.y);
-        opponentPlayer.setSpawnPosition(config.opponentSpawnPosition.x, config.opponentSpawnPosition.y);
-
+        // Create players at spawn positions directly - no setSpawnPosition method needed
         const localSprite = localPlayer.createPlayer(config.localSpawnPosition.x, config.localSpawnPosition.y);
         const opponentSprite = opponentPlayer.createPlayer(config.opponentSpawnPosition.x, config.opponentSpawnPosition.y);
 
@@ -148,7 +137,7 @@ export class PlayerContextManager {
 
     public updatePlayers(delta: number): void {
         this.playerContexts.forEach(player => {
-            player.manager.update(delta);
+            player.manager.update(); // PlayerManager.update() takes no parameters
         });
     }
 

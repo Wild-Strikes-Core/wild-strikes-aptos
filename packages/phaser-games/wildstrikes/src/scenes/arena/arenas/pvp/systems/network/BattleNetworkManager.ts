@@ -72,78 +72,53 @@ export class BattleNetworkManager {
         });
 
         this.socket.on('server:playerReconciliation', (data: any) => {
-            
+            // Legacy event - no longer used in server-authoritative system
         });
 
         this.socket.on('server:remotePlayerHasMoved', (data: any) => {
+            // Legacy event - no longer used in server-authoritative system
+        });
+
+        // Listen for server-authoritative player context broadcasts
+        this.socket.on('server:broadcastPlayerContexts', (data: any) => {
+            console.log('[BATTLE NETWORK] 📥 Received server:broadcastPlayerContexts:', data);
             
+            if (this.onPlayerContextsReceivedCallback) {
+                this.onPlayerContextsReceivedCallback(data);
+            }
         });
     }
 
-
-    // ✅ Keep legacy method for backwards compatibility
-    public sendPlayerInput(inputCommand: any): void {
+    // Send player context to server for validation
+    public sendPlayerContext(playerContext: any): void {
         if (!this.socket || !this.socket.connected) {
-            console.error('[BATTLE NETWORK] Cannot send input - socket not connected');
+            console.error('[BATTLE NETWORK] Cannot send player context - socket not connected');
             return;
         }
 
-        const inputData = {
-            roomId: this.roomId,
-            playerId: this.localPlayerId,
-            input: inputCommand
-        };
-
-        console.log('[BATTLE NETWORK] 📤 Sending player input:', {
-            roomId: inputData.roomId,
-            playerId: inputData.playerId,
-            inputs: inputCommand.inputs,
-            sequenceNumber: inputCommand.sequenceNumber
-        });
-        
-        this.socket.emit('player-input', inputData);
+        console.log('[BATTLE NETWORK] 📤 Sending player context:', playerContext);
+        this.socket.emit('player:moved', playerContext);
     }
 
-    // ✅ Legacy callbacks
-    private onLocalPlayerUpdateCallback?: (data: any) => void;
-    private onRemotePlayerUpdateCallback?: (data: any) => void;
-    private onBattleStateUpdateCallback?: (data: any) => void;
-    private onPlayerStateUpdateCallback?: (data: any) => void;
-    private onPhysicsUpdateCallback?: (data: any) => void;
+    // Callbacks
     private onBattleStartCallback?: (data: any) => void;
+    private onPlayerContextsReceivedCallback?: (data: any) => void;
 
-
-    // ✅ Legacy methods for backwards compatibility
-    public onLocalPlayerUpdate(callback: (data: any) => void): void {
-        this.onLocalPlayerUpdateCallback = callback;
-    }
-
-    public onRemotePlayerUpdate(callback: (data: any) => void): void {
-        this.onRemotePlayerUpdateCallback = callback;
-    }
-
-    public onBattleStateUpdate(callback: (data: any) => void): void {
-        this.onBattleStateUpdateCallback = callback;
-    }
-
-    public onPlayerStateUpdate(callback: (data: any) => void): void {
-        this.onPlayerStateUpdateCallback = callback;
-    }
-
-    public onPhysicsUpdate(callback: (data: any) => void): void {
-        this.onPhysicsUpdateCallback = callback;
-    }
-
+    // Methods
     public onBattleStart(callback: (data: any) => void): void {
         this.onBattleStartCallback = callback;
     }
 
+    public onPlayerContextsReceived(callback: (data: any) => void): void {
+        this.onPlayerContextsReceivedCallback = callback;
+    }
+
     public destroy(): void {
         if (this.socket) {
-            this.socket.off('battle-start');
-            this.socket.off('player-state-update'); // ✅ Corrected event name
-            this.socket.off('remote-player-update'); // ✅ Corrected event name
-            this.socket.off('physics-update');
+            this.socket.off('server:start-battle');
+            this.socket.off('server:playerReconciliation');
+            this.socket.off('server:remotePlayerHasMoved');
+            this.socket.off('server:broadcastPlayerContexts');
         }
     }
 }

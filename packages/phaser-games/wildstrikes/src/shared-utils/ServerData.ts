@@ -30,6 +30,7 @@ export interface PlayerContext {
     damagePercentage?: number;
     lives?: number;
   }
+  isAlive?: boolean;
   sequenceNumber?: number;
   timestamp?: number;
 }

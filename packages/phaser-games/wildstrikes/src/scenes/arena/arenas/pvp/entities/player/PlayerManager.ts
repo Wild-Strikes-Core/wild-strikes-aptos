@@ -13,30 +13,6 @@ import {
     AttackingHeavyState 
 } from "./states";
 
-interface InputCommand {
-    sequenceNumber: number;
-    timestamp: number;
-    inputs: {
-        left: boolean;
-        right: boolean;
-        jump: boolean;
-        crouch: boolean;
-        dash: boolean;
-        lightAttack: boolean;
-        heavyAttack: boolean;
-    };
-}
-
-interface ServerUpdate {
-    sequenceNumber: number;
-    timestamp: number;
-    x: number;
-    y: number;
-    velocityX: number;
-    velocityY: number;
-    state: PlayerStates;
-}
-
 export class PlayerManager {
     private spriteManager: PlayerSpriteManager;
     private statsUI: PlayerStatsUI | null = null;
@@ -61,10 +37,9 @@ export class PlayerManager {
 
     // Client prediction properties
     private sequenceNumber: number = 0;
-    private inputHistory: InputCommand[] = [];
-    private lastServerUpdate: ServerUpdate | null = null;
-    private serverReconciliation: boolean = true;
-    private inputBuffer: InputCommand[] = [];
+    private lastSentInputs: any = null; // Track last sent inputs to avoid spam
+    private lastSentPosition: { x: number; y: number } = { x: 0, y: 0 };
+    private lastSentState: string = 'idle'; // Track last sent state to detect state changes
 
     private networkManager?: any; // Will be injected by ArenaScene
 
@@ -176,6 +151,10 @@ export class PlayerManager {
             setTimeout(() => this.setupServerEventListeners(), 100);
             return;
         }
+
+        console.log('[PLAYER MANAGER] Server event listeners set up - server reconciliation handled in ArenaScene');
+        // Note: Server reconciliation and player context updates are now handled in ArenaScene
+        // via the networkManager.onPlayerContextsReceived() callback
     }
 
     public setNetworkManager(networkManager: any): void {
@@ -219,6 +198,11 @@ export class PlayerManager {
         
         this.currentState?.update();
         
+        // Check for state changes and send updates even without input changes
+        if (this.enabledInput && this.networkManager) {
+            this.sendStateUpdatesIfChanged();
+        }
+        
         // Update stats UI position and real-time data (throttled for performance)
         const now = Date.now();
         if (this.statsUI && this.player && (now - this.lastUIUpdate >= this.UI_UPDATE_RATE)) {
@@ -248,26 +232,16 @@ export class PlayerManager {
     // filepath: /home/j3yz/Documents/GitHub/wild-strikes-aptos/packages/phaser-games/wildstrikes/src/scenes/arena/arenas/pvp/entities/player/PlayerManager.ts
     private captureAndProcessInput(): void {
         const now = Date.now();
-        
-        // Still rate limit sending to server but not local processing
-        const shouldSendToServer = now - this.lastInputSent >= this.INPUT_RATE_LIMIT;
-        if (shouldSendToServer) {
-            this.lastInputSent = now;
-        }
 
-        // Capture ALL inputs regardless of attacks
-        const inputCommand: InputCommand = {
-            sequenceNumber: shouldSendToServer ? ++this.sequenceNumber : this.sequenceNumber,
-            timestamp: now,
-            inputs: {
-                left: this.keyObjects.left?.isDown || false,
-                right: this.keyObjects.right?.isDown || false,
-                jump: this.jumpJustPressed, // Use "just pressed" for jump
-                crouch: this.keyObjects.crouch?.isDown || false,
-                dash: this.keyObjects.dash?.isDown || false,
-                lightAttack: this.mouseButtonsJustPressed.left, // Use "just pressed" for attacks
-                heavyAttack: this.mouseButtonsJustPressed.right // Use "just pressed" for attacks
-            }
+        // Capture current inputs BEFORE resetting just-pressed flags
+        const inputs = {
+            left: this.keyObjects.left?.isDown || false,
+            right: this.keyObjects.right?.isDown || false,
+            jump: this.jumpJustPressed,
+            crouch: this.keyObjects.crouch?.isDown || false,
+            dash: this.keyObjects.dash?.isDown || false,
+            lightAttack: this.mouseButtonsJustPressed.left,
+            heavyAttack: this.mouseButtonsJustPressed.right
         };
         
         // Debug logging for attacks
@@ -280,34 +254,202 @@ export class PlayerManager {
             console.log('Jump input detected');
         }
         
-        // Reset "just pressed" flags after capturing input
+        // Send input-based updates BEFORE resetting flags (so we can compare properly)
+        this.sendInputBasedUpdates(inputs, now);
+        
+        // Reset "just pressed" flags AFTER sending to server
         this.mouseButtonsJustPressed.left = false;
         this.mouseButtonsJustPressed.right = false;
         this.jumpJustPressed = false;
         
-        this.inputHistory.push(inputCommand);
-        
-        if (this.inputHistory.length > 60) { // 1 second at 60fps
-            this.inputHistory.shift();
-        }
-        
         // Apply input locally for client-side prediction
         if (this.currentState && 'handleInput' in this.currentState) {
-            (this.currentState as any).handleInput(inputCommand.inputs);
+            (this.currentState as any).handleInput(inputs);
+        }
+    }
+
+    private sendInputBasedUpdates(inputs: any, now: number): void {
+        const shouldSendToServer = now - this.lastInputSent >= this.INPUT_RATE_LIMIT;
+        
+        if (!shouldSendToServer || !this.networkManager) return;
+        
+        this.lastInputSent = now;
+        
+        const currentPosition = {
+            x: this.player?.x || 0,
+            y: this.player?.y || 0
+        };
+        
+        // Check for input changes
+        const hasInputChanges = !this.lastSentInputs || JSON.stringify(inputs) !== JSON.stringify(this.lastSentInputs);
+        
+        // Check for significant position changes (movement)
+        const hasPositionChanges = Math.abs(currentPosition.x - this.lastSentPosition.x) > 0.5 || 
+                                 Math.abs(currentPosition.y - this.lastSentPosition.y) > 0.5;
+        
+        // Check if any movement keys are held down (continuous movement should be sent)
+        const hasMovementInput = inputs.left || inputs.right || inputs.jump || inputs.crouch || inputs.dash;
+        
+        // Send if there are input changes, position changes, or active movement
+        if (hasInputChanges || hasPositionChanges || hasMovementInput) {
+            const reason = hasInputChanges ? 'INPUT_CHANGE' : 
+                          hasPositionChanges ? 'POSITION_CHANGE' : 'MOVEMENT_ACTIVE';
+            
+            this.sendPlayerContextToServer(inputs, currentPosition, now, reason as any);
+            
+            console.log(`[PLAYER MANAGER] 📡 Sending update: input=${hasInputChanges}, pos=${hasPositionChanges}, movement=${hasMovementInput}`);
+        } else {
+            console.log('[PLAYER MANAGER] ⏹️ No changes detected - skipping update');
+        }
+    }
+
+    private sendStateUpdatesIfChanged(): void {
+        const now = Date.now();
+        const currentStateString = this.mapPhaserStateToPlayerState(this.currentState);
+        
+        // Check if state changed without input change (e.g., attack finished -> idle)
+        if (currentStateString !== this.lastSentState) {
+            const shouldSendToServer = now - this.lastInputSent >= this.INPUT_RATE_LIMIT;
+            
+            if (shouldSendToServer) {
+                this.lastInputSent = now;
+                
+                const currentPosition = {
+                    x: this.player?.x || 0,
+                    y: this.player?.y || 0
+                };
+                
+                // Send with current input state (might be different from what triggered the original state)
+                const currentInputs = {
+                    left: this.keyObjects.left?.isDown || false,
+                    right: this.keyObjects.right?.isDown || false,
+                    jump: false, // No just-pressed states for state updates
+                    crouch: this.keyObjects.crouch?.isDown || false,
+                    dash: this.keyObjects.dash?.isDown || false,
+                    lightAttack: false,
+                    heavyAttack: false
+                };
+                
+                this.sendPlayerContextToServer(currentInputs, currentPosition, now, 'STATE_CHANGE');
+                
+                console.log(`[PLAYER MANAGER] 📋 State changed from '${this.lastSentState}' to '${currentStateString}' - sending update`);
+            }
         }
         
-        if (shouldSendToServer && this.networkManager) {
-            this.inputBuffer.push(inputCommand);
+        // Always update last sent state to track changes
+        this.lastSentState = currentStateString;
+    }
+
+    private sendPlayerContextToServer(inputs: any, currentPosition: any, now: number, reason: 'INPUT_CHANGE' | 'STATE_CHANGE' | 'POSITION_CHANGE' | 'MOVEMENT_ACTIVE' | 'STATE_TRANSITION'): void {
+        const playerContext = {
+            socketId: this.playerId,
+            position: {
+                x: currentPosition.x,
+                y: currentPosition.y,
+                facing: (this.player?.scaleX === 1 ? 'right' : 'left') as 'left' | 'right'
+            },
+            velocityX: this.player?.body ? (this.player.body as Phaser.Physics.Arcade.Body).velocity.x : 0,
+            velocityY: this.player?.body ? (this.player.body as Phaser.Physics.Arcade.Body).velocity.y : 0,
+            inputs: inputs,
+            state: this.mapPhaserStateToPlayerState(this.currentState),
+            playerStats: this.serverStats,
+            isAlive: true,
+            sequenceNumber: ++this.sequenceNumber,
+            timestamp: now
+        };
+
+        console.log(`[PLAYER MANAGER] 📤 Sending player context (${reason}):`, {
+            socketId: playerContext.socketId,
+            position: playerContext.position,
+            inputs: playerContext.inputs,
+            state: playerContext.state,
+            sequenceNumber: playerContext.sequenceNumber,
+            reason
+        });
+
+        // Send via server-authoritative system
+        this.networkManager.sendPlayerContext(playerContext);
+
+        // Update last sent data
+        this.lastSentInputs = { ...inputs };
+        this.lastSentPosition = { ...currentPosition };
+        this.lastSentState = playerContext.state;
+    }
+
+    // Helper method to map Phaser state to PlayerContext state
+    private mapPhaserStateToPlayerState(currentState: PlayerState | null): string {
+        if (!currentState) return 'idle';
+        
+        const stateName = currentState.constructor.name;
+        
+        switch (stateName) {
+            case 'IdleState': return 'idle';
+            case 'SprintingState': return 'sprinting';
+            case 'CrouchingState': return 'crouching';
+            case 'CrouchWalkingState': return 'crouchWalking';
+            case 'JumpingState': return 'jumping';
+            case 'DashingState': return 'dashing';
+            case 'AttackingLightState': return 'attackingLight';
+            case 'AttackingHeavyState': return 'attackingHeavy';
+            default: return 'idle';
         }
     }
 
     public transitionTo(stateName: PlayerStates): void {
         const newState = this.states.get(stateName);
         if (newState && newState !== this.currentState) {
+            const oldStateName = this.mapPhaserStateToPlayerState(this.currentState);
+            const newStateName = this.mapPhaserStateToPlayerState(newState);
+            
+            console.log(`[PLAYER MANAGER] 🔄 State transition: ${oldStateName} → ${newStateName}`);
+            
             this.currentState?.exit();
             this.currentState = newState;
             this.currentState.enter();
+            
+            // Force immediate state update to server for local player
+            if (this.enabledInput && this.networkManager) {
+                this.forceStateUpdate(newStateName);
+            }
         }
+    }
+    
+    private forceStateUpdate(newStateName: string): void {
+        const now = Date.now();
+        
+        // Check if enough time has passed since last update (respect rate limiting)
+        const shouldSendToServer = now - this.lastInputSent >= this.INPUT_RATE_LIMIT;
+        
+        if (!shouldSendToServer) {
+            // If rate limited, schedule the update for the next available slot
+            setTimeout(() => this.forceStateUpdate(newStateName), this.INPUT_RATE_LIMIT);
+            return;
+        }
+        
+        this.lastInputSent = now;
+        
+        const currentPosition = {
+            x: this.player?.x || 0,
+            y: this.player?.y || 0
+        };
+        
+        // Send with current input state
+        const currentInputs = {
+            left: this.keyObjects.left?.isDown || false,
+            right: this.keyObjects.right?.isDown || false,
+            jump: false, // No just-pressed states for forced updates
+            crouch: this.keyObjects.crouch?.isDown || false,
+            dash: this.keyObjects.dash?.isDown || false,
+            lightAttack: false,
+            heavyAttack: false
+        };
+        
+        this.sendPlayerContextToServer(currentInputs, currentPosition, now, 'STATE_TRANSITION');
+        
+        console.log(`[PLAYER MANAGER] ⚡ FORCED state update sent: '${this.lastSentState}' → '${newStateName}'`);
+        
+        // Update tracking variables
+        this.lastSentState = newStateName;
     }
 
     private initializeStates(): void {

@@ -134,18 +134,29 @@ export default class Arena extends Phaser.Scene {
             }
         });
 
-        // // ✅ Keep legacy handlers for backwards compatibility
-        // this.networkManager.onLocalPlayerUpdate((serverUpdate: any) => {
-        //     this.localPlayerManager.handleServerUpdate(serverUpdate);
-        // });
-
-        // this.networkManager.onRemotePlayerUpdate((playerData: any) => {
-        //     this.opponentPlayerManager.handleRemotePlayerUpdate(playerData);
-        // });
-
-        // Handle battle state updates
-        this.networkManager.onBattleStateUpdate((battleState: any) => {
-            console.log('[ARENA] Battle state update received:', battleState);
+        // ✅ Handle server-authoritative player contexts
+        this.networkManager.onPlayerContextsReceived((data: any) => {
+            console.log('[ARENA] 📥 Server-authoritative player contexts received:', data);
+            
+            if (data.players && Array.isArray(data.players)) {
+                data.players.forEach((playerContext: any) => {
+                    console.log(`[ARENA] Player context for ${playerContext.socketId}:`, {
+                        position: playerContext.position,
+                        inputs: playerContext.inputs,
+                        state: playerContext.state,
+                        sequenceNumber: playerContext.sequenceNumber,
+                        timestamp: playerContext.timestamp
+                    });
+                    
+                    // Here you would apply the server-validated state to the respective players
+                    // For now, just console logging as requested
+                    if (playerContext.socketId === this.battleConfig.localPlayerId) {
+                        console.log('[ARENA] 🎮 Local player reconciliation data received');
+                    } else {
+                        console.log('[ARENA] 👤 Remote player update data received');
+                    }
+                });
+            }
         });
     }
 

@@ -42,6 +42,11 @@ export class BattleSocketClient {
         socket.emit("start-battle");
     }
 
+    // Server-authoritative input system
+    sendPlayerContext(playerContext: any) {
+        socket.emit("player:moved", playerContext);
+    }
+
     // Utility methods
     isSocketConnected(): boolean {
         return socket.connected;

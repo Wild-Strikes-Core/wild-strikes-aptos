@@ -18,6 +18,9 @@ io.use((socket, next) => {
     const roomId = matchmaking.getPlayerRoom(socket.id);
     if (roomId) {
         (socket as any).roomId = roomId;
+        console.log(`[SOCKET MIDDLEWARE] Set roomId ${roomId} for socket ${socket.id}`);
+    } else {
+        console.log(`[SOCKET MIDDLEWARE] No roomId found for socket ${socket.id}`);
     }
     next();
 });
