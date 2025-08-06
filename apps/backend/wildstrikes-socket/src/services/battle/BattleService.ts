@@ -376,7 +376,11 @@ export class BattleService {
                     facing: attacker.position.facing
                 },
                 defenderPosition: opponent.position,
-                newDefenderStats: opponent.playerStats,
+                newDefenderStats: {
+                    damagePercentage: opponent.playerStats.damagePercentage,
+                    lives: opponent.playerStats.lives,
+                    knockback: attackData.knockback // Include knockback in stats
+                },
                 timestamp: Date.now()
             });
         } else {

@@ -51,7 +51,6 @@ export class BattleNetworkManager {
                     console.log('[BATTLE NETWORK] Local player stats:', localPlayerData);
                     this.onBattleStartCallback({
                         localPlayerStats: {
-                            health: localPlayerData.playerStats?.health || 100,
                             damagePercentage: localPlayerData.playerStats?.damagePercentage || 0,
                             lives: localPlayerData.playerStats?.lives || 3
                         },
@@ -62,7 +61,6 @@ export class BattleNetworkManager {
                 // Fallback for older format - use default stats
                 this.onBattleStartCallback({
                     localPlayerStats: {
-                        health: 100,
                         damagePercentage: 0,
                         lives: 3
                     },

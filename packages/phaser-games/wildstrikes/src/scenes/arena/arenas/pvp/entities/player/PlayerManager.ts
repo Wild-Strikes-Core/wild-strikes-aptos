@@ -346,8 +346,38 @@ export class PlayerManager {
     }
 
     // Player stats
-    public updatePlayerStats(stats: { health: number; damagePercentage: number; lives: number }): void {
-        this.serverStats = { ...stats };
+    public updatePlayerStats(stats: { 
+        damagePercentage: number; 
+        lives: number; 
+        health?: number;
+        knockback?: { force: number; angle: number };
+        position?: { x: number; y: number };
+        velocity?: { x: number; y: number };
+        animation?: string;
+    }): void {
+        // Update server stats with core combat data
+        this.serverStats = {
+            health: stats.health || this.serverStats.health,
+            damagePercentage: stats.damagePercentage,
+            lives: stats.lives
+        };
+
+        // Force immediate UI update with all provided data
+        if (this.statsUI && this.player) {
+            this.statsUI.updateStats({
+                damagePercentage: stats.damagePercentage,
+                lives: stats.lives,
+                knockback: stats.knockback,
+                position: stats.position || { x: this.player.x, y: this.player.y },
+                velocity: stats.velocity || { 
+                    x: this.player.body ? (this.player.body as Phaser.Physics.Arcade.Body).velocity.x : 0,
+                    y: this.player.body ? (this.player.body as Phaser.Physics.Arcade.Body).velocity.y : 0
+                },
+                animation: stats.animation || this.player.anims?.currentAnim?.key || 'idle'
+            });
+        }
+        
+        console.log(`[PLAYER MANAGER] Stats updated - DMG: ${stats.damagePercentage}%, Lives: ${stats.lives}, KB: ${stats.knockback?.force || 0}`);
     }
 
     // Getters for compatibility with existing state classes

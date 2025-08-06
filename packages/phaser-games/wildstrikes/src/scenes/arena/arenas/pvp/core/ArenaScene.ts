@@ -155,7 +155,11 @@ export default class Arena extends Phaser.Scene {
             
             if (battleData.localPlayerStats) {
                 // Update local player stats UI
-                this.localPlayerManager.updatePlayerStats(battleData.localPlayerStats);
+                this.localPlayerManager.updatePlayerStats({
+                    damagePercentage: battleData.localPlayerStats.damagePercentage,
+                    lives: battleData.localPlayerStats.lives,
+                    health: 100 // Default starting health
+                });
             }
         });
 
@@ -169,19 +173,50 @@ export default class Arena extends Phaser.Scene {
                         position: playerContext.position,
                         inputs: playerContext.inputs,
                         state: playerContext.state,
+                        playerStats: playerContext.playerStats,
                         sequenceNumber: playerContext.sequenceNumber,
                         timestamp: playerContext.timestamp
                     });
                     
                     // Apply client-side prediction reconciliation or remote player updates
                     if (playerContext.socketId === this.battleConfig.localPlayerId) {
-                        console.log('[ARENA] � Local player reconciliation data received');
+                        console.log('[ARENA] 🎮 Local player reconciliation data received');
                         // Reconcile local player predictions with server state
                         this.localPlayerManager.reconcileWithServer(playerContext);
+
+                        // Update local player stats UI with server data
+                        if (playerContext.playerStats) {
+                            this.localPlayerManager.updatePlayerStats({
+                                damagePercentage: playerContext.playerStats.damagePercentage,
+                                lives: playerContext.playerStats.lives,
+                                health: playerContext.playerStats.health,
+                                position: playerContext.position,
+                                velocity: {
+                                    x: playerContext.velocityX || 0,
+                                    y: playerContext.velocityY || 0
+                                },
+                                animation: playerContext.state
+                            });
+                        }
                     } else {
                         console.log('[ARENA] 👤 Remote player update data received');
                         // Apply remote player state directly (no prediction needed)
                         this.updateRemotePlayer(playerContext);
+                        
+                        // Update opponent player stats UI with server data
+                        if (playerContext.playerStats) {
+                            this.opponentPlayerManager.updatePlayerStats({
+                                damagePercentage: playerContext.playerStats.damagePercentage,
+                                lives: playerContext.playerStats.lives,
+                                health: playerContext.playerStats.health,
+                                position: playerContext.position,
+                                velocity: {
+                                    x: playerContext.velocityX || 0,
+                                    y: playerContext.velocityY || 0
+                                },
+                                animation: playerContext.state
+                            });
+                        }
                     }
                 });
             }
@@ -191,6 +226,21 @@ export default class Arena extends Phaser.Scene {
             console.log('[ARENA] ⚔️ Server attack hit received:', attackData);
             this.renderServerAttackHitbox(attackData, true); // true = hit
             this.applyAttackEffects(attackData);
+
+            // Update defender's stats UI with knockback
+            if (attackData.defenderId && attackData.newDefenderStats) {
+                const defenderManager = attackData.defenderId === this.battleConfig.localPlayerId 
+                    ? this.localPlayerManager 
+                    : this.opponentPlayerManager;
+                    
+                if (defenderManager) {
+                    defenderManager.updatePlayerStats({
+                        damagePercentage: attackData.newDefenderStats.damagePercentage,
+                        lives: attackData.newDefenderStats.lives,
+                        knockback: attackData.newDefenderStats.knockback
+                    });
+                }
+            }
         });
 
         // ✅ Handle server-validated attack misses
