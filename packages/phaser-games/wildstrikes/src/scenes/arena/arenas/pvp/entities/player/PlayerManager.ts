@@ -41,6 +41,19 @@ export class PlayerManager {
     private lastSentPosition: { x: number; y: number } = { x: 0, y: 0 };
     private lastSentState: string = 'idle'; // Track last sent state to detect state changes
 
+    // Client-side prediction reconciliation
+    private predictionBuffer: Array<{
+        sequenceNumber: number;
+        timestamp: number;
+        position: { x: number; y: number };
+        velocity: { x: number; y: number };
+        inputs: any;
+        state: string;
+    }> = [];
+    private serverState: any = null;
+    private readonly MAX_PREDICTION_BUFFER = 60; // ~1 second at 60fps
+    private readonly RECONCILIATION_THRESHOLD = 3; // pixels
+
     private networkManager?: any; // Will be injected by ArenaScene
 
     // Add rate limiting properties
@@ -50,6 +63,11 @@ export class PlayerManager {
     // UI update throttling
     private lastUIUpdate: number = 0;
     private readonly UI_UPDATE_RATE = 100; // Update UI every 100ms for performance
+
+    // Remote player animation tracking
+    private currentRemoteState: string = 'idle';
+    private currentRemoteAnimation: string = '';
+    private lastRemoteAnimationChange: number = 0;
 
     constructor(scene: Phaser.Scene, isInputEnabled: boolean = true, roomId: string, playerId: string = '') {
         this.scene = scene;
@@ -152,9 +170,12 @@ export class PlayerManager {
             return;
         }
 
-        console.log('[PLAYER MANAGER] Server event listeners set up - server reconciliation handled in ArenaScene');
-        // Note: Server reconciliation and player context updates are now handled in ArenaScene
-        // via the networkManager.onPlayerContextsReceived() callback
+        console.log('[PLAYER MANAGER] Server event listeners set up - enabling client-side prediction reconciliation');
+        
+        // Enable client-side prediction reconciliation for local player
+        if (this.enabledInput) {
+            console.log('[PLAYER MANAGER] 🎯 Client-side prediction reconciliation ENABLED');
+        }
     }
 
     public setNetworkManager(networkManager: any): void {
@@ -201,6 +222,8 @@ export class PlayerManager {
         // Check for state changes and send updates even without input changes
         if (this.enabledInput && this.networkManager) {
             this.sendStateUpdatesIfChanged();
+            // Periodically clean up old predictions
+            this.cleanupOldPredictions();
         }
         
         // Update stats UI position and real-time data (throttled for performance)
@@ -346,7 +369,7 @@ export class PlayerManager {
             position: {
                 x: currentPosition.x,
                 y: currentPosition.y,
-                facing: (this.player?.scaleX === 1 ? 'right' : 'left') as 'left' | 'right'
+                facing: (this.player?.flipX ? 'left' : 'right') as 'left' | 'right'
             },
             velocityX: this.player?.body ? (this.player.body as Phaser.Physics.Arcade.Body).velocity.x : 0,
             velocityY: this.player?.body ? (this.player.body as Phaser.Physics.Arcade.Body).velocity.y : 0,
@@ -354,7 +377,7 @@ export class PlayerManager {
             state: this.mapPhaserStateToPlayerState(this.currentState),
             playerStats: this.serverStats,
             isAlive: true,
-            sequenceNumber: ++this.sequenceNumber,
+            sequenceNumber: ++this.sequenceNumber, // Increment sequence number here
             timestamp: now
         };
 
@@ -367,6 +390,11 @@ export class PlayerManager {
             reason
         });
 
+        // Store prediction for reconciliation (local player only)
+        if (this.enabledInput) {
+            this.storePrediction(playerContext, inputs, currentPosition);
+        }
+
         // Send via server-authoritative system
         this.networkManager.sendPlayerContext(playerContext);
 
@@ -374,6 +402,149 @@ export class PlayerManager {
         this.lastSentInputs = { ...inputs };
         this.lastSentPosition = { ...currentPosition };
         this.lastSentState = playerContext.state;
+    }
+
+    private storePrediction(playerContext: any, inputs: any, currentPosition: any): void {
+        // Store client prediction for reconciliation
+        this.predictionBuffer.push({
+            sequenceNumber: playerContext.sequenceNumber,
+            timestamp: playerContext.timestamp,
+            position: { ...currentPosition },
+            velocity: {
+                x: playerContext.velocityX,
+                y: playerContext.velocityY
+            },
+            inputs: { ...inputs },
+            state: playerContext.state
+        });
+
+        // Keep buffer size reasonable
+        if (this.predictionBuffer.length > this.MAX_PREDICTION_BUFFER) {
+            this.predictionBuffer.shift();
+        }
+
+        console.log(`[PREDICTION] Stored prediction #${playerContext.sequenceNumber}, buffer size: ${this.predictionBuffer.length}`);
+    }
+
+    // Client-side prediction reconciliation
+    public reconcileWithServer(serverPlayerContext: any): void {
+        // Only reconcile for local player
+        if (!this.enabledInput || serverPlayerContext.socketId !== this.playerId) {
+            return;
+        }
+
+        const serverSequence = serverPlayerContext.sequenceNumber;
+        const serverPosition = serverPlayerContext.position;
+        const serverState = serverPlayerContext.state;
+
+        console.log(`[RECONCILIATION] 🔍 Reconciling with server sequence #${serverSequence}`);
+
+        // Find our prediction for this sequence number
+        const predictionIndex = this.predictionBuffer.findIndex(p => p.sequenceNumber === serverSequence);
+
+        if (predictionIndex === -1) {
+            console.warn(`[RECONCILIATION] ⚠️ No prediction found for sequence #${serverSequence}`);
+            return;
+        }
+
+        const prediction = this.predictionBuffer[predictionIndex];
+        const clientPosition = prediction.position;
+        const clientState = prediction.state;
+
+        // Calculate position difference
+        const positionDiff = Math.sqrt(
+            Math.pow(serverPosition.x - clientPosition.x, 2) + 
+            Math.pow(serverPosition.y - clientPosition.y, 2)
+        );
+
+        // Check for significant differences
+        const needsPositionCorrection = positionDiff > this.RECONCILIATION_THRESHOLD;
+        const needsStateCorrection = serverState !== clientState;
+
+        console.log(`[RECONCILIATION] 📊 Differences:`, {
+            positionDiff: positionDiff.toFixed(2),
+            stateMatch: serverState === clientState,
+            needsCorrection: needsPositionCorrection || needsStateCorrection,
+            serverPos: serverPosition,
+            clientPos: clientPosition,
+            serverState,
+            clientState
+        });
+
+        if (needsPositionCorrection || needsStateCorrection) {
+            this.applyServerCorrection(serverPlayerContext, prediction, predictionIndex);
+        } else {
+            console.log(`[RECONCILIATION] ✅ Prediction accurate - no correction needed`);
+            // Clean up predictions up to this point
+            this.predictionBuffer = this.predictionBuffer.slice(predictionIndex + 1);
+        }
+
+        // Store server state for future reference
+        this.serverState = { ...serverPlayerContext };
+    }
+
+    private applyServerCorrection(serverContext: any, mismatchedPrediction: any, predictionIndex: number): void {
+        console.log(`[RECONCILIATION] 🔧 Applying server correction`);
+
+        // Apply server position immediately
+        if (this.player) {
+            this.player.setPosition(serverContext.position.x, serverContext.position.y);
+            
+            // Apply server velocity
+            if (this.player.body) {
+                const body = this.player.body as Phaser.Physics.Arcade.Body;
+                body.setVelocity(serverContext.velocityX || 0, serverContext.velocityY || 0);
+            }
+
+            // Update facing direction using flipX (consistent with SpriteManager)
+            const facing = serverContext.position.facing || 'right';
+            this.player.setFlipX(facing === 'left');
+        }
+
+        // Apply server state if different
+        if (serverContext.state !== this.mapPhaserStateToPlayerState(this.currentState)) {
+            console.log(`[RECONCILIATION] 🔄 State correction: ${this.mapPhaserStateToPlayerState(this.currentState)} → ${serverContext.state}`);
+            this.applyServerState(serverContext.state);
+        }
+
+        // Re-apply predictions that came after the corrected one
+        const remainingPredictions = this.predictionBuffer.slice(predictionIndex + 1);
+        console.log(`[RECONCILIATION] ↩️ Re-applying ${remainingPredictions.length} predictions`);
+
+        // Clear buffer and start fresh from server state
+        this.predictionBuffer = remainingPredictions;
+        
+        // Update tracking variables
+        this.lastSentPosition = { x: serverContext.position.x, y: serverContext.position.y };
+        this.lastSentState = serverContext.state;
+
+        console.log(`[RECONCILIATION] ✅ Correction applied, buffer size: ${this.predictionBuffer.length}`);
+    }
+
+    private applyServerState(serverStateName: string): void {
+        // Map server state name back to PlayerStates enum
+        const stateMapping: { [key: string]: PlayerStates } = {
+            'idle': PlayerStates.Idle,
+            'sprinting': PlayerStates.Sprinting,
+            'crouching': PlayerStates.Crouching,
+            'crouchWalking': PlayerStates.CrouchWalking,
+            'jumping': PlayerStates.Jumping,
+            'dashing': PlayerStates.Dashing,
+            'attackingLight': PlayerStates.AttackingLight,
+            'attackingHeavy': PlayerStates.AttackingHeavy
+        };
+
+        const targetState = stateMapping[serverStateName];
+        if (targetState && this.states.has(targetState)) {
+            // Directly set state without triggering force update (to avoid recursion)
+            const newState = this.states.get(targetState)!;
+            if (newState !== this.currentState) {
+                this.currentState?.exit();
+                this.currentState = newState;
+                this.currentState.enter();
+                console.log(`[RECONCILIATION] 🎯 State corrected to: ${serverStateName}`);
+            }
+        }
     }
 
     // Helper method to map Phaser state to PlayerContext state
@@ -496,12 +667,296 @@ export class PlayerManager {
         }
     }
 
+    // Apply server-authoritative state to remote player (for opponent players)
+    public applyRemotePlayerState(serverPlayerContext: any): void {
+        // Only apply to remote players (opponents)
+        if (this.enabledInput) {
+            console.warn('[PLAYER MANAGER] ⚠️ applyRemotePlayerState called on local player - ignoring');
+            return;
+        }
+
+        if (!this.player || !serverPlayerContext) {
+            return;
+        }
+
+        const serverState = serverPlayerContext.state;
+        const serverPosition = serverPlayerContext.position;
+        const serverVelocity = { x: serverPlayerContext.velocityX || 0, y: serverPlayerContext.velocityY || 0 };
+
+        console.log(`[PLAYER MANAGER] 🤖 Applying remote state: '${serverState}' at (${serverPosition?.x?.toFixed(1)}, ${serverPosition?.y?.toFixed(1)})`);
+
+        // Update position with smooth interpolation (optional - can be disabled for instant updates)
+        if (serverPosition) {
+            // Option 1: Instant position update (more accurate)
+            this.player.setPosition(serverPosition.x, serverPosition.y);
+            
+            // Update facing direction using flipX (consistent with SpriteManager)
+            const facing = serverPosition.facing || 'right';
+            this.player.setFlipX(facing === 'left');
+        }
+
+        // Update velocity
+        if (this.player.body) {
+            const body = this.player.body as Phaser.Physics.Arcade.Body;
+            body.setVelocity(serverVelocity.x, serverVelocity.y);
+        }
+
+        // Apply state-based animation with smart animation management for remote players
+        this.applyRemoteStateWithSimpleTracking(serverState);
+    }
+
+    private applyRemoteState(serverStateName: string): void {
+        // Map server state to appropriate animation
+        switch (serverStateName) {
+            case 'idle':
+                this.spriteManager.playIdleAnimation(this.player!);
+                break;
+            case 'sprinting':
+                this.spriteManager.playSprintingAnimation(this.player!);
+                break;
+            case 'jumping':
+                this.spriteManager.playJumpingAnimation(this.player!);
+                break;
+            case 'crouching':
+                this.spriteManager.playCrouchFullAnimation(this.player!);
+                break;
+            case 'crouchWalking':
+                this.spriteManager.playCrouchWalkAnimation(this.player!);
+                break;
+            case 'dashing':
+                this.spriteManager.playDashingAnimation(this.player!);
+                break;
+            case 'attackingLight':
+                this.spriteManager.playAttackingAnimation(this.player!);
+                break;
+            case 'attackingHeavy':
+                this.spriteManager.playAttack2Animation(this.player!);
+                break;
+            default:
+                console.warn(`[PLAYER MANAGER] ⚠️ Unknown server state: '${serverStateName}', defaulting to idle`);
+                this.spriteManager.playIdleAnimation(this.player!);
+                break;
+        }
+    }
+
+    private applyRemoteStateWithAnimationTracking(serverStateName: string, serverVelocity: { x: number; y: number }): void {
+        const now = Date.now();
+        const isMoving = Math.abs(serverVelocity.x) > 0.1; // Consider moving if velocity > 0.1
+        
+        // Determine the appropriate animation based on state and movement
+        let targetAnimation = '';
+        let shouldRestart = false;
+
+        switch (serverStateName) {
+            case 'idle':
+                targetAnimation = 'idle';
+                break;
+            case 'sprinting':
+                targetAnimation = 'sprinting';
+                break;
+            case 'jumping':
+                targetAnimation = 'jumping';
+                break;
+            case 'crouching':
+                targetAnimation = 'crouching';
+                break;
+            case 'crouchWalking':
+                targetAnimation = 'crouchWalking';
+                break;
+            case 'dashing':
+                targetAnimation = 'dashing';
+                break;
+            case 'attackingLight':
+                // Always show attack animation, whether moving or stationary
+                targetAnimation = 'attackingLight';
+                // Only restart attack animation if it's a new attack or enough time has passed
+                const timeSinceLastLight = now - this.lastRemoteAnimationChange;
+                shouldRestart = (this.currentRemoteAnimation !== 'attackingLight') || timeSinceLastLight > 300;
+                break;
+            case 'attackingHeavy':
+                // Always show attack animation, whether moving or stationary  
+                targetAnimation = 'attackingHeavy';
+                // Only restart attack animation if it's a new attack or enough time has passed
+                const timeSinceLastHeavy = now - this.lastRemoteAnimationChange;
+                shouldRestart = (this.currentRemoteAnimation !== 'attackingHeavy') || timeSinceLastHeavy > 500;
+                break;
+            default:
+                targetAnimation = 'idle';
+                break;
+        }
+
+        // Only change animation if needed
+        if (targetAnimation !== this.currentRemoteAnimation || shouldRestart) {
+            console.log(`[REMOTE ANIMATION] 🎬 Changing animation: '${this.currentRemoteAnimation}' → '${targetAnimation}' (moving: ${isMoving}, state: ${serverStateName})`);
+            
+            this.currentRemoteAnimation = targetAnimation;
+            this.lastRemoteAnimationChange = now;
+
+            // Apply the appropriate animation
+            switch (targetAnimation) {
+                case 'idle':
+                    this.spriteManager.playIdleAnimation(this.player!);
+                    break;
+                case 'sprinting':
+                    this.spriteManager.playSprintingAnimation(this.player!);
+                    break;
+                case 'jumping':
+                    this.spriteManager.playJumpingAnimation(this.player!);
+                    break;
+                case 'crouching':
+                    this.spriteManager.playCrouchFullAnimation(this.player!);
+                    break;
+                case 'crouchWalking':
+                    this.spriteManager.playCrouchWalkAnimation(this.player!);
+                    break;
+                case 'dashing':
+                    this.spriteManager.playDashingAnimation(this.player!);
+                    break;
+                case 'attackingLight':
+                    // For remote players, play attack animation directly without complex callbacks
+                    if (this.player && this.player.anims) {
+                        this.player.anims.play('player_attack_light', true);
+                        console.log(`[REMOTE ANIMATION] 🗡️ Playing light attack animation (moving: ${isMoving})`);
+                    }
+                    break;
+                case 'attackingHeavy':
+                    // For remote players, play attack animation directly without complex callbacks
+                    if (this.player && this.player.anims) {
+                        this.player.anims.play('player_attack_heavy', true);
+                        console.log(`[REMOTE ANIMATION] ⚔️ Playing heavy attack animation (moving: ${isMoving})`);
+                    }
+                    break;
+                default:
+                    this.spriteManager.playIdleAnimation(this.player!);
+                    break;
+            }
+        }
+
+        // Update state tracking
+        this.currentRemoteState = serverStateName;
+    }
+
+    private applyRemoteStateWithSimpleTracking(serverStateName: string): void {
+        const now = Date.now();
+        
+        // Check if we're currently playing an attack animation
+        const isPlayingAttackAnim = this.currentRemoteAnimation === 'attackingLight' || this.currentRemoteAnimation === 'attackingHeavy';
+        const isNewAttackState = serverStateName === 'attackingLight' || serverStateName === 'attackingHeavy';
+        
+        // For attack animations, handle with special logic
+        if (isNewAttackState) {
+            const timeSinceLastChange = now - this.lastRemoteAnimationChange;
+            const isNewAttackType = this.currentRemoteAnimation !== serverStateName;
+            const shouldRestart = isNewAttackType || timeSinceLastChange > 400; // 400ms cooldown
+            
+            if (shouldRestart) {
+                console.log(`[REMOTE ANIMATION] 🗡️ Starting ${serverStateName} animation (restart: ${shouldRestart})`);
+                this.currentRemoteAnimation = serverStateName;
+                this.lastRemoteAnimationChange = now;
+                
+                // Clear any previous animation complete listeners to avoid conflicts
+                this.player?.off('animationcomplete');
+                
+                // Use direct animation play with completion handler for remote players
+                if (serverStateName === 'attackingLight') {
+                    if (this.player && this.player.anims) {
+                        this.player.anims.play('player_attack_light', true);
+                        // Set up completion handler to check state after attack
+                        this.player.once('animationcomplete', () => {
+                            this.handleRemoteAttackComplete();
+                        });
+                    }
+                } else if (serverStateName === 'attackingHeavy') {
+                    if (this.player && this.player.anims) {
+                        this.player.anims.play('player_attack_heavy', true);
+                        // Set up completion handler to check state after attack
+                        this.player.once('animationcomplete', () => {
+                            this.handleRemoteAttackComplete();
+                        });
+                    }
+                }
+            }
+            // If we're already playing the right attack animation, don't interrupt it
+            return;
+        }
+        
+        // For non-attack states, check if we should interrupt an ongoing attack
+        if (isPlayingAttackAnim && !isNewAttackState) {
+            // If we were playing an attack but server says we're not attacking anymore,
+            // immediately transition to the new state
+            console.log(`[REMOTE ANIMATION] ⏹️ Interrupting attack animation, transitioning to: ${serverStateName}`);
+            this.player?.off('animationcomplete'); // Remove attack completion handler
+            this.currentRemoteAnimation = serverStateName;
+            this.lastRemoteAnimationChange = now;
+            this.applyRemoteState(serverStateName);
+            return;
+        }
+        
+        // For all other non-attack state changes
+        if (this.currentRemoteAnimation !== serverStateName) {
+            console.log(`[REMOTE ANIMATION] 🎬 State change: '${this.currentRemoteAnimation}' → '${serverStateName}'`);
+            this.currentRemoteAnimation = serverStateName;
+            this.lastRemoteAnimationChange = now;
+            
+            // Use the original applyRemoteState for non-attack animations
+            this.applyRemoteState(serverStateName);
+        }
+    }
+
+    private handleRemoteAttackComplete(): void {
+        if (!this.player || !this.player.body) return;
+        
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        const isMoving = Math.abs(body.velocity.x) > 0.1;
+        
+        console.log(`[REMOTE ANIMATION] ⚡ Attack animation completed, moving: ${isMoving}, remote state: ${this.currentRemoteState}, velocity: ${body.velocity.x.toFixed(2)}`);
+        
+        // Determine what animation to play based on current velocity and state
+        if (isMoving) {
+            // If still moving, transition to sprinting regardless of current remote state
+            console.log(`[REMOTE ANIMATION] 🏃 Transitioning to sprinting after attack (velocity: ${body.velocity.x.toFixed(2)})`);
+            this.currentRemoteAnimation = 'sprinting';
+            this.spriteManager.playSprintingAnimation(this.player);
+        } else {
+            // If not moving, check the current remote state to decide animation
+            switch (this.currentRemoteState) {
+                case 'crouching':
+                    console.log(`[REMOTE ANIMATION] 🫏 Transitioning to crouching after attack`);
+                    this.currentRemoteAnimation = 'crouching';
+                    this.spriteManager.playCrouchFullAnimation(this.player);
+                    break;
+                case 'idle':
+                default:
+                    console.log(`[REMOTE ANIMATION] 🛑 Transitioning to idle after attack`);
+                    this.currentRemoteAnimation = 'idle';
+                    this.spriteManager.playIdleAnimation(this.player);
+                    break;
+            }
+        }
+    }
+
+    private cleanupOldPredictions(): void {
+        const now = Date.now();
+        const maxAge = 1000; // 1 second
+        
+        const oldBufferSize = this.predictionBuffer.length;
+        this.predictionBuffer = this.predictionBuffer.filter(p => (now - p.timestamp) < maxAge);
+        
+        if (this.predictionBuffer.length !== oldBufferSize) {
+            console.log(`[PREDICTION] Cleaned up ${oldBufferSize - this.predictionBuffer.length} old predictions`);
+        }
+    }
+
     // Clean up resources
     public destroy(): void {
         if (this.statsUI) {
             this.statsUI.destroy();
             this.statsUI = null;
         }
+        
+        // Clear prediction buffer
+        this.predictionBuffer = [];
+        console.log('[PLAYER MANAGER] Resources cleaned up');
     }
 
 }

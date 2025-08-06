@@ -148,15 +148,33 @@ export default class Arena extends Phaser.Scene {
                         timestamp: playerContext.timestamp
                     });
                     
-                    // Here you would apply the server-validated state to the respective players
-                    // For now, just console logging as requested
+                    // Apply client-side prediction reconciliation or remote player updates
                     if (playerContext.socketId === this.battleConfig.localPlayerId) {
-                        console.log('[ARENA] 🎮 Local player reconciliation data received');
+                        console.log('[ARENA] � Local player reconciliation data received');
+                        // Reconcile local player predictions with server state
+                        this.localPlayerManager.reconcileWithServer(playerContext);
                     } else {
                         console.log('[ARENA] 👤 Remote player update data received');
+                        // Apply remote player state directly (no prediction needed)
+                        this.updateRemotePlayer(playerContext);
                     }
                 });
             }
+        });
+    }
+
+    private updateRemotePlayer(playerContext: any): void {
+        // 🎯 Option 1: Use PlayerManager method (cleaner approach)
+        this.opponentPlayerManager.applyRemotePlayerState(playerContext);
+        
+        // 🎯 Option 2: Direct sprite manipulation (more control)
+        // this.applyRemotePlayerState(playerContext);
+        
+        console.log(`[ARENA] 🤖 Updated remote player:`, {
+            position: playerContext.position,
+            velocity: { x: playerContext.velocityX, y: playerContext.velocityY },
+            state: playerContext.state,
+            inputs: playerContext.inputs
         });
     }
 
