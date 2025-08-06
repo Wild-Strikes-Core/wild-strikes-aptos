@@ -3,6 +3,7 @@ import { PlayerStatsUI } from "../../systems/ui/PlayerStatsUI";
 import { InputManager } from "./InputManager";
 import { NetworkManager } from "./NetworkManager";
 import { RemoteAnimationManager } from "./RemoteAnimationManager";
+import { AttackHitboxManager } from "./AttackHitboxManager";
 import { 
     PlayerState,
     PlayerStates,
@@ -26,6 +27,7 @@ export class PlayerManager {
     private inputManager: InputManager;
     private networkManager: NetworkManager;
     private remoteAnimationManager: RemoteAnimationManager | null = null;
+    private attackHitboxManager: AttackHitboxManager | null = null;
     private statsUI: PlayerStatsUI | null = null;
 
     // State management
@@ -90,6 +92,9 @@ export class PlayerManager {
         this.player = this.spriteManager.createPlayerSprite(x, y);
         this.player.setDepth(1);
         
+        // Initialize attack hitbox manager
+        this.attackHitboxManager = new AttackHitboxManager(this.scene, this.player);
+        
         if (this.enabledInput) {
             this.player.setTint(0x00fffff);
             this.statsUI = new PlayerStatsUI(this.scene, this.player);
@@ -120,6 +125,7 @@ export class PlayerManager {
         }
         
         this.currentState?.update();
+        this.attackHitboxManager?.update(); // Update hitboxes
         this.updateUI();
     }
 
@@ -348,11 +354,14 @@ export class PlayerManager {
     public getKeyObjects(): any { return this.inputManager.getKeyObjects(); }
     public isInputEnabled(): boolean { return this.enabledInput; }
     public getCurrentState(): PlayerState | null { return this.currentState; }
+    public getAttackHitboxManager(): AttackHitboxManager | null { return this.attackHitboxManager; }
 
     // Cleanup
     public destroy(): void {
         this.statsUI?.destroy();
         this.statsUI = null;
+        this.attackHitboxManager?.destroy();
+        this.attackHitboxManager = null;
         console.log('[PLAYER MANAGER] Resources cleaned up');
     }
 }

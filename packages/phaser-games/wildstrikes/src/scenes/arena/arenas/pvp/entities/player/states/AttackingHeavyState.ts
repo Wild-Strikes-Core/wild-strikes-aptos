@@ -22,6 +22,13 @@ export class AttackingHeavyState extends PlayerState {
             }
             this.lastAttackTime = currentTime;
     
+            // ✅ Create visual hitbox using the new system
+            const hitboxManager = this.playerManager.getAttackHitboxManager();
+            if (hitboxManager) {
+                const hitbox = hitboxManager.createHeavyAttackHitbox();
+                console.log(`[HEAVY ATTACK] Created visual hitbox:`, hitbox);
+            }
+
             // Send attack event to server
             const body = player.body as Phaser.Physics.Arcade.Body;
             battleSocketClient.emit('player-attack', {
