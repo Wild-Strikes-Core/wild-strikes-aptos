@@ -106,138 +106,79 @@ export class AttackHitboxManager {
         }
     }
 
-    /**
-     * Create a light attack hitbox
+   /**
+     * Render a hitbox based on server-validated attack data
      */
-    createLightAttackHitbox(): AttackHitbox {
-        const hitboxData: HitboxData = {
-            id: `light_attack_${Date.now()}`,
-            type: 'light' as const,
+    renderServerValidatedAttack(serverData: {
+        attackType: 'light' | 'heavy';
+        position: { x: number; y: number; facing: 'left' | 'right' };
+        isHit: boolean;
+        timestamp: number;
+    }): void {
+        console.log('[HITBOX] 🎯 Rendering server-validated attack:', serverData);
+
+        // Use server position instead of client position
+        const serverX = serverData.position.x;
+        const serverY = serverData.position.y;
+        const facing = serverData.position.facing;
+
+       // Create hitbox data based on server validation
+        const hitboxData: HitboxData = serverData.attackType === 'light' ? {
+            id: `server_light_${serverData.timestamp}`,
+            type: 'light',
             damage: 15,
             knockbackForce: 200,
             knockbackAngle: 45,
-            width: 80,
+            // ✅ Match server: Light = 150px range
+            width: 80, 
             height: 60,
-            duration: 200, // ms
-            offsetX: this.player.flipX ? -60 : 60, // Offset from player center
+            duration: 200,
+            offsetX: facing === 'left' ? -75 : 75, // Half of width
             offsetY: -10,
-            color: 0xff4444, // Red for light attacks
-            alpha: 0.6
-        };
-
-        return this.createHitbox(hitboxData);
-    }
-
-    /**
-     * Create a heavy attack hitbox
-     */
-    createHeavyAttackHitbox(): AttackHitbox {
-        const hitboxData: HitboxData = {
-            id: `heavy_attack_${Date.now()}`,
-            type: 'heavy' as const,
+            color: serverData.isHit ? 0x00ff00 : 0xff4444,
+            alpha: serverData.isHit ? 0.8 : 0.4
+        } : {
+            id: `server_heavy_${serverData.timestamp}`,
+            type: 'heavy',
             damage: 25,
             knockbackForce: 400,
             knockbackAngle: 60,
-            width: 120,
+            // ✅ Match server: Heavy = 80px range
+            width: 150,   // Reduced from 120
             height: 80,
-            duration: 400, // ms
-            offsetX: this.player.flipX ? -80 : 80,
+            duration: 400,
+            offsetX: facing === 'left' ? -40 : 40, // Half of width
             offsetY: -20,
-            color: 0xff8800, // Orange for heavy attacks
-            alpha: 0.7
+            color: serverData.isHit ? 0x00ff00 : 0xff8800,
+            alpha: serverData.isHit ? 0.8 : 0.5
         };
 
-        return this.createHitbox(hitboxData);
-    }
+        // Calculate world position using SERVER position
+        const worldX = serverX + hitboxData.offsetX;
+        const worldY = serverY + hitboxData.offsetY;
 
-    /**
-     * Create a hitbox with the given parameters
-     */
-    private createHitbox(data: HitboxData): AttackHitbox {
-        // Calculate world position
-        const worldX = this.player.x + data.offsetX;
-        const worldY = this.player.y + data.offsetY;
-
-        // Create physics body for collision detection
-        const hitboxBody = this.scene.physics.add.sprite(worldX, worldY, null);
-        hitboxBody.setVisible(false); // Only the visual representation should be visible
-        
-        // FIXED: Configure physics body properly for Arcade Physics
-        if (hitboxBody.body) {
-            const body = hitboxBody.body as Phaser.Physics.Arcade.Body;
-            body.setSize(data.width, data.height);
-            body.setOffset(-data.width / 2, -data.height / 2); // Center the hitbox
-            body.enable = true;
-            body.debugShowBody = this.debugMode; // Only show debug in debug mode
-            body.debugBodyColor = 0xff0000;
-            
-            // Make hitbox a sensor (doesn't affect physics but detects overlaps)
-            body.setImmovable(true);
-            hitboxBody.body.pushable = false;
-        }
-        
-        // Add to hitbox group
-        this.hitboxGroup.add(hitboxBody);
-
-        // Ensure collision detection is set up for this hitbox if opponent exists
-        if (this.opponentPlayer && this.opponentPlayer.body) {
-            console.log(`[HITBOX] ⚡ Setting up individual collision for ${data.type} hitbox`);
-            this.scene.physics.add.overlap(
-                hitboxBody,
-                this.opponentPlayer,
-                (hitboxObj: any, opponentObj: any) => {
-                    console.log("[HITBOX] ⚡ Individual overlap detected!", {
-                        hitboxType: data.type,
-                        hitboxPosition: { x: hitboxObj.x, y: hitboxObj.y },
-                        opponentPosition: { x: opponentObj.x, y: opponentObj.y }
-                    });
-                    this.handleHitCollision(hitboxObj, opponentObj);
-                },
-                undefined,
-                this
-            );
-        }
-
-        const hitbox: AttackHitbox = {
-            id: data.id,
-            type: data.type,
-            body: hitboxBody,
-            damage: data.damage,
-            knockbackForce: data.knockbackForce,
-            knockbackAngle: data.knockbackAngle,
-            width: data.width,
-            height: data.height,
+        // ✅ Create visual-only hitbox (no physics body needed since server already validated)
+        const visualHitbox: AttackHitbox = {
+            ...hitboxData,
+            body: null as any, // No physics body needed for visual-only hitboxes
             startTime: this.scene.time.now,
-            duration: data.duration,
             isActive: true,
-            color: data.color,
-            alpha: data.alpha,
             worldX: worldX,
             worldY: worldY
         };
 
-        // Store the hitbox
-        this.activeHitboxes.set(data.id, hitbox);
-
-        // Draw visual representation
-        this.drawHitbox(hitbox);
+        // Store and draw the server-validated hitbox
+        this.activeHitboxes.set(hitboxData.id, visualHitbox);
+        this.drawHitbox(visualHitbox);
 
         // Schedule cleanup
-        this.scene.time.delayedCall(data.duration, () => {
-            this.removeHitbox(data.id);
+        this.scene.time.delayedCall(hitboxData.duration, () => {
+            this.removeHitbox(hitboxData.id);
         });
 
-        console.log(`[HITBOX] Created ${data.type} attack hitbox at (${worldX}, ${worldY})`, {
-            hitboxData: data,
-            playerPosition: { x: this.player.x, y: this.player.y },
-            playerFlipX: this.player.flipX,
-            worldPosition: { x: worldX, y: worldY },
-            hasOpponent: !!this.opponentPlayer,
-            opponentPosition: this.opponentPlayer ? { x: this.opponentPlayer.x, y: this.opponentPlayer.y } : null
-        });
-        return hitbox;
+        console.log(`[HITBOX] ✅ Server-validated ${hitboxData.type} attack rendered at (${worldX}, ${worldY})`);
     }
-
+    
     /**
      * Draw visual representation of hitbox - don't clear, just add to existing graphics
      */
@@ -375,9 +316,12 @@ export class AttackHitboxManager {
         if (hitbox) {
             hitbox.isActive = false;
             
-            // Remove physics body
-            this.hitboxGroup.remove(hitbox.body);
-            hitbox.body.destroy();
+            // ✅ Check if body exists before trying to destroy it
+            if (hitbox.body && hitbox.body.destroy) {
+                // Remove physics body only if it exists
+                this.hitboxGroup.remove(hitbox.body);
+                hitbox.body.destroy();
+            }
             
             // Remove from active hitboxes
             this.activeHitboxes.delete(id);

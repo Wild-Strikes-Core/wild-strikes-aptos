@@ -13,8 +13,8 @@ type BattleState = {
 
 export class BattleService {
     private battles: Map<string, BattleState> = new Map();
-    private readonly PHYSICS_TIMESTEP = 16.67; // ~60fps
     private physicsIntervals: Map<string, NodeJS.Timeout> = new Map();
+    private lastValidationTime: Map<string, number> = new Map();
 
     constructor(private io: Server, private roomService: RoomService) {}
 
@@ -48,7 +48,7 @@ export class BattleService {
                     },
                     isAlive: true,
                     sequenceNumber: 0,
-                    timestamp: 0,
+                    timestamp: currentTime,
                 },
                 [p2]: { 
                     socketId: p2, 
@@ -67,7 +67,7 @@ export class BattleService {
                     },
                     isAlive: true,
                     sequenceNumber: 0,
-                    timestamp: 0,
+                    timestamp: currentTime,
                 },
             },
         };
@@ -100,6 +100,9 @@ export class BattleService {
             return;
         }
 
+        const oldTimestamp = player.timestamp || Date.now();
+        const newTimestamp = playerContext.timestamp || Date.now();
+
         // Server-side validation of input
         // For now, we'll accept all inputs but log them for debugging
         // console.log(`[BATTLE SERVICE] Input validation passed for player ${playerId}:`, {
@@ -113,16 +116,44 @@ export class BattleService {
         // Update player state on server
         player.inputs = playerContext.inputs;
         player.sequenceNumber = playerContext.sequenceNumber || 0;
-        player.timestamp = playerContext.timestamp || Date.now();
-        
-        // Update position if provided
+
+        // Validate position (anti-teleport) - use old timestamp for delta calculation
+        // Validate position (anti-teleport) - use old timestamp for delta calculation
         if (playerContext.position) {
-            player.position = playerContext.position;
+            const now = Date.now();
+            const lastValidation = this.lastValidationTime.get(playerId) || 0;
+            
+            // For dashing, only validate every 100ms instead of every frame
+            if (playerContext.state === 'dashing' && (now - lastValidation) < 100) {
+                player.position = playerContext.position; // Accept without validation
+            } else {
+                const deltaTime = newTimestamp - oldTimestamp;
+                const maxSpeed = playerContext.state === 'sprinting' ? 450 : 300;
+                
+                playerContext.position = this.validatePosition(
+                    playerContext.position, 
+                    player.position, 
+                    deltaTime, 
+                    maxSpeed,
+                    playerContext.state || player.state
+                );
+                
+                player.position = playerContext.position;
+                this.lastValidationTime.set(playerId, now);
+            }
+            
+            // Always update facing direction from client - don't validate this
+            if (playerContext.position.facing !== undefined) {
+                player.position.facing = playerContext.position.facing;
+            }
         }
+
+        // Now update the timestamp after position validation
+        player.timestamp = newTimestamp;
 
         // Update velocity if provided
         if (playerContext.velocityX !== undefined) {
-            player.velocityX = playerContext.velocityX;
+            player.velocityX = this.validateSprintingSpeed(playerContext.velocityX, player.state);
         }
         if (playerContext.velocityY !== undefined) {
             player.velocityY = playerContext.velocityY;
@@ -135,6 +166,97 @@ export class BattleService {
 
         // Broadcast validated player contexts to all clients in the room
         this.broadcastPlayerContexts(roomId);
+    }
+
+    private validateSprintingSpeed(velocityX: number, playerState: string): number {
+        const MAX_SPRINT_SPEED = 450; // Ensures sprinting speed does not exceed this value
+
+        if (playerState === 'sprinting') {
+            if (Math.abs(velocityX) > MAX_SPRINT_SPEED) {
+                return Math.sign(velocityX) * MAX_SPRINT_SPEED;
+            }
+        }
+        return velocityX;
+    }
+
+    private validatePosition(newPosition: {x: number, y: number}, oldPosition: {x: number, y: number}, deltaTime: number, maxSpeed: number, playerState?: string): {x: number, y: number} {
+        // Handle edge cases
+        if (deltaTime <= 0 || deltaTime > 1000) { // More than 1 second indicates connection issues
+            console.log(`[BATTLE SERVICE] Invalid deltaTime: ${deltaTime}ms, accepting position`);
+            return newPosition;
+        }
+
+        // For dashing, be extremely lenient - only prevent obvious teleporting
+        if (playerState === 'dashing') {
+            const distance = Math.sqrt(
+                Math.pow(newPosition.x - oldPosition.x, 2) + 
+                Math.pow(newPosition.y - oldPosition.y, 2)
+            );
+            
+            // Only reject if it's an obvious teleport (much higher threshold)
+            const maxDashDistance = 500; // Very generous for dash combos
+            if (distance > maxDashDistance) {
+                console.log(`[BATTLE SERVICE] Extreme dash distance detected: ${distance} > ${maxDashDistance}`);
+                return oldPosition; // Keep old position instead of partial correction
+            }
+            
+            return newPosition; // Accept all normal dash movement
+        }
+
+        const distance = Math.sqrt(
+            Math.pow(newPosition.x - oldPosition.x, 2) + 
+            Math.pow(newPosition.y - oldPosition.y, 2)
+        );
+        
+        // Much more lenient validation for all states
+        let maxPossibleDistance: number;
+        let tolerance: number;
+        
+        switch (playerState) {
+            case 'jumping':
+                // Very lenient for jumping - allows for jump momentum
+                const jumpSpeed = 800; // Increased from 600
+                maxPossibleDistance = Math.max(maxSpeed, jumpSpeed) * (deltaTime / 1000);
+                tolerance = 5.0; // Much more lenient
+                break;
+                
+            case 'falling':
+            case 'idle': // Player might be falling while idle
+            case 'sprinting':
+                // Check if this is primarily vertical movement (falling/jumping)
+                const horizontalDistance = Math.abs(newPosition.x - oldPosition.x);
+                const verticalDistance = Math.abs(newPosition.y - oldPosition.y);
+                
+                if (verticalDistance > horizontalDistance) {
+                    // Primarily vertical movement - very lenient
+                    const fallSpeed = 1000; // Increased from 800
+                    maxPossibleDistance = fallSpeed * (deltaTime / 1000);
+                    tolerance = 4.0; // Very lenient
+                } else {
+                    // Horizontal movement - still lenient
+                    maxPossibleDistance = maxSpeed * (deltaTime / 1000);
+                    tolerance = 4.0; // Much more lenient
+                }
+                break;
+                
+            default:
+                // Default case - very lenient
+                maxPossibleDistance = maxSpeed * (deltaTime / 1000);
+                tolerance = 4.0; // Much more lenient
+                break;
+        }
+        
+        // Only prevent extreme teleportation
+        if (distance > maxPossibleDistance * tolerance) {
+            console.log(`[BATTLE SERVICE] Extreme movement detected for state '${playerState}': distance ${distance.toFixed(2)} > max ${(maxPossibleDistance * tolerance).toFixed(2)}`);
+            
+            // Only reject truly extreme movements (likely cheating)
+            if (distance > 1000) { // Only block movements > 1000 pixels
+                return oldPosition; // Keep old position
+            }
+        }
+        
+        return newPosition; // Accept most movement
     }
 
     // Broadcast player contexts to all clients
@@ -195,6 +317,7 @@ export class BattleService {
             clearInterval(interval);
             this.physicsIntervals.delete(roomId);
         }
+
     }
 
 
@@ -217,14 +340,22 @@ export class BattleService {
             return;
         }
 
+        // ✅ Validate client's attack position against server position
+        const positionValid = this.validateAttackPosition(attacker.position, attackData.position, attackData.timestamp);
+        
+        if (!positionValid) {
+            console.log(`[BATTLE SERVICE] Invalid attack position from player ${playerId}. Server: (${attacker.position.x}, ${attacker.position.y}), Client: (${attackData.position.x}, ${attackData.position.y})`);
+            return; // Reject the attack entirely
+        }
+
         // Calculate hit detection using AttackData structure
         const isHit = this.calculateDirectionalHitDetection(
             {
-                x: attackData.position.x,
-                y: attackData.position.y,
-                facing: attackData.facing
+                x: attacker.position.x,         // Server position
+                y: attacker.position.y,         // Server position
+                facing: attacker.position.facing // Server facing direction
             }, 
-            opponent.position, 
+            opponent.position,                  // Server position
             attackData.attackType
         );
 
@@ -232,22 +363,64 @@ export class BattleService {
             // Apply damage using AttackData values
             this.applyDamage(opponent, attackData);
             console.log(`[BATTLE SERVICE] Player ${attacker.socketId} hit player ${opponent.socketId} for ${attackData.damage} damage.`);
-            // Broadcast hit result to all players
-            // this.io.to(roomId).emit("server:attackHit", {
-            //     attackerId: playerId, // Use the socket ID instead of attackData.playerId
-            //     defenderId: opponent.socketId,
-            //     damage: attackData.damage,
-            //     knockback: attackData.knockback,
-            //     newDefenderStats: opponent.playerStats
-            // });
+            this.io.to(roomId).emit("server:attackHit", {
+                attackerId: playerId,
+                defenderId: opponent.socketId,
+                damage: attackData.damage,
+                knockback: attackData.knockback,
+                attackType: attackData.attackType,
+                // Use SERVER position for rendering
+                attackerPosition: {
+                    x: attacker.position.x,
+                    y: attacker.position.y,
+                    facing: attacker.position.facing
+                },
+                defenderPosition: opponent.position,
+                newDefenderStats: opponent.playerStats,
+                timestamp: Date.now()
+            });
         } else {
             console.log(`[BATTLE SERVICE] Player ${attacker.socketId} missed the attack on player ${opponent.socketId}.`);
-            // Optionally broadcast a miss event
-            // this.io.to(roomId).emit("server:attackMissed", {
-            //     attackerId: playerId,
-            //     defenderId: opponent.socketId
-            // });
+            // ✅ Broadcast MISS with server-validated data
+            this.io.to(roomId).emit("server:attackMissed", {
+                attackerId: playerId,
+                defenderId: opponent.socketId,
+                attackType: attackData.attackType,
+                attackerPosition: {
+                    x: attacker.position.x,
+                    y: attacker.position.y,
+                    facing: attacker.position.facing
+                },
+                timestamp: Date.now()
+            });
         }
+    }
+    
+    private validateAttackPosition(
+        serverPos: {x: number, y: number}, 
+        clientPos: {x: number, y: number}, 
+        attackTimestamp: number
+    ): boolean {
+        const distance = Math.sqrt(
+            Math.pow(clientPos.x - serverPos.x, 2) + 
+            Math.pow(clientPos.y - serverPos.y, 2)
+        );
+        
+        // Allow some tolerance for network lag and client prediction
+        const currentTime = Date.now();
+        const timeDiff = currentTime - attackTimestamp;
+        
+        // Base tolerance + extra for network lag
+        const baseTolerance = 50; // Base 50 pixels
+        const lagTolerance = Math.min(timeDiff * 0.3, 100); // Up to 100px for lag
+        const maxTolerance = baseTolerance + lagTolerance;
+        
+        if (distance > maxTolerance) {
+            console.log(`[BATTLE SERVICE] Attack position validation failed: distance ${distance.toFixed(2)} > tolerance ${maxTolerance.toFixed(2)} (lag: ${timeDiff}ms)`);
+            return false;
+        }
+        
+        return true;
     }
 
     calculateDirectionalHitDetection(
@@ -267,7 +440,7 @@ export class BattleService {
         }
         
         const distance = Math.abs(horizontalDistance);
-        const maxRange = attackType === 'light' ? 150 : 80;
+        const maxRange = attackType === 'light' ? 80 : 150;
         const VERTICAL_TOLERANCE = 50;
         
         return distance <= maxRange && verticalDistance <= VERTICAL_TOLERANCE;

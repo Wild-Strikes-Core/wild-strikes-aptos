@@ -38,17 +38,6 @@ export class AttackingLightState extends PlayerState {
             }
             this.lastAttackTime = currentTime;
     
-            // ✅ Create visual hitbox using the new system
-            const hitboxManager = this.playerManager.getAttackHitboxManager();
-            if (hitboxManager) {
-                const hitbox = hitboxManager.createLightAttackHitbox();
-                const debugInfo = hitboxManager.getCollisionDebugInfo();
-                console.log(`[LIGHT ATTACK] Created visual hitbox:`, {
-                    hitbox,
-                    collisionDebug: debugInfo
-                });
-            }
-
             // Send attack event to server
             const attackData: AttackData = {
                 playerId: (player.getData('id') as string),

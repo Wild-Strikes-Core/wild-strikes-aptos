@@ -38,16 +38,6 @@ export class AttackingHeavyState extends PlayerState {
             }
             this.lastAttackTime = currentTime;
     
-            // ✅ Create visual hitbox using the new system
-            const hitboxManager = this.playerManager.getAttackHitboxManager();
-            if (hitboxManager) {
-                const hitbox = hitboxManager.createHeavyAttackHitbox();
-                const debugInfo = hitboxManager.getCollisionDebugInfo();
-                console.log(`[HEAVY ATTACK] Created visual hitbox:`, {
-                    hitbox,
-                    collisionDebug: debugInfo
-                });
-            }
 
             // Send attack event to server
             

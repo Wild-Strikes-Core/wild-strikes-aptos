@@ -87,6 +87,21 @@ export class BattleNetworkManager {
                 this.onPlayerContextsReceivedCallback(data);
             }
         });
+
+        this.socket.on('server:attackHit', (data: any) => {
+            console.log('[BATTLE NETWORK] ⚔️ Server attack hit:', data);
+            if (this.onAttackHitCallback) {
+                this.onAttackHitCallback(data);
+            }
+        });
+
+        // ✅ Listen for server-validated attack misses
+        this.socket.on('server:attackMissed', (data: any) => {
+            console.log('[BATTLE NETWORK] 💨 Server attack missed:', data);
+            if (this.onAttackMissedCallback) {
+                this.onAttackMissedCallback(data);
+            }
+        });
     }
 
     // Send player context to server for validation
@@ -103,6 +118,8 @@ export class BattleNetworkManager {
     // Callbacks
     private onBattleStartCallback?: (data: any) => void;
     private onPlayerContextsReceivedCallback?: (data: any) => void;
+    private onAttackHitCallback?: (data: any) => void;
+    private onAttackMissedCallback?: (data: any) => void;
 
     // Methods
     public onBattleStart(callback: (data: any) => void): void {
@@ -111,6 +128,14 @@ export class BattleNetworkManager {
 
     public onPlayerContextsReceived(callback: (data: any) => void): void {
         this.onPlayerContextsReceivedCallback = callback;
+    }
+    
+    public onAttackHit(callback: (data: any) => void): void {
+        this.onAttackHitCallback = callback;
+    }
+
+    public onAttackMissed(callback: (data: any) => void): void {
+        this.onAttackMissedCallback = callback;
     }
 
     public destroy(): void {

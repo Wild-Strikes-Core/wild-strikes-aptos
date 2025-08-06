@@ -186,6 +186,44 @@ export default class Arena extends Phaser.Scene {
                 });
             }
         });
+
+         this.networkManager.onAttackHit((attackData: any) => {
+            console.log('[ARENA] ⚔️ Server attack hit received:', attackData);
+            this.renderServerAttackHitbox(attackData, true); // true = hit
+            this.applyAttackEffects(attackData);
+        });
+
+        // ✅ Handle server-validated attack misses
+        this.networkManager.onAttackMissed((attackData: any) => {
+            console.log('[ARENA] 💨 Server attack miss received:', attackData);
+            this.renderServerAttackHitbox(attackData, false); // false = miss
+        });
+    }
+
+    private renderServerAttackHitbox(attackData: any, isHit: boolean): void {
+        // Determine which player performed the attack
+        const attackerManager = attackData.attackerId === this.battleConfig.localPlayerId 
+            ? this.localPlayerManager 
+            : this.opponentPlayerManager;
+
+        if (attackerManager) {
+            const hitboxManager = attackerManager.getAttackHitboxManager();
+            if (hitboxManager) {
+                // ✅ Render hitbox using SERVER-VALIDATED position and data
+                hitboxManager.renderServerValidatedAttack({
+                    attackType: attackData.attackType,
+                    position: attackData.attackerPosition,
+                    isHit: isHit,
+                    timestamp: attackData.timestamp
+                });
+            }
+        }
+    }
+
+    private applyAttackEffects(attackData: any): void {
+        
+        // Play hit sound, particle effects, etc.
+        console.log('[ARENA] 🎯 Applying hit effects:', attackData);
     }
 
     private updateRemotePlayer(playerContext: any): void {
