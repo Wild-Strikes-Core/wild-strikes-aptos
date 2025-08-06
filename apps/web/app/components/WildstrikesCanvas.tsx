@@ -1,15 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { useWallet, groupAndSortWallets } from '@aptos-labs/wallet-adapter-react';
 
 export default function WildstrikesCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [game, setGame] = useState<Phaser.Game | null>(null);
-  const { account, connected } = useWallet();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null); // Used to track current wallet address
-
-  // No need for handleWalletConnected since we're using the PLAY_BUTTON directly
+  const { account, connected, connect, disconnect, wallets, notDetectedWallets } = useWallet();
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  
+  // Group wallets by type using the official utility
+  const { aptosConnectWallets, availableWallets } = groupAndSortWallets([
+    ...(wallets || []), 
+    ...(notDetectedWallets || [])
+  ]);
 
   // Initialize the game
   useEffect(() => {
@@ -28,29 +33,16 @@ export default function WildstrikesCanvas() {
   }, []);
 
   // Set up event listeners after the game has been initialized
-  const { connect } = useWallet();
-  
   useEffect(() => {
     if (!game) return;
-    
-    console.log("[WildstrikesCanvas] Game initialized, setting up event listeners");
-    
-    // Debug current wallet state
-    console.log("[WildstrikesCanvas] Current wallet state:", {
-      connected,
-      accountAddress: account?.address?.toString(),
-      walletAddress
-    });
     
     // If wallet is already connected, pass the info to the game
     if (connected && account) {
       const address = account.address.toString();
       setWalletAddress(address);
-      console.log("[WildstrikesCanvas] Wallet already connected:", address);
       
       // Set global variables immediately
       if (typeof window !== 'undefined') {
-        console.log("[WildstrikesCanvas] Setting global variables for already connected wallet");
         window.aptosWalletConnected = true;
         window.aptosWalletAddress = address;
       }
@@ -58,91 +50,40 @@ export default function WildstrikesCanvas() {
     
     // Listen for custom connect wallet events from the Phaser game
     const handleConnectWallet = async () => {
-      console.log("[WildstrikesCanvas] 'wildstrikes-connect-wallet' event received");
-      
       // Reset wallet connection status (in case of a previous attempt)
       if (typeof window !== 'undefined') {
         window.aptosWalletConnected = false;
         window.aptosWalletAddress = undefined;
-        console.log("[WildstrikesCanvas] Reset global wallet variables");
       }
       
       if (!connected) {
-        console.log("[WildstrikesCanvas] Wallet not connected, attempting to connect");
-        try {
-          console.log("[WildstrikesCanvas] Attempting to connect to Petra wallet...");
-          // Try to connect to Petra first
-          await connect('Petra');
-          console.log("[WildstrikesCanvas] Successfully connected to Petra wallet");
-          
-          // No need to manually set global variables here - this will be handled by the wallet connection change effect
-        } catch (error: any) {
-          console.log("[WildstrikesCanvas] Petra connection error:", error?.message || error);
-          
-          // Only try AptosConnect if not a user rejection
-          if (!error?.message?.includes('User has rejected the request')) {
-            console.log("[WildstrikesCanvas] Failed to connect to Petra, trying AptosConnect");
-            try {
-              await connect('AptosConnect');
-              console.log("[WildstrikesCanvas] Successfully connected to AptosConnect");
-              
-              // No need to manually set global variables here - this will be handled by the wallet connection change effect
-            } catch (secondError: any) {
-              console.log("[WildstrikesCanvas] Failed to connect to AptosConnect:", secondError?.message || secondError);
-              // Reset the global variables if all connections fail
-              if (typeof window !== 'undefined') {
-                window.aptosWalletConnected = false;
-                window.aptosWalletAddress = undefined;
-                console.log("[WildstrikesCanvas] Reset global variables after connection failure");
-              }
-            }
-          } else {
-            console.log("[WildstrikesCanvas] User rejected Petra wallet connection");
-            // Reset the global variables if connection is rejected
-            if (typeof window !== 'undefined') {
-              window.aptosWalletConnected = false;
-              window.aptosWalletAddress = undefined;
-              console.log("[WildstrikesCanvas] Reset global variables after user rejection");
-            }
-          }
-        }
+        // Show the wallet selection modal
+        setShowWalletModal(true);
       } else {
-        console.log("[WildstrikesCanvas] Wallet already connected:", account?.address.toString());
         // Ensure global variables are set if wallet is already connected
         if (typeof window !== 'undefined' && account) {
           window.aptosWalletConnected = true;
           window.aptosWalletAddress = account.address.toString();
-          console.log("[WildstrikesCanvas] Updated global variables for already connected wallet");
           
           // Explicitly dispatch the connected event for Phaser
           const walletConnectedEvent = new CustomEvent('aptos-wallet-connected', { 
             detail: { address: account.address.toString() }
           });
           window.dispatchEvent(walletConnectedEvent);
-          console.log("[WildstrikesCanvas] Dispatched aptos-wallet-connected event");
         }
       }
     };
     
-    console.log("[WildstrikesCanvas] Adding event listener for 'wildstrikes-connect-wallet'");
     window.addEventListener('wildstrikes-connect-wallet', handleConnectWallet);
     
     return () => {
-      console.log("[WildstrikesCanvas] Removing event listener for 'wildstrikes-connect-wallet'");
       window.removeEventListener('wildstrikes-connect-wallet', handleConnectWallet);
     };
-  }, [game, connected, account, connect, walletAddress]);
+  }, [game, connected, account]);
 
   // Update game when wallet connection changes
   useEffect(() => {
-    // Only run this effect if the game instance exists
     if (!game) return;
-    
-    console.log("[WildstrikesCanvas] Wallet connection change detected:", {
-      connected,
-      accountAddress: account?.address?.toString(),
-      previousWalletAddress: walletAddress
-    });
     
     if (connected && account) {
       const address = account.address.toString();
@@ -152,22 +93,12 @@ export default function WildstrikesCanvas() {
         
         // Set global variables for Phaser game to access
         if (typeof window !== 'undefined') {
-          console.log("[WildstrikesCanvas] Setting global wallet connection variables - connected:", address);
           window.aptosWalletConnected = true;
           window.aptosWalletAddress = address;
-          
-          // Debug global state after update
-          console.log("[WildstrikesCanvas] Global wallet state after update:", {
-            connected: window.aptosWalletConnected,
-            address: window.aptosWalletAddress
-          });
         }
-        
-        console.log("[WildstrikesCanvas] Wallet connection updated:", address);
         
         // Dispatch a custom event that Phaser can listen for
         if (typeof window !== 'undefined') {
-          console.log("[WildstrikesCanvas] Dispatching aptos-wallet-connected event");
           const walletConnectedEvent = new CustomEvent('aptos-wallet-connected', { 
             detail: { address }
           });
@@ -179,32 +110,118 @@ export default function WildstrikesCanvas() {
       
       // Clear global variables
       if (typeof window !== 'undefined') {
-        console.log("[WildstrikesCanvas] Clearing global wallet connection variables");
         window.aptosWalletConnected = false;
         window.aptosWalletAddress = undefined;
-        
-        // Debug global state after update
-        console.log("[WildstrikesCanvas] Global wallet state after disconnect:", {
-          connected: window.aptosWalletConnected,
-          address: window.aptosWalletAddress
-        });
       }
-      
-      console.log("[WildstrikesCanvas] Wallet disconnected");
       
       // Dispatch a custom event that Phaser can listen for
       if (typeof window !== 'undefined') {
-        console.log("[WildstrikesCanvas] Dispatching aptos-wallet-disconnected event");
         const walletDisconnectedEvent = new CustomEvent('aptos-wallet-disconnected');
         window.dispatchEvent(walletDisconnectedEvent);
       }
     }
   }, [game, connected, account, walletAddress]);
 
+  const handleWalletSelect = async (walletName: string) => {
+    try {
+      // If already connected, disconnect first to ensure fresh authentication
+      if (connected) {
+        await disconnect();
+      }
+      
+      // Connect to the selected wallet, which will prompt for authentication
+      await connect(walletName);
+      setShowWalletModal(false);
+    } catch (error) {
+      console.log("Wallet connection failed:", error);
+      // Don't close the modal on error, let user try again
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowWalletModal(false);
+    
+    // Reset global variables to indicate connection was cancelled
+    if (typeof window !== 'undefined') {
+      window.aptosWalletConnected = false;
+      window.aptosWalletAddress = undefined;
+      
+      // Dispatch event to notify Phaser that connection was cancelled
+      const cancelEvent = new CustomEvent('aptos-wallet-connection-cancelled');
+      window.dispatchEvent(cancelEvent);
+    }
+  };
+
   return (
     <div className="w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
-      {/* No overlay UI - using PLAY_BUTTON in Phaser game instead */}
+      
+      {/* Wallet Selection Modal */}
+      {showWalletModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-white text-xl font-semibold">Connect Wallet</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Social Login Section - AptosConnect wallets */}
+            {aptosConnectWallets && aptosConnectWallets.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-gray-300 text-sm font-medium mb-3">SOCIAL LOGIN</h3>
+                <div className="space-y-2">
+                  {aptosConnectWallets.map((wallet) => (
+                    <button
+                      key={wallet.name}
+                      onClick={() => handleWalletSelect(wallet.name)}
+                      className="w-full flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg transition-colors"
+                    >
+                      <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
+                        {wallet.name.includes('Google') ? (
+                          <span className="text-gray-800 font-bold text-sm">G</span>
+                        ) : wallet.name.includes('Apple') ? (
+                          <span className="text-gray-800 font-bold text-sm">🍎</span>
+                        ) : (
+                          <span className="text-gray-800 font-bold text-sm">A</span>
+                        )}
+                      </div>
+                      {wallet.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Installed Wallets Section */}
+            {availableWallets && availableWallets.length > 0 && (
+              <div>
+                <h3 className="text-gray-300 text-sm font-medium mb-3">INSTALLED WALLETS</h3>
+                <div className="space-y-2">
+                  {availableWallets.map((wallet) => (
+                    <button
+                      key={wallet.name}
+                      onClick={() => handleWalletSelect(wallet.name)}
+                      className="w-full flex items-center gap-3 bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">
+                          {wallet.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      {wallet.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}

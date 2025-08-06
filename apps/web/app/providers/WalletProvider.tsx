@@ -5,24 +5,15 @@ import { Network } from '@aptos-labs/ts-sdk';
 import { PropsWithChildren } from 'react';
 
 export const WalletProvider = ({ children }: PropsWithChildren) => {
-  // Get the origin for AptosConnect configuration
-  let dappImageURI: string | undefined;
-  if (typeof window !== "undefined") {
-    dappImageURI = `${window.location.origin}/aptos-favicon.ico`;
-  }
-
   return (
     <AptosWalletAdapterProvider
-      autoConnect={true}
+      autoConnect={false}
       dappConfig={{
         network: Network.TESTNET,
-        // Configure AptosConnect
-        aptosConnect: {
-          dappImageURI
+        aptosConnect: { 
+          dappId: "wildstrikes-game"
         },
       }}
-      // Only include Petra and AptosConnect will be included by default
-      optInWallets={["Petra"]}
       onError={(error) => {
         // Filter out user rejections which aren't actually errors
         if (error && typeof error === 'string' && !error.includes('User has rejected')) {
