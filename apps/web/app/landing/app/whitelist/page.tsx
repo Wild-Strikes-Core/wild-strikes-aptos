@@ -53,7 +53,7 @@ export default function Home() {
       {/* CLOUD SECTION */}
       <section className="cloud-section">
         <Image
-          src="/assets/Website-page/whitelist/cloudd.png"
+          src="/assets/Website-page/whitelist/whitelistcloud.png"
           alt="Whitelist Cloud"
           fill
           className="cloud-image"
