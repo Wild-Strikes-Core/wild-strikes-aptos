@@ -62,7 +62,7 @@ import { PlayerManager } from "../../entities/player/PlayerManager";
 export interface PlayerContext {
     id: string;
     name?: string;
-    health?: number;
+    damagePercentage?: number;
     manager: PlayerManager;
     isLocal: boolean;
     spawnPosition: { x: number; y: number };

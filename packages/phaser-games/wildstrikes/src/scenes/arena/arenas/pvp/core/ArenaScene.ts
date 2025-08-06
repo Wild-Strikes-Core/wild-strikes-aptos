@@ -157,8 +157,7 @@ export default class Arena extends Phaser.Scene {
                 // Update local player stats UI
                 this.localPlayerManager.updatePlayerStats({
                     damagePercentage: battleData.localPlayerStats.damagePercentage,
-                    lives: battleData.localPlayerStats.lives,
-                    health: 100 // Default starting health
+                    lives: battleData.localPlayerStats.lives
                 });
             }
         });
@@ -189,7 +188,6 @@ export default class Arena extends Phaser.Scene {
                             this.localPlayerManager.updatePlayerStats({
                                 damagePercentage: playerContext.playerStats.damagePercentage,
                                 lives: playerContext.playerStats.lives,
-                                health: playerContext.playerStats.health,
                                 position: playerContext.position,
                                 velocity: {
                                     x: playerContext.velocityX || 0,
@@ -208,7 +206,6 @@ export default class Arena extends Phaser.Scene {
                             this.opponentPlayerManager.updatePlayerStats({
                                 damagePercentage: playerContext.playerStats.damagePercentage,
                                 lives: playerContext.playerStats.lives,
-                                health: playerContext.playerStats.health,
                                 position: playerContext.position,
                                 velocity: {
                                     x: playerContext.velocityX || 0,

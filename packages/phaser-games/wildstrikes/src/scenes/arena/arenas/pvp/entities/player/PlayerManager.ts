@@ -38,7 +38,7 @@ export class PlayerManager {
     // Player data
     private roomId: string;
     private playerId: string;
-    private serverStats = { health: 100, damagePercentage: 0, lives: 3 };
+    private serverStats = { damagePercentage: 0, lives: 3 };
     
     // UI throttling
     private lastUIUpdate: number = 0;
@@ -349,7 +349,6 @@ export class PlayerManager {
     public updatePlayerStats(stats: { 
         damagePercentage: number; 
         lives: number; 
-        health?: number;
         knockback?: { force: number; angle: number };
         position?: { x: number; y: number };
         velocity?: { x: number; y: number };
@@ -357,7 +356,6 @@ export class PlayerManager {
     }): void {
         // Update server stats with core combat data
         this.serverStats = {
-            health: stats.health || this.serverStats.health,
             damagePercentage: stats.damagePercentage,
             lives: stats.lives
         };

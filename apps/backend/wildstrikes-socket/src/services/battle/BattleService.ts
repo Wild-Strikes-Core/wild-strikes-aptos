@@ -42,7 +42,6 @@ export class BattleService {
                     inputs: { left: false, right: false, jump: false, crouch: false, dash: false, lightAttack: false, heavyAttack: false },
                     state: 'idle',
                     playerStats: {
-                        health: 100,
                         damagePercentage: 0,
                         lives: 3,
                     },
@@ -61,7 +60,6 @@ export class BattleService {
                     inputs: { left: false, right: false, jump: false, crouch: false, dash: false, lightAttack: false, heavyAttack: false },
                     state: 'idle',
                     playerStats: {
-                        health: 100,
                         damagePercentage: 0,
                         lives: 3,
                     },
@@ -451,19 +449,18 @@ export class BattleService {
     }
 
     private applyDamage(defender: PlayerContext, attackData: AttackData): void {
-        defender.playerStats.health -= attackData.damage;
+        // Add damage to damage percentage (this is our new health system)
         defender.playerStats.damagePercentage += attackData.damage;
         
-        console.log(`[BATTLE SERVICE] Player ${defender.socketId} took ${attackData.damage} damage. Health: ${defender.playerStats.health}, Damage Percentage: ${defender.playerStats.damagePercentage}`);
+        console.log(`[BATTLE SERVICE] Player ${defender.socketId} took ${attackData.damage} damage. Damage Percentage: ${defender.playerStats.damagePercentage}%`);
 
         // Apply knockback (you may want to implement knockback physics here)
         // This would use attackData.knockback.force and attackData.knockback.angle
         
-        // Check for knockout
-        if (defender.playerStats.health <= 0) {
+        // Check for knockout - when damage percentage reaches 100% or more
+        if (defender.playerStats.damagePercentage >= 100) {
             defender.playerStats.lives -= 1;
-            defender.playerStats.health = 100;
-            defender.playerStats.damagePercentage = 0;
+            defender.playerStats.damagePercentage = 0; // Reset damage percentage
             console.log(`[BATTLE SERVICE] Player ${defender.socketId} has lost a life. Remaining lives: ${defender.playerStats.lives}`);
 
             if (defender.playerStats.lives <= 0) {
@@ -485,7 +482,6 @@ export class BattleService {
                 state: p.state,
                 isAlive: p.isAlive,
                 playerStats: {
-                    health: p.playerStats.health,
                     damagePercentage: p.playerStats.damagePercentage,
                     lives: p.playerStats.lives
                 }
