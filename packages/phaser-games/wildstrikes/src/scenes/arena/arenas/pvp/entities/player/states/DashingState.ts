@@ -41,8 +41,8 @@ export class DashingState extends PlayerState {
         this.getSpriteManager().playDashingAnimation(player);
     }
 
-    handleInput(): void {
-        // No input handling during dash - it's a fixed duration state
+    handleInput(inputs?: any): void {
+        // No input handling during dash
     }
 
     private exitDash(): void {

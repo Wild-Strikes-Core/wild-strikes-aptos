@@ -41,8 +41,21 @@ export class IdleState extends PlayerState {
         }
     }
 
-    handleInput(): void {
-        // Input handling is done in update for this state
+    handleInput(inputs?: any): void {
+        if (!this.isInputEnabled() || !inputs) return;
+
+        // Handle jump input
+        if (inputs.jump) {
+            this.playerManager.transitionTo(PlayerStates.Jumping);
+            return;
+        }
+
+        // Handle attack inputs
+        if (inputs.lightAttack) {
+            this.playerManager.transitionTo(PlayerStates.AttackingLight);
+        } else if (inputs.heavyAttack) {
+            this.playerManager.transitionTo(PlayerStates.AttackingHeavy);
+        }
     }
 
     exit(): void {

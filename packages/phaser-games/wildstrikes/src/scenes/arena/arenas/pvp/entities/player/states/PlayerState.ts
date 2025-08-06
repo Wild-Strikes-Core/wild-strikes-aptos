@@ -3,7 +3,7 @@ import { PlayerManager } from "../PlayerManager";
 export interface IPlayerState {
     enter(): void;
     update(): void;
-    handleInput(): void;
+    handleInput(inputs?: any): void;
     exit?(): void; // optional
 }
 
@@ -16,7 +16,7 @@ export abstract class PlayerState implements IPlayerState {
 
     abstract enter(): void;
     abstract update(): void;
-    abstract handleInput(): void;
+    abstract handleInput(inputs?: any): void;
     abstract exit(): void;
 
     // Helper method to get the player sprite

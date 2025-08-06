@@ -51,7 +51,7 @@ export class AttackingHeavyState extends PlayerState {
         // State will transition when animation completes
     }
 
-    handleInput(): void {
+    handleInput(inputs?: any): void {
         // No input handling during attack animation
     }
 

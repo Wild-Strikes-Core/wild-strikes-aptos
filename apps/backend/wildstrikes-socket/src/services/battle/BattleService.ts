@@ -1,25 +1,11 @@
 import { Server } from 'socket.io';
 import { RoomService } from './RoomService';
+import { PlayerContext } from '../../models/battle/PlayerContext';
 
-type PlayerPosition = {
-    x: number;
-    y: number;
-    velocityX?: number;
-    velocityY?: number;
-    facing?: 'left' | 'right';
-};
-
-type PlayerState = {
-    socketId: string;
-    damagePercentage: number;  // 0-300%+ (Brawlhalla style)
-    position: PlayerPosition;
-    state: 'idle' | 'walking' | 'jumping' | 'attacking-light' | 'attacking-heavy' | 'dashing' | 'crouching' | 'defeated';
-    isAlive: boolean;
-};
 
 type BattleState = {
     roomId: string;
-    players: Record<string, PlayerState>; // key: socketId
+    players: Record<string, PlayerContext>;
     gameState: 'waiting' | 'active' | 'ended';
     winner?: string;
     startTime: number;
@@ -27,6 +13,8 @@ type BattleState = {
 
 export class BattleService {
     private battles: Map<string, BattleState> = new Map();
+    private readonly PHYSICS_TIMESTEP = 16.67; // ~60fps
+    private physicsIntervals: Map<string, NodeJS.Timeout> = new Map();
 
     constructor(private io: Server, private roomService: RoomService) {}
 
@@ -45,92 +33,55 @@ export class BattleService {
             players: {
                 [p1]: { 
                     socketId: p1, 
-                    damagePercentage: 0, 
                     position: { 
                         x: mapConfig?.spawnPoints.player1.x || 0, 
                         y: mapConfig?.spawnPoints.player1.y || 0, 
                         facing: 'right' 
                     },
+                    animation: 'idle',
+                    inputs: { left: false, right: false, jump: false, crouch: false, dash: false, lightAttack: false, heavyAttack: false },
                     state: 'idle',
+                    playerStats: {
+                        health: 100,
+                        damagePercentage: 0,
+                        lives: 3,
+                    },
                     isAlive: true,
+                    sequenceNumber: 0,
+                    timestamp: 0,
                 },
                 [p2]: { 
                     socketId: p2, 
-                    damagePercentage: 0, 
                     position: { 
                         x: mapConfig?.spawnPoints.player2.x || 0, 
                         y: mapConfig?.spawnPoints.player2.y || 0, 
-                        facing: 'left' 
+                        facing: 'right' 
                     },
+                    animation: 'idle',
+                    inputs: { left: false, right: false, jump: false, crouch: false, dash: false, lightAttack: false, heavyAttack: false },
                     state: 'idle',
+                    playerStats: {
+                        health: 100,
+                        damagePercentage: 0,
+                        lives: 3,
+                    },
                     isAlive: true,
+                    sequenceNumber: 0,
+                    timestamp: 0,
                 },
             },
         };
 
         this.battles.set(roomId, state);
 
-        this.io.to(roomId).emit("battle-start", {
+        this.io.to(roomId).emit("server:start-battle", {
             ...this.serialize(state),
             mapConfig: mapConfig
-        });
-
-    }
-
-    handlePlayerStateUpdate(roomId: string, playerId: string, playerState: any) {
-        // console.log("[BATTLE SERVICE] Received player state update:", playerState);
-        const battle = this.battles.get(roomId);
-        if (!battle) return;
-        
-        // Update the player state with the received data
-        battle.players[playerId] = {
-            ...battle.players[playerId], // Keep existing data like damagePercentage, isAlive
-            socketId: playerId,
-            position: playerState.position,
-            state: playerState.state,
-            // Add velocity if provided
-            ...(playerState.velocity && {
-                position: {
-                    ...playerState.position,
-                    velocityX: playerState.velocity.x,
-                    velocityY: playerState.velocity.y
-                }
-            })
-        };
-        
-        // ✅ ADD DEBUGGING: Check what we're broadcasting
-        const broadcastData = {
-            id: playerId,
-            ...battle.players[playerId]
-        };
-        console.log("[BATTLE SERVICE] Broadcasting to room:", roomId);
-        console.log("[BATTLE SERVICE] Broadcast data:", broadcastData);
-        
-        this.io.to(roomId).emit("player-state-update", broadcastData);
-        
-    }
-
-    // Simple handleAttack method (just for data structure)
-    handleAttack(roomId: string, attackerId: string, attackData: any) {
-        const battle = this.battles.get(roomId);
-        if (!battle || battle.gameState !== 'active') return;
-
-        console.log(`[BATTLE] Attack received from ${attackerId}:`, attackData);
-        
-        // For now, just broadcast the attack event
-        this.io.to(roomId).emit("attack-broadcast", {
-            attackerId,
-            attackData
         });
     }
 
     getBattleState(roomId: string): BattleState | undefined {
         return this.battles.get(roomId);
-    }
-
-    getPlayerState(roomId: string, playerId: string): PlayerState | undefined {
-        const battle = this.battles.get(roomId);
-        return battle?.players[playerId];
     }
 
     // Handle player disconnect
@@ -157,7 +108,15 @@ export class BattleService {
         setTimeout(() => {
             this.battles.delete(roomId);
         }, 2000);
+
+        // Clear physics interval
+        const interval = this.physicsIntervals.get(roomId);
+        if (interval) {
+            clearInterval(interval);
+            this.physicsIntervals.delete(roomId);
+        }
     }
+
 
     private serialize(battle: BattleState) {
         return {
@@ -167,10 +126,14 @@ export class BattleService {
             startTime: battle.startTime,
             players: Object.values(battle.players).map(p => ({
                 socketId: p.socketId,
-                damagePercentage: p.damagePercentage,
                 position: p.position,
                 state: p.state,
                 isAlive: p.isAlive,
+                playerStats: {
+                    health: p.playerStats.health,
+                    damagePercentage: p.playerStats.damagePercentage,
+                    lives: p.playerStats.lives
+                }
             })),
         };
     }

@@ -2,20 +2,18 @@ import { MapManager } from "../maps/MapManager";
 import { AssetLoader } from "../../../../../AssetLoader";
 import { ArenaCameraManager } from "../systems/camera/CameraManager";
 import { BattleNetworkManager } from "../systems/network/BattleNetworkManager";
-import { PlayerContextManager } from "../entities/player/PlayerContextManager";
 import { BattleConfig, DEFAULT_CAMERA_CONFIG } from "../config/BattleConfig";
+import { PlayerManager } from "../entities/player/PlayerManager";
 
 export default class Arena extends Phaser.Scene {
     private mapManager: MapManager;
     private cameraManager: ArenaCameraManager;
     private networkManager: BattleNetworkManager;
-    private playerContextManager: PlayerContextManager;
+    private localPlayerManager: PlayerManager;
+    private opponentPlayerManager: PlayerManager;
     
     private battleConfig: BattleConfig;
     
-    // Enable/disable debug mode - set to false for production
-    private static readonly DEBUG_ENABLED = true;
-
     constructor() {
         super({ key: "Arena" });
     }
@@ -44,17 +42,12 @@ export default class Arena extends Phaser.Scene {
             roomId: data.roomId || ''
         };
         
-        // Initialize managers
-        this.playerContextManager = new PlayerContextManager(this);
         this.cameraManager = new ArenaCameraManager(this, DEFAULT_CAMERA_CONFIG);
         this.networkManager = new BattleNetworkManager({
             localPlayerId: this.battleConfig.localPlayerId,
             opponentId: this.battleConfig.opponentId,
             roomId: this.battleConfig.roomId
         });
-
-        // Set up network event handlers
-        this.setupNetworkHandlers();
     }
 
     preload(): void {
@@ -70,30 +63,12 @@ export default class Arena extends Phaser.Scene {
         this.setupMap();
         this.setupPlayers();
         this.setupCamera();
+        this.setupNetworkListeners();
     }
 
     update(time: number, delta: number): void {
-        this.playerContextManager.updatePlayers(delta);
         this.cameraManager.update();
-    }
-
-    shutdown(): void {
-        this.cleanup();
-    }
-
-    destroy(): void {
-        this.cleanup();
-    }
-
-    private setupNetworkHandlers(): void {
-        this.networkManager.onPlayerStateUpdate((playerState: any) => {
-            console.log("[ARENA] Received player state update:", playerState);
-            const playerContext = this.playerContextManager.getPlayerContext(playerState.id);
-            if (playerContext && !playerContext.isLocal) {
-                console.log(`[ARENA] Updating remote player: ${playerState.id}`);
-                playerContext.manager.updateFromNetwork(playerState);
-            }
-        });
+        this.localPlayerManager?.update();
     }
 
     private setupMap(): void {
@@ -106,32 +81,87 @@ export default class Arena extends Phaser.Scene {
         this.mapManager.setupMap(this, clientMapConfig);
     }
 
-    private setupPlayers(): void {
-        const playerContexts = this.playerContextManager.setupPlayers({
-            localPlayerId: this.battleConfig.localPlayerId,
-            opponentId: this.battleConfig.opponentId,
-            localSpawnPosition: this.battleConfig.localSpawnPosition,
-            opponentSpawnPosition: this.battleConfig.opponentSpawnPosition,
-            roomId: this.battleConfig.roomId
-        });
-
-        console.log(`[ARENA] Players setup complete. Local: ${this.battleConfig.localPlayerId}, Opponent: ${this.battleConfig.opponentId}`);
+    private setupCamera(): void {
+        const localPlayerSprite = this.localPlayerManager.getPlayerSprite();
+        if (localPlayerSprite) {
+            this.cameras.main.startFollow(localPlayerSprite);
+            this.cameras.main.setFollowOffset(0, 50);
+            this.cameras.main.setDeadzone(100, 100);
+        }
     }
 
-    private setupCamera(): void {
-        const localPlayerContext = this.playerContextManager.getLocalPlayerContext();
-        if (localPlayerContext) {
-            const playerSprite = localPlayerContext.manager.getPlayerSprite();
-            if (playerSprite) {
-                this.cameraManager.followTarget(playerSprite);
+    private setupPlayers(): void {
+        // Create local player (with input enabled)
+        this.localPlayerManager = new PlayerManager(
+            this, 
+            true, 
+            this.battleConfig.roomId,
+            this.battleConfig.localPlayerId
+        );
+        
+        // ✅ Inject network manager for sending inputs
+        this.localPlayerManager.setNetworkManager(this.networkManager);
+        this.localPlayerManager.createPlayer(
+            this.battleConfig.localSpawnPosition.x,
+            this.battleConfig.localSpawnPosition.y
+        );
+
+        // Create opponent player (with input disabled)
+        this.opponentPlayerManager = new PlayerManager(
+            this, 
+            false, 
+            this.battleConfig.roomId,
+            this.battleConfig.opponentId
+        );
+        
+        this.opponentPlayerManager.createPlayer(
+            this.battleConfig.opponentSpawnPosition.x,
+            this.battleConfig.opponentSpawnPosition.y
+        );
+
+        
+    }
+
+    private setupNetworkListeners(): void {
+   
+        // ✅ Handle battle start with player stats
+        this.networkManager.onBattleStart((battleData: any) => {
+            console.log('[ARENA] Battle start received with stats:', battleData);
+            
+            if (battleData.localPlayerStats) {
+                // Update local player stats UI
+                this.localPlayerManager.updatePlayerStats(battleData.localPlayerStats);
             }
-        }
+        });
+
+        // // ✅ Keep legacy handlers for backwards compatibility
+        // this.networkManager.onLocalPlayerUpdate((serverUpdate: any) => {
+        //     this.localPlayerManager.handleServerUpdate(serverUpdate);
+        // });
+
+        // this.networkManager.onRemotePlayerUpdate((playerData: any) => {
+        //     this.opponentPlayerManager.handleRemotePlayerUpdate(playerData);
+        // });
+
+        // Handle battle state updates
+        this.networkManager.onBattleStateUpdate((battleState: any) => {
+            console.log('[ARENA] Battle state update received:', battleState);
+        });
+    }
+
+    shutdown(): void {
+        this.cleanup();
+    }
+
+    destroy(): void {
+        this.cleanup();
     }
 
     private cleanup(): void {
         this.cameraManager?.destroy();
         this.networkManager?.destroy();
-        this.playerContextManager?.destroy();
         this.mapManager?.destroy();
+        this.localPlayerManager?.destroy();
+        this.opponentPlayerManager?.destroy();
     }
 }

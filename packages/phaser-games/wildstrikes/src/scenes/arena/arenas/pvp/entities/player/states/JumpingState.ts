@@ -82,15 +82,19 @@ export class JumpingState extends PlayerState {
         }
     }
 
-    handleInput(): void {
-        const keyObjects = this.getKeyObjects();
-        const player = this.getPlayer();
-        
-        if (!player || !keyObjects || !this.isInputEnabled()) return;
+    handleInput(inputs?: any): void {
+        if (!this.isInputEnabled() || !inputs) return;
 
-        // Handle double jump
-        if (keyObjects.jump.isDown && this.jumpCount < this.jumpLimit) {
+        // Handle jump input for double jump
+        if (inputs.jump && this.jumpCount < this.jumpLimit) {
             this.performJump();
+        }
+
+        // Handle attack inputs while jumping
+        if (inputs.lightAttack) {
+            this.playerManager.transitionTo(PlayerStates.AttackingLight);
+        } else if (inputs.heavyAttack) {
+            this.playerManager.transitionTo(PlayerStates.AttackingHeavy);
         }
     }
 
