@@ -17,7 +17,7 @@ export function registerBattleEvents(io: Server, socket: Socket, matchmaking: Ma
             }
         }
         
-        console.log(`[BATTLE EVENTS] Received player:moved from ${playerId} in room ${roomId}:`, playerContext);
+        //console.log(`[BATTLE EVENTS] Received player:moved from ${playerId} in room ${roomId}:`, playerContext);
         
         if (roomId && playerId) {
             battleService.validatePlayerInput(roomId, playerId, playerContext);
@@ -28,6 +28,14 @@ export function registerBattleEvents(io: Server, socket: Socket, matchmaking: Ma
 
     socket.on("player:attacked", (attackData) => {
         const roomId = (socket as any).roomId;
+        const playerId = socket.id;
+        console.log(`[BATTLE EVENTS] Received player:attacked from ${playerId} in room ${roomId}:`, attackData);
         
+        if (roomId && playerId) {
+            battleService.handlePlayerAttack(roomId, playerId, attackData);
+        } else {
+            console.log(`[BATTLE EVENTS] Missing roomId (${roomId}) or playerId (${playerId}) for player:attacked event`);
+        }
+    
     });
 }

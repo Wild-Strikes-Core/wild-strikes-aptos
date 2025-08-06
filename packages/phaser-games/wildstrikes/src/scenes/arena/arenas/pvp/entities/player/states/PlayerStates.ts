@@ -6,5 +6,6 @@ export enum PlayerStates {
     Jumping = 'jumping',
     Dashing = 'dashing',
     AttackingLight = 'attackingLight',
-    AttackingHeavy = 'attackingHeavy'
+    AttackingHeavy = 'attackingHeavy',
+    Hit = 'hit',
 }

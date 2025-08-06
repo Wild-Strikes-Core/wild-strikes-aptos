@@ -16,6 +16,7 @@ import {
     AttackingLightState, 
     AttackingHeavyState 
 } from "./states";
+import { HitState } from "./states/HitState";
 
 export class PlayerManager {
     private scene: Phaser.Scene;
@@ -71,6 +72,8 @@ export class PlayerManager {
         this.states.set(PlayerStates.Dashing, new DashingState(this));
         this.states.set(PlayerStates.AttackingLight, new AttackingLightState(this));
         this.states.set(PlayerStates.AttackingHeavy, new AttackingHeavyState(this));
+
+        this.states.set(PlayerStates.Hit, new HitState(this));
     }
 
     private setupServerEventListeners(): void {

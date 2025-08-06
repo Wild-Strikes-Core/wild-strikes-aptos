@@ -25,9 +25,9 @@ export interface PlayerContext {
   | 'crouchWalking' | 'jumping' | 'dashing'
   | 'attackingLight' | 'attackingHeavy';
   playerStats: {
-    health?: number;
-    damagePercentage?: number;
-    lives?: number;
+    health: number;
+    damagePercentage: number;
+    lives: number;
   }
   isAlive?: boolean;
   sequenceNumber?: number;

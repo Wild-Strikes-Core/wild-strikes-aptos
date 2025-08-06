@@ -47,6 +47,10 @@ export class BattleSocketClient {
         socket.emit("player:moved", playerContext);
     }
 
+    sendPlayerAttack(attackData: any) {
+        socket.emit("player:attacked", attackData);
+    }
+
     // Utility methods
     isSocketConnected(): boolean {
         return socket.connected;

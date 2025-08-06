@@ -119,7 +119,32 @@ export default class Arena extends Phaser.Scene {
             this.battleConfig.opponentSpawnPosition.y
         );
 
+        // ✅ Set up hitbox collision detection between players
+        this.setupPlayerHitboxCollisions();
         
+    }
+
+    private setupPlayerHitboxCollisions(): void {
+        const localPlayerSprite = this.localPlayerManager.getPlayerSprite();
+        const opponentPlayerSprite = this.opponentPlayerManager.getPlayerSprite();
+        
+        // Set up hitbox collision detection for local player's attacks against opponent
+        if (localPlayerSprite && opponentPlayerSprite) {
+            const localHitboxManager = this.localPlayerManager.getAttackHitboxManager();
+            if (localHitboxManager) {
+                console.log('[ARENA] 🥊 Setting up local player hitbox collisions with opponent');
+                localHitboxManager.setOpponentPlayer(opponentPlayerSprite);
+            }
+            
+            // Set up hitbox collision detection for opponent's attacks against local player
+            const opponentHitboxManager = this.opponentPlayerManager.getAttackHitboxManager();
+            if (opponentHitboxManager) {
+                console.log('[ARENA] 🥊 Setting up opponent hitbox collisions with local player');
+                opponentHitboxManager.setOpponentPlayer(localPlayerSprite);
+            }
+        } else {
+            console.warn('[ARENA] ⚠️ Could not set up hitbox collisions - missing player sprites');
+        }
     }
 
     private setupNetworkListeners(): void {

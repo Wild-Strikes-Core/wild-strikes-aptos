@@ -2,6 +2,22 @@ import { battleSocketClient } from "@phaser-games/wildstrikes/src/shared-utils/B
 import { PlayerState } from "./PlayerState";
 import { PlayerStates } from "./PlayerStates";
 
+interface AttackData {
+    playerId: string;
+    attackType: 'light' | 'heavy';
+    facing: 'left' | 'right';
+    damage: number;
+    knockback: {
+        force: number;
+        angle: number;
+    };
+    position: {
+        x: number;
+        y: number;
+    };
+    timestamp: number;
+}
+
 export class AttackingHeavyState extends PlayerState {
     private attackCooldown: number = 300;
     private lastAttackTime: number = 0;
@@ -26,20 +42,32 @@ export class AttackingHeavyState extends PlayerState {
             const hitboxManager = this.playerManager.getAttackHitboxManager();
             if (hitboxManager) {
                 const hitbox = hitboxManager.createHeavyAttackHitbox();
-                console.log(`[HEAVY ATTACK] Created visual hitbox:`, hitbox);
+                const debugInfo = hitboxManager.getCollisionDebugInfo();
+                console.log(`[HEAVY ATTACK] Created visual hitbox:`, {
+                    hitbox,
+                    collisionDebug: debugInfo
+                });
             }
 
             // Send attack event to server
-            const body = player.body as Phaser.Physics.Arcade.Body;
-            battleSocketClient.emit('player-attack', {
-                type: 'heavy',
-                damage: 30,
-                range: 120,
-                position: { x: player.x, y: player.y },
-                animation: 'heavy-attack',
-                knockbackForce: 100,  // Higher knockback for heavy attacks
-                knockbackAngle: 45    // Knockback angle in degrees
-            });
+            
+            const attackData: AttackData = {
+                playerId: (player.getData('id') as string),
+                attackType: 'heavy',
+                facing: player.flipX ? 'left' : 'right',
+                damage: 20,
+                knockback: {
+                    force: 40,
+                    angle: player.flipX ? 180 : 0
+                },
+                position: {
+                    x: player.x,
+                    y: player.y
+                },
+                timestamp: currentTime
+            };
+
+            battleSocketClient.sendPlayerAttack(attackData);
         }
     
         // Play heavy attack animation (for both local and remote players)

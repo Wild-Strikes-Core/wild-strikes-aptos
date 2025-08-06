@@ -1,5 +1,3 @@
-
-
 export interface PlayerContext {
   socketId: string;
   position : {
@@ -26,9 +24,9 @@ export interface PlayerContext {
   | 'crouchWalking' | 'jumping' | 'dashing'
   | 'attackingLight' | 'attackingHeavy';
   playerStats: {
-    health?: number;
-    damagePercentage?: number;
-    lives?: number;
+    health: number;
+    damagePercentage: number;
+    lives: number;
   }
   isAlive?: boolean;
   sequenceNumber?: number;
@@ -36,13 +34,18 @@ export interface PlayerContext {
 }
 
 
-// export interface BattleConfig {
-//   mapConfig?: any;
-//   localPlayerData: string[];
-//   opponentData: string[];
-//   localPlayerId: string;
-//   opponentId: string;
-//   localSpawnPosition: { x: number; y: number };
-//   opponentSpawnPosition: { x: number; y: number };
-//   roomId: string;
-// }
+export interface AttackData {
+  playerId: string;
+  attackType: 'light' | 'heavy';
+  facing: 'left' | 'right';
+  damage: number;
+  knockback: {
+      force: number; 
+      angle: number; 
+  };
+  position: {
+      x: number;
+      y: number;
+  };
+  timestamp: number; 
+}

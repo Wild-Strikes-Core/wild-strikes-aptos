@@ -2,6 +2,22 @@ import { PlayerState } from "./PlayerState";
 import { PlayerStates } from "./PlayerStates";
 import { battleSocketClient } from "../../../../../../../shared-utils/BattleSocketClient";
 
+interface AttackData {
+    playerId: string;
+    attackType: 'light' | 'heavy';
+    facing: 'left' | 'right';
+    damage: number;
+    knockback: {
+        force: number;
+        angle: number;
+    };
+    position: {
+        x: number;
+        y: number;
+    };
+    timestamp: number;
+}
+
 export class AttackingLightState extends PlayerState {
     private attackCooldown: number = 300;
     private lastAttackTime: number = 0;
@@ -26,20 +42,31 @@ export class AttackingLightState extends PlayerState {
             const hitboxManager = this.playerManager.getAttackHitboxManager();
             if (hitboxManager) {
                 const hitbox = hitboxManager.createLightAttackHitbox();
-                console.log(`[LIGHT ATTACK] Created visual hitbox:`, hitbox);
+                const debugInfo = hitboxManager.getCollisionDebugInfo();
+                console.log(`[LIGHT ATTACK] Created visual hitbox:`, {
+                    hitbox,
+                    collisionDebug: debugInfo
+                });
             }
 
             // Send attack event to server
-            const body = player.body as Phaser.Physics.Arcade.Body;
-            battleSocketClient.emit('player-attack', {
-                type: 'light',
-                damage: 15,
-                range: 80,
-                position: { x: player.x, y: player.y },
-                animation: 'light-attack',
-                knockbackForce: 50,  // Base knockback force
-                knockbackAngle: 45   // Knockback angle in degrees
-            });
+            const attackData: AttackData = {
+                playerId: (player.getData('id') as string),
+                attackType: 'light',
+                facing: player.flipX ? 'left' : 'right',
+                damage: 10,
+                knockback: {
+                    force: 5,
+                    angle: player.flipX ? 180 : 0
+                },
+                position: {
+                    x: player.x,
+                    y: player.y
+                },
+                timestamp: currentTime
+            };
+
+            battleSocketClient.sendPlayerAttack(attackData);
         }
     
         // Play light attack animation (for both local and remote players)
