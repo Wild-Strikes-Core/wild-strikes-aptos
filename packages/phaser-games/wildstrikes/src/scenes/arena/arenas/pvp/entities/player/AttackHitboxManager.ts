@@ -14,9 +14,13 @@ export class AttackHitboxManager {
     private debugMode: boolean = true;
     private networkManager: any;
 
-    constructor(scene: Phaser.Scene, player: Phaser.Physics.Arcade.Sprite) {
+    // Add this property
+    private singlePlayerMode: boolean = false;
+
+    constructor(scene: Phaser.Scene, player: Phaser.Physics.Arcade.Sprite, singlePlayerMode: boolean = false) {
         this.scene = scene;
         this.player = player;
+        this.singlePlayerMode = singlePlayerMode;
         
         // Create a physics group for hitboxes
         this.hitboxGroup = this.scene.physics.add.group();
@@ -402,6 +406,79 @@ export class AttackHitboxManager {
     // Add to constructor or create a setter method
     public setNetworkManager(networkManager: any): void {
         this.networkManager = networkManager;
+    }
+
+    /**
+     * Create a local hitbox in single player mode
+     */
+    createLocalAttackHitbox(attackType: 'light' | 'heavy'): void {
+        if (!this.player) return;
+        
+        // Only run in single player mode or when explicitly needed
+        const facing = this.player.flipX ? 'left' : 'right';
+        
+        // Create hitbox data based on attack type
+        const hitboxData: HitboxData = attackType === 'light' ? {
+            id: `local_light_${Date.now()}`,
+            type: 'light',
+            damage: 15,
+            knockbackForce: 200,
+            knockbackAngle: 45,
+            width: 80, 
+            height: 60,
+            duration: 200,
+            offsetX: facing === 'left' ? -75 : 75,
+            offsetY: -10,
+            color: 0xff4444,
+            alpha: 0.4
+        } : {
+            id: `local_heavy_${Date.now()}`,
+            type: 'heavy',
+            damage: 25,
+            knockbackForce: 400,
+            knockbackAngle: 60,
+            width: 150,
+            height: 80,
+            duration: 400,
+            offsetX: facing === 'left' ? -40 : 40,
+            offsetY: -20,
+            color: 0xff8800,
+            alpha: 0.5
+        };
+
+        // Calculate world position
+        const worldX = this.player.x + hitboxData.offsetX;
+        const worldY = this.player.y + hitboxData.offsetY;
+        
+        // Create hitbox sprite
+        const hitboxSprite = this.scene.physics.add.sprite(worldX, worldY, '__DEFAULT');
+        hitboxSprite.setVisible(false); // Physics body only
+        hitboxSprite.setSize(hitboxData.width, hitboxData.height);
+        hitboxSprite.setDisplaySize(hitboxData.width, hitboxData.height);
+        
+        // Create hitbox object
+        const hitbox: AttackHitbox = {
+            ...hitboxData,
+            body: hitboxSprite,
+            startTime: this.scene.time.now,
+            isActive: true,
+            worldX: worldX,
+            worldY: worldY
+        };
+        
+        // Add to group and store in active hitboxes
+        this.hitboxGroup.add(hitboxSprite);
+        this.activeHitboxes.set(hitboxData.id, hitbox);
+        
+        // Draw the hitbox
+        this.drawHitbox(hitbox);
+        
+        // Schedule cleanup
+        this.scene.time.delayedCall(hitboxData.duration, () => {
+            this.removeHitbox(hitboxData.id);
+        });
+        
+        console.log(`[HITBOX] Created local ${attackType} attack hitbox at (${worldX}, ${worldY})`);
     }
 }
 

@@ -22,11 +22,12 @@ export class PlayerManager {
     private scene: Phaser.Scene;
     private player: Phaser.Physics.Arcade.Sprite | null = null;
     private enabledInput: boolean = true;
+    private singlePlayerMode: boolean = false; // Add this flag
 
     // Component managers
     private spriteManager: PlayerSpriteManager;
     private inputManager: InputManager;
-    private networkManager: NetworkManager;
+    private networkManager: NetworkManager | null = null; // Make this optional
     private remoteAnimationManager: RemoteAnimationManager | null = null;
     private attackHitboxManager: AttackHitboxManager | null = null;
     private statsUI: PlayerStatsUI | null = null;
@@ -44,21 +45,32 @@ export class PlayerManager {
     private lastUIUpdate: number = 0;
     private readonly UI_UPDATE_RATE = 100;
 
-    constructor(scene: Phaser.Scene, isInputEnabled: boolean = true, roomId: string, playerId: string = '') {
+    constructor(
+        scene: Phaser.Scene, 
+        isInputEnabled: boolean = true, 
+        roomId: string = 'offline', 
+        playerId: string = 'local-player',
+        singlePlayerMode: boolean = false
+    ) {
         this.scene = scene;
         this.enabledInput = isInputEnabled;
         this.roomId = roomId;
         this.playerId = playerId;
+        this.singlePlayerMode = singlePlayerMode;
         
         // Initialize components
         this.spriteManager = new PlayerSpriteManager(scene);
         this.inputManager = new InputManager(scene, isInputEnabled);
-        this.networkManager = new NetworkManager(playerId, roomId);
+        
+        // Only create network manager if not in single player mode
+        if (!this.singlePlayerMode) {
+            this.networkManager = new NetworkManager(playerId, roomId);
+        }
         
         this.initializeStates();
         this.currentState = this.states.get(PlayerStates.Idle)!;
         
-        if (this.enabledInput) {
+        if (this.enabledInput && !this.singlePlayerMode) {
             this.setupServerEventListeners();
         }
     }
@@ -78,14 +90,15 @@ export class PlayerManager {
 
     private setupServerEventListeners(): void {
         if (!this.networkManager) {
-            setTimeout(() => this.setupServerEventListeners(), 100);
-            return;
+            return; // Skip if no network manager
         }
         console.log('[PLAYER MANAGER] 🎯 Client-side prediction reconciliation ENABLED');
     }
 
     public setNetworkManager(networkHandler: any): void {
-        this.networkManager.setNetworkHandler(networkHandler);
+        if (this.singlePlayerMode) return; // Skip in single player mode
+        
+        this.networkManager?.setNetworkHandler(networkHandler);
         if (this.enabledInput) {
             this.setupServerEventListeners();
         }
@@ -95,8 +108,8 @@ export class PlayerManager {
         this.player = this.spriteManager.createPlayerSprite(x, y);
         this.player.setDepth(1);
         
-        // Initialize attack hitbox manager
-        this.attackHitboxManager = new AttackHitboxManager(this.scene, this.player);
+        // Initialize attack hitbox manager with single player mode
+        this.attackHitboxManager = new AttackHitboxManager(this.scene, this.player, this.singlePlayerMode);
         
         if (this.enabledInput) {
             this.player.setTint(0x00fffff);
@@ -136,20 +149,28 @@ export class PlayerManager {
         const inputs = this.inputManager.captureInputs();
         if (!inputs) return;
 
-        this.sendNetworkUpdates(inputs);
+        // Only send network updates if not in single player mode
+        if (!this.singlePlayerMode && this.networkManager) {
+            this.sendNetworkUpdates(inputs);
+        }
+        
         this.inputManager.resetJustPressedFlags();
         
-        // Apply input locally for client-side prediction
+        // Apply input locally
         if (this.currentState && 'handleInput' in this.currentState) {
             (this.currentState as any).handleInput(inputs);
         }
 
-        // Send state updates if changed and clean up predictions
-        this.sendStateUpdatesIfChanged();
-        this.networkManager.cleanupOldPredictions();
+        // Only send state updates if not in single player mode
+        if (!this.singlePlayerMode && this.networkManager) {
+            this.sendStateUpdatesIfChanged();
+            this.networkManager.cleanupOldPredictions();
+        }
     }
 
     private sendNetworkUpdates(inputs: any): void {
+        if (this.singlePlayerMode || !this.networkManager) return;
+        
         const now = Date.now();
         if (!this.networkManager.shouldSendUpdate(now)) return;
 
@@ -171,6 +192,8 @@ export class PlayerManager {
     }
 
     private sendStateUpdatesIfChanged(): void {
+        if (this.singlePlayerMode || !this.networkManager) return;
+        
         const currentStateString = this.mapPhaserStateToPlayerState(this.currentState);
         const now = Date.now();
         
@@ -237,8 +260,8 @@ export class PlayerManager {
     private forceStateUpdate(newStateName: string): void {
         const now = Date.now();
         
-        if (!this.networkManager.shouldSendUpdate(now)) {
-            setTimeout(() => this.forceStateUpdate(newStateName), this.networkManager.getInputRateLimit());
+        if (!this.networkManager?.shouldSendUpdate(now)) {
+            setTimeout(() => this.forceStateUpdate(newStateName), this.networkManager?.getInputRateLimit() || 100);
             return;
         }
         
@@ -278,9 +301,9 @@ export class PlayerManager {
 
     // Network reconciliation
     public reconcileWithServer(serverPlayerContext: any): void {
-        if (!this.enabledInput) return;
+        if (this.singlePlayerMode) return;
         
-        this.networkManager.reconcileWithServer(
+        this.networkManager?.reconcileWithServer(
             serverPlayerContext,
             this.player!,
             (state: string) => this.applyServerState(state)

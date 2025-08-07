@@ -27,7 +27,7 @@ export class AttackingHeavyState extends PlayerState {
         const player = this.getPlayer();
         
         if (!player) return;
-    
+
         // Check attack cooldown (only for local players)
         if (this.isInputEnabled()) {
             const currentTime = this.getScene().time.now;
@@ -37,37 +37,50 @@ export class AttackingHeavyState extends PlayerState {
                 return;
             }
             this.lastAttackTime = currentTime;
-    
 
-            // Send attack event to server
+            // Check if we're in single player mode (access via playerManager)
+            const isSinglePlayer = (this.playerManager as any).singlePlayerMode;
             
-            const attackData: AttackData = {
-                playerId: (player.getData('id') as string),
-                attackType: 'heavy',
-                facing: player.flipX ? 'left' : 'right',
-                damage: 20,
-                knockback: {
-                    force: 40,
-                    angle: player.flipX ? 180 : 0
-                },
-                position: {
-                    x: player.x,
-                    y: player.y
-                },
-                timestamp: currentTime
-            };
-
-            battleSocketClient.sendPlayerAttack(attackData);
+            if (!isSinglePlayer) {
+                // Send attack event to server only in network mode
+                const attackData: AttackData = {
+                    playerId: (player.getData('id') as string),
+                    attackType: 'heavy',
+                    facing: player.flipX ? 'left' : 'right',
+                    damage: 20,
+                    knockback: {
+                        force: 40,
+                        angle: player.flipX ? 180 : 0
+                    },
+                    position: {
+                        x: player.x,
+                        y: player.y
+                    },
+                    timestamp: currentTime
+                };
+                
+                try {
+                    battleSocketClient.sendPlayerAttack(attackData);
+                } catch (error) {
+                    console.warn('Failed to send attack to server:', error);
+                }
+            } else {
+                // In single player mode, create hitbox directly
+                const hitboxManager = this.playerManager.getAttackHitboxManager();
+                if (hitboxManager) {
+                    hitboxManager.createLocalAttackHitbox('heavy');
+                }
+            }
         }
-    
+
         // Play heavy attack animation (for both local and remote players)
         this.getSpriteManager().playAttack2Animation(player);
-    
+
         // Set up animation complete callback
         this.getSpriteManager().setHeavyAttackCompleteCallback(() => {
             this.onAttackComplete();
         });
-    
+
         console.log('Heavy attack executed');
     }
 

@@ -27,7 +27,7 @@ export class AttackingLightState extends PlayerState {
         const player = this.getPlayer();
         
         if (!player) return;
-    
+
         // Check attack cooldown (only for local players)
         if (this.isInputEnabled()) {
             const currentTime = this.getScene().time.now;
@@ -37,25 +37,40 @@ export class AttackingLightState extends PlayerState {
                 return;
             }
             this.lastAttackTime = currentTime;
-    
-            // Send attack event to server
-            const attackData: AttackData = {
-                playerId: (player.getData('id') as string),
-                attackType: 'light',
-                facing: player.flipX ? 'left' : 'right',
-                damage: 10,
-                knockback: {
-                    force: 5,
-                    angle: player.flipX ? 180 : 0
-                },
-                position: {
-                    x: player.x,
-                    y: player.y
-                },
-                timestamp: currentTime
-            };
 
-            battleSocketClient.sendPlayerAttack(attackData);
+            // Check if we're in single player mode (access via playerManager)
+            const isSinglePlayer = (this.playerManager as any).singlePlayerMode;
+            
+            if (!isSinglePlayer) {
+                // Send attack event to server only in network mode
+                const attackData: AttackData = {
+                    playerId: (player.getData('id') as string),
+                    attackType: 'light',
+                    facing: player.flipX ? 'left' : 'right',
+                    damage: 10,
+                    knockback: {
+                        force: 5,
+                        angle: player.flipX ? 180 : 0
+                    },
+                    position: {
+                        x: player.x,
+                        y: player.y
+                    },
+                    timestamp: currentTime
+                };
+                
+                try {
+                    battleSocketClient.sendPlayerAttack(attackData);
+                } catch (error) {
+                    console.warn('Failed to send attack to server:', error);
+                }
+            } else {
+                // In single player mode, create hitbox directly
+                const hitboxManager = this.playerManager.getAttackHitboxManager();
+                if (hitboxManager) {
+                    hitboxManager.createLocalAttackHitbox('light');
+                }
+            }
         }
     
         // Play light attack animation (for both local and remote players)
