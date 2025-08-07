@@ -23,6 +23,8 @@ export class JumpingState extends PlayerState {
                 this.getSpriteManager().playFallAnimation(player);
             }
         }
+
+        this.getScene().sound.play('player-jump', { volume: 0.5 });
     }
 
     update(): void {

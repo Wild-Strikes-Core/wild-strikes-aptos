@@ -82,6 +82,8 @@ export class AttackingLightState extends PlayerState {
         });
     
         console.log('Light attack executed');
+
+        this.getScene().sound.play('player-attack', { volume: 0.5 });
     }
 
     update(): void {

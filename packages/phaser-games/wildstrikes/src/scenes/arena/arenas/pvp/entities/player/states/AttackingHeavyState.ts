@@ -82,6 +82,8 @@ export class AttackingHeavyState extends PlayerState {
         });
 
         console.log('Heavy attack executed');
+
+        this.getScene().sound.play('player-attack', { volume: 0.5 });
     }
 
     update(): void {

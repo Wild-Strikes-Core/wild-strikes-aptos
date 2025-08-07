@@ -402,9 +402,7 @@ export class PlayerSpriteManager {
         }
     }
 
-    public playJumpingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
-        this.playAnimationWithReset(sprite, 'player_jump', 'jumping');
-    }
+
 
     public playAttackingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
         this.playAnimationWithReset(sprite, 'player_attack_light', 'attacking', {
@@ -422,6 +420,10 @@ export class PlayerSpriteManager {
 
     public playDashingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
         this.playAnimationWithReset(sprite, 'player_dash', 'dashing');
+    }
+
+    public playJumpingAnimation(sprite: Phaser.Physics.Arcade.Sprite): void {
+        this.playAnimationWithReset(sprite, 'player_jump', 'jumping');
     }
 
     public playAttack2Animation(sprite: Phaser.Physics.Arcade.Sprite): void {

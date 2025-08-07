@@ -251,6 +251,7 @@ export class PlayerManager {
             this.currentState = newState;
             this.currentState.enter();
             
+
             if (this.enabledInput) {
                 this.forceStateUpdate(newStateName);
             }

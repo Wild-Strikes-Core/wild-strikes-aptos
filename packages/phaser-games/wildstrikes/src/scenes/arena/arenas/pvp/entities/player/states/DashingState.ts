@@ -31,6 +31,8 @@ export class DashingState extends PlayerState {
         this.getScene().time.delayedCall(this.dashDuration, () => {
             this.exitDash();
         });
+
+        this.getScene().sound.play('player-dash', { volume: 0.5 });
     }
 
     update(): void {

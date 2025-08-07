@@ -16,6 +16,8 @@ export class HitState extends PlayerState {
         this.hitStartTime = this.playerManager.getScene().time.now;
         
         console.log("[PLAYER STATE] Entered Hit state");
+
+        this.playerManager.getScene().sound.play('player-hit', { volume: 0.5 });
     }
 
     update(): void {

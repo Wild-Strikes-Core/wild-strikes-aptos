@@ -19,6 +19,7 @@ export class SprintingState extends PlayerState {
         
         if (!player) return;
 
+        
         // Only handle input and movement for local players
         if (!this.isInputEnabled()) {
             // For remote players, just ensure the animation is playing
@@ -64,6 +65,28 @@ export class SprintingState extends PlayerState {
             this.playerManager.transitionTo(PlayerStates.Dashing);
         } else if (!isOnGround) {
             this.playerManager.transitionTo(PlayerStates.Jumping);
+        }
+
+        // Removed repeated sprint sound playback to prevent overlapping audio issues
+        if (isMoving) {
+            this.getSpriteManager().playSprintingAnimation(player);
+
+            // Play footstep sound only on specific animation frame
+            if (!(player as any).hasFootstepListener) {
+                player.on('animationupdate-player_run', (anim: any, frame: any) => {
+                    // Play sound on frames where foot touches ground (e.g., frame.index === 2 or 5)
+                    if (frame.index === 2 || frame.index === 5) {
+                        this.getScene().sound.play('player-sprint', { volume: 0.5 });
+                    }
+                });
+                (player as any).hasFootstepListener = true;
+            }
+        } else {
+            // Remove listener when not moving
+            if ((player as any).hasFootstepListener) {
+                player.off('animationupdate-player_run');
+                (player as any).hasFootstepListener = false;
+            }
         }
     }
 
