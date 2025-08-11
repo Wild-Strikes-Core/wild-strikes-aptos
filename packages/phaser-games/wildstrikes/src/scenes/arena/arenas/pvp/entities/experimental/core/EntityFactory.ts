@@ -1,11 +1,14 @@
 import { PlayerEntity } from '../playerEntity';
-// import { RocketEntity } from './RocketEntity';
-
 
 export class EntityFactory {
-    static createPlayer(id: string, scene: Phaser.Scene, x: number, y: number): PlayerEntity {
-        const sprite = scene.physics.add.sprite(x, y, 'playerSprite'); // Replace 'playerSprite' with actual sprite key
-        return new PlayerEntity(id, scene, sprite);
-    }
-
+  static createPlayer(
+    id: string,
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    options?: { inputEnabled?: boolean; singlePlayerMode?: boolean; playerId?: string; roomId?: string; followCamera?: boolean }
+  ): PlayerEntity {
+    const sprite = scene.physics.add.sprite(x, y, '_Idle') as Phaser.Physics.Arcade.Sprite;
+    return new PlayerEntity(id, scene, sprite, options);
+  }
 }

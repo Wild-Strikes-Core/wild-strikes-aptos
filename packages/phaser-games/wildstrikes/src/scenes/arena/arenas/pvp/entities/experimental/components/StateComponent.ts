@@ -1,40 +1,91 @@
+import { EntityComponent } from './EntityComponent';
 import { GameEntity } from '../core/GameEntity';
+import { InputComponent } from './InputComponent';
+import { SpriteComponent } from './SpriteComponent';
+import { HitboxComponent } from './HitboxComponent';
+import { MovementComponent } from './MovementComponent';
+import { NetworkComponent } from './NetworkComponent';
 
-export interface IEntityState {
-    enter(): void;
-    update(): void;
-    exit(): void;
-}
+export interface IEntityState { enter(): void; update(): void; exit(): void; }
 
-export class StateComponent {
-    private entity: GameEntity;
-    private states: Map<string, IEntityState>;
-    private currentState: IEntityState | null = null;
+export type StateDeps = {
+  entity: GameEntity;
+  input: InputComponent;
+  sprite: SpriteComponent;
+  hitbox: HitboxComponent;
+  movement: MovementComponent;
+  network?: NetworkComponent | null;
+  inputEnabled: boolean;
+  singlePlayerMode: boolean;
+};
 
-    constructor(entity: GameEntity, states: Map<string, IEntityState>, initialState: string) {
-        this.entity = entity;
-        this.states = states;
-        this.transitionTo(initialState);
+export type StateFactory = (deps: StateDeps, goto: (key: string) => void) => IEntityState;
+
+export class StateComponent implements EntityComponent {
+  private deps: StateDeps;
+  private factories = new Map<string, StateFactory>();
+  private instances = new Map<string, IEntityState>();
+  private currentKey: string;
+  private current: IEntityState;
+
+  constructor(
+    private entity: GameEntity,
+    options: {
+      inputEnabled: boolean;
+      singlePlayerMode: boolean;
+      states: Record<string, StateFactory>;
+      initial?: string;
     }
+  ) {
+    const input = entity.getComponent<InputComponent>('input')!;
+    const sprite = entity.getComponent<SpriteComponent>('sprite')!;
+    const hitbox = entity.getComponent<HitboxComponent>('hitbox')!;
+    const movement = entity.getComponent<MovementComponent>('movement')!;
+    const network = entity.getComponent<NetworkComponent>('network');
 
-    transitionTo(stateName: string) {
-        if (this.currentState) {
-            this.currentState.exit();
+    this.deps = { entity, input, sprite, hitbox, movement, network, inputEnabled: options.inputEnabled, singlePlayerMode: options.singlePlayerMode };
+
+    Object.entries(options.states).forEach(([k, f]) => this.factories.set(k, f));
+    this.currentKey = options.initial || 'idle';
+    this.current = this.getOrCreate(this.currentKey);
+    this.current.enter();
+  }
+
+  private getOrCreate(key: string): IEntityState {
+    const existing = this.instances.get(key);
+    if (existing) return existing;
+    const factory = this.factories.get(key);
+    if (!factory) throw new Error(`State '${key}' not registered`);
+    const inst = factory(this.deps, this.transitionTo.bind(this));
+    this.instances.set(key, inst);
+    return inst;
+  }
+
+  transitionTo(key: string): void {
+    if (key === this.currentKey) return;
+    const next = this.getOrCreate(key);
+    this.current.exit();
+    this.current = next;
+    this.currentKey = key;
+    this.current.enter();
+  }
+
+  getStateKey(): string { return this.currentKey; }
+
+  update(): void {
+    this.current.update();
+
+    // Always capture + reset after state update so per-state logic can read one-shot inputs first
+    if (this.deps.inputEnabled) {
+      const inputs = this.deps.input.capture();
+      if (inputs) {
+        if (this.deps.network) {
+          this.deps.network.sendPlayerMoved(inputs, this.currentKey, 'TICK');
         }
-        const newState = this.states.get(stateName);
-        if (newState) {
-            this.currentState = newState;
-            this.currentState.enter();
-        }
+        this.deps.input.resetJustPressed();
+      }
     }
+  }
 
-    update() {
-        if (this.currentState) {
-            this.currentState.update();
-        }
-    }
-
-    getCurrentState(): IEntityState | null {
-        return this.currentState;
-    }
+  destroy(): void { this.current.exit(); }
 }

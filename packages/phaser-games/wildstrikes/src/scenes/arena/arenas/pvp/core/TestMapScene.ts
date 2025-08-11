@@ -1,9 +1,11 @@
 import * as Phaser from 'phaser';
-import { PlayerManager } from "../entities/player/PlayerManager";
+import { EntityFactory } from "../entities/experimental/core/EntityFactory";
+import { PlayerEntity } from "../entities/experimental/playerEntity";
+
 import { AssetLoader } from "../../../../../AssetLoader";
 
 export class TestMapScene extends Phaser.Scene {
-    private playerManager: PlayerManager;
+    private player?: PlayerEntity;
 
     constructor() {
         super({ key: 'TestMapScene' });
@@ -32,7 +34,7 @@ export class TestMapScene extends Phaser.Scene {
     }
 
     update() {
-        this.playerManager?.update();
+        this.player?.update();
     }
 
     // --- Helper Methods ---
@@ -247,13 +249,14 @@ export class TestMapScene extends Phaser.Scene {
     }
 
     private setupPlayer(platformGroup: Phaser.Physics.Arcade.StaticGroup) {
-        this.playerManager = new PlayerManager(this, true, 'test-room', 'test-player', true);
-        const player = this.playerManager.createPlayer(600, 200);
-        player.setDepth(9999);
-        const camera = this.cameras.main;
-        camera.startFollow(player, true, 0.08, 0.08, -70, 180);
-        if (player) {
-            this.physics.add.collider(player, platformGroup);
-        }
+        this.player = EntityFactory.createPlayer('local-1', this, 600, 200, {
+            inputEnabled: true,
+            singlePlayerMode: true,
+            followCamera: false, // we’ll set custom offsets below
+        });
+        this.player.sprite.setDepth(9999);
+        this.physics.add.collider(this.player.sprite, platformGroup);
+        // Camera follow with offsets/lerp
+        this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08, -70, 180);
     }
 }

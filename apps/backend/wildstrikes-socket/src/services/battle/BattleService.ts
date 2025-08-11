@@ -15,6 +15,9 @@ export class BattleService {
     private battles: Map<string, BattleState> = new Map();
     private physicsIntervals: Map<string, NodeJS.Timeout> = new Map();
     private lastValidationTime: Map<string, number> = new Map();
+    // Toggle to bypass server validation and reconciliation. When true,
+    // the server accepts client positions/states as-is and only relays them.
+    private readonly clientAuthoritativeMode: boolean = true;
 
     constructor(private io: Server, private roomService: RoomService) {}
 
@@ -76,6 +79,27 @@ export class BattleService {
             ...this.serialize(state),
             mapConfig: mapConfig
         });
+
+        // Start a lightweight periodic broadcast loop to ensure all clients
+        // receive authoritative contexts even if input events are sparse.
+        // If an interval already exists for this room, clear it first.
+        const existingInterval = this.physicsIntervals.get(roomId);
+        if (existingInterval) {
+            clearInterval(existingInterval);
+            this.physicsIntervals.delete(roomId);
+        }
+
+        const interval = setInterval(() => {
+            const battle = this.battles.get(roomId);
+            if (!battle || battle.gameState !== 'active') {
+                clearInterval(interval);
+                this.physicsIntervals.delete(roomId);
+                return;
+            }
+            this.broadcastPlayerContexts(roomId);
+        }, 50); // ~20Hz
+
+        this.physicsIntervals.set(roomId, interval);
     }
 
     getBattleState(roomId: string): BattleState | undefined {
@@ -100,6 +124,21 @@ export class BattleService {
 
         const oldTimestamp = player.timestamp || Date.now();
         const newTimestamp = playerContext.timestamp || Date.now();
+
+        // In client-authoritative mode, trust the client's context directly and broadcast.
+        if (this.clientAuthoritativeMode) {
+            if (playerContext.position) {
+                player.position = { ...player.position, ...playerContext.position } as any;
+            }
+            if (playerContext.velocityX !== undefined) player.velocityX = playerContext.velocityX;
+            if (playerContext.velocityY !== undefined) player.velocityY = playerContext.velocityY;
+            if (playerContext.inputs) player.inputs = playerContext.inputs;
+            if (playerContext.state) player.state = playerContext.state;
+            player.sequenceNumber = playerContext.sequenceNumber || player.sequenceNumber || 0;
+            player.timestamp = newTimestamp;
+            this.broadcastPlayerContexts(roomId);
+            return;
+        }
 
         // Server-side validation of input
         // For now, we'll accept all inputs but log them for debugging
@@ -149,17 +188,17 @@ export class BattleService {
         // Now update the timestamp after position validation
         player.timestamp = newTimestamp;
 
-        // Update velocity if provided
+        // Update state first so velocity validation uses the latest state
+        if (playerContext.state) {
+            player.state = playerContext.state;
+        }
+
+        // Update velocity if provided, capping sprint speed only when sprinting
         if (playerContext.velocityX !== undefined) {
             player.velocityX = this.validateSprintingSpeed(playerContext.velocityX, player.state);
         }
         if (playerContext.velocityY !== undefined) {
             player.velocityY = playerContext.velocityY;
-        }
-
-        // Update state if provided
-        if (playerContext.state) {
-            player.state = playerContext.state;
         }
 
         // Broadcast validated player contexts to all clients in the room

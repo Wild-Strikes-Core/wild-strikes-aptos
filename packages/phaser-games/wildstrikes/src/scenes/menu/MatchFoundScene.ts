@@ -222,7 +222,7 @@ export default class MatchFound extends Phaser.Scene {
         this.cameras.main.once("cameraflashcomplete", () => {
             this.cameras.main.fadeOut(400);
             this.cameras.main.once("camerafadeoutcomplete", () => {
-                this.scene.start('Arena', {
+                this.scene.start('TestMapSceneMultiplayer', {
                     mapConfig: this.mapConfig,
                     yourData: this.yourData,
                     opponentData: this.opponentData,
