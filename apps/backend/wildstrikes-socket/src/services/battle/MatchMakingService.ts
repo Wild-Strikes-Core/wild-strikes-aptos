@@ -72,11 +72,11 @@ export class MatchmakingService {
                 players: [
                     {
                         socketId: p1Id,
-                        spawnPosition: mapConfig?.spawnPoints.player1 || { x: 100, y: 300 }
+                        spawnPosition: mapConfig?.mapSpawnPoints.player1 || { x: 100, y: 300 }
                     },
                     {
                         socketId: p2Id,
-                        spawnPosition: mapConfig?.spawnPoints.player2 || { x: 700, y: 300 }
+                        spawnPosition: mapConfig?.mapSpawnPoints.player2 || { x: 700, y: 300 }
                     }
                 ]
             };
@@ -87,11 +87,11 @@ export class MatchmakingService {
                 players: [
                     {
                         socketId: p2Id,
-                        spawnPosition: mapConfig?.spawnPoints.player2 || { x: 700, y: 300 }
+                        spawnPosition: mapConfig?.mapSpawnPoints.player2 || { x: 700, y: 300 }
                     },
                     {
                         socketId: p1Id,
-                        spawnPosition: mapConfig?.spawnPoints.player1 || { x: 100, y: 300 }
+                        spawnPosition: mapConfig?.mapSpawnPoints.player1 || { x: 100, y: 300 }
                     }
                 ]
             };

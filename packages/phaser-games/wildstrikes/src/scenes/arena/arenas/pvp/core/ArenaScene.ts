@@ -18,6 +18,7 @@ export class ArenaScene extends Phaser.Scene {
   private battleConfig: BattleConfig;
   private lastKnownStats: Record<string, { damagePercentage: number; lives: number }> = {};
   private overlayManager?: PlayerOverlayManager;
+  private currentBgmKey?: string;
 
   constructor() {
     super({ key: 'Arena' });
@@ -57,21 +58,33 @@ export class ArenaScene extends Phaser.Scene {
     loader.loadGroup('gameplay');
     loader.loadGroup('gameplay-audio');
     loader.loadGroup('chars');
-    if (this.battleConfig?.mapConfig?.tiledKey) {
-      this.load.tilemapTiledJSON('test-map', this.battleConfig.mapConfig.tiledKey);
-    } else {
-      this.load.tilemapTiledJSON('test-map', '/arena-maps/PH/test-map.json');
+    const cfg = this.battleConfig?.mapConfig;
+    this.load.tilemapTiledJSON(cfg.mapKey, cfg.mapLocation);
+
+    // Preload map-specific background music if provided and not already loaded
+    const bgm = cfg?.mapBackgroundMusic as string | undefined;
+    if (bgm) {
+      const bgmKey = this.deriveAudioKey(bgm);
+      if (!this.cache.audio.exists(bgmKey)) {
+        this.load.audio(bgmKey, bgm);
+      }
     }
   }
 
   create() {
-    const map = this.make.tilemap({ key: 'test-map' });
+    const cfg = this.battleConfig?.mapConfig;
+    const activeMapKey = cfg?.mapKey || 'PH-map';
+    const map = this.make.tilemap({ key: activeMapKey });
     const tileset = this.textures.exists('world_tileset')
       ? map.addTilesetImage('world_tileset', 'world_tileset')
       : null;
-    const rawMapData = this.cache.tilemap.get('test-map');
+    const rawMapData = this.cache.tilemap.get(activeMapKey);
   
-    const renderer = new TiledMapRenderer(this, { baseImagePath: '/arena-maps/PH' });
+    // Derive base images folder from mapLocation (e.g., /arena-maps/PH/map.json -> /arena-maps/PH)
+    const baseImagePath = (cfg?.mapLocation && cfg.mapLocation.lastIndexOf('/') > -1)
+      ? cfg.mapLocation.substring(0, cfg.mapLocation.lastIndexOf('/'))
+      : '/arena-maps/PH';
+    const renderer = new TiledMapRenderer(this, { baseImagePath });
     const imagesToLoad = renderer.collectImages(rawMapData.data.layers);
   
     const finalize = () => {
@@ -89,6 +102,18 @@ export class ArenaScene extends Phaser.Scene {
     }
   
     this.setupNetworkListeners();
+
+    // Stop matchmaking music if still playing
+    try { this.sound.stopByKey('waiting-music'); } catch {}
+    // Play map-specific BGM if available
+    const bgm = cfg?.mapBackgroundMusic as string | undefined;
+    if (bgm) {
+      const bgmKey = this.deriveAudioKey(bgm);
+      if (this.cache.audio.exists(bgmKey)) {
+        this.sound.play(bgmKey, { loop: true, volume: 0.6 });
+        this.currentBgmKey = bgmKey;
+      }
+    }
   }
 
   update() {
@@ -97,123 +122,12 @@ export class ArenaScene extends Phaser.Scene {
     this.overlayManager?.update();
   }
 
-  private processLayer(
-    layer: any,
-    parentDepth: number,
-    map: Phaser.Tilemaps.Tilemap,
-    tileset: Phaser.Tilemaps.Tileset | null,
-    platformGroup: Phaser.Physics.Arcade.StaticGroup,
-    groupDepthOffset: number = 0,
-    parentScrollFactorX: number = 1,
-    parentScrollFactorY: number = 1
-  ) {
-    if (layer.type === 'tilelayer' && tileset) {
-      if (layer.compression && layer.compression !== 'none') return;
-      const tileLayer = map.createLayer(layer.name, tileset, 0, 0)?.setDepth(parentDepth + groupDepthOffset);
-      if (tileLayer) {
-        const scrollFactorX = layer.parallaxx !== undefined ? layer.parallaxx : parentScrollFactorX;
-        const scrollFactorY = layer.parallaxy !== undefined ? layer.parallaxy : parentScrollFactorY;
-        tileLayer.setScrollFactor(scrollFactorX, scrollFactorY);
-      }
+  shutdown() {
+    if (this.currentBgmKey) {
+      this.sound.stopByKey(this.currentBgmKey);
     }
-    else if (layer.type === 'group' && layer.layers) {
-      const groupScrollFactorX = layer.parallaxx !== undefined ? layer.parallaxx : parentScrollFactorX;
-      const groupScrollFactorY = layer.parallaxy !== undefined ? layer.parallaxy : parentScrollFactorY;
-      layer.layers.forEach((childLayer: any, index: number) => {
-        this.processLayer(
-          childLayer,
-          parentDepth,
-          map,
-          tileset,
-          platformGroup,
-          index * 0.1,
-          groupScrollFactorX,
-          groupScrollFactorY
-        );
-      });
-    }
-    else if (layer.type === 'imagelayer' && layer.image) {
-      const imageKey = layer.image.replace('.png', '');
-
-      // Repeat flags
-      const isRepeatingX = layer.repeatx === true || layer.repeatx === 'true' || layer.repeatx === 1;
-      const isRepeatingY = layer.repeaty === true || layer.repeaty === 'true' || layer.repeaty === 1;
-      const isRepeating = isRepeatingX || isRepeatingY;
-
-      const scrollFactorX = layer.parallaxx !== undefined ? layer.parallaxx : parentScrollFactorX;
-      const scrollFactorY = layer.parallaxy !== undefined ? layer.parallaxy : parentScrollFactorY;
-
-      let img: Phaser.GameObjects.Image | Phaser.GameObjects.TileSprite;
-      if (isRepeating) {
-        const tileWidth = isRepeatingX ? map.widthInPixels * 2 : layer.imagewidth;
-        const tileHeight = isRepeatingY ? map.heightInPixels * 2 : layer.imageheight;
-        img = this.add.tileSprite(
-          layer.offsetx || 0,
-          layer.offsety || 0,
-          tileWidth,
-          tileHeight,
-          imageKey
-        ).setOrigin(0, 0);
-      } else {
-        // Bounds check
-        const layerX = layer.offsetx || 0;
-        const layerY = layer.offsety || 0;
-        const layerWidth = layer.imagewidth || 0;
-        const layerHeight = layer.imageheight || 0;
-        const isWithinBounds = (
-          layerX < map.widthInPixels &&
-          layerX + layerWidth > 0 &&
-          layerY < map.heightInPixels &&
-          layerY + layerHeight > 0
-        );
-        if (!isWithinBounds) return;
-        img = this.add.image(layer.offsetx || 0, layer.offsety || 0, imageKey).setOrigin(0, 0);
-      }
-
-      img.setScrollFactor(scrollFactorX, scrollFactorY);
-      img.setDepth(parentDepth + groupDepthOffset);
-
-      // Platform physics from layer properties
-      if (layer.properties) {
-        for (const prop of layer.properties) {
-          if (prop.name === 'platform' && prop.value === true) {
-            const texture = this.textures.get(imageKey);
-            const imageWidth = texture.source[0].width;
-            const imageHeight = texture.source[0].height;
-
-            if (isRepeatingX) {
-              const numRepeats = Math.ceil(map.widthInPixels / imageWidth) + 2;
-              const startX = layer.offsetx || 0;
-              for (let i = 0; i < numRepeats; i++) {
-                const platformX = startX + i * imageWidth;
-                const platform = platformGroup.create(platformX, (img as any).y, imageKey)
-                  .setOrigin(0, 0)
-                  .setDisplaySize(imageWidth, imageHeight)
-                  .refreshBody();
-                platform.setVisible(false);
-              }
-            } else {
-              const platform = platformGroup.create((img as any).x, (img as any).y, imageKey)
-                .setOrigin(0, 0)
-                .setDisplaySize(imageWidth, imageHeight)
-                .refreshBody();
-              platform.setVisible(false);
-            }
-          }
-        }
-      }
-    }
-    else if (layer.type === 'objectgroup') {
-      layer.objects.forEach((obj: any) => {
-        if (obj.image) {
-          const objImageKey = obj.image.replace('.png', '');
-          this.add.image(obj.x, obj.y, objImageKey).setOrigin(0, 0);
-        } else {
-          this.add.rectangle(obj.x, obj.y, obj.width, obj.height, 0xff0000).setOrigin(0, 0);
-        }
-      });
-    }
-  }
+    this.currentBgmKey = undefined;
+}
 
   private setupPlayers() {
     if (!this.platformGroup) return;
@@ -531,6 +445,15 @@ export class ArenaScene extends Phaser.Scene {
     // Back to idle
     const stateComp = entity.getComponent<any>('state');
     try { stateComp?.transitionTo('idle'); } catch {}
+  }
+
+  // Helpers
+  private deriveAudioKey(pathOrKey: string): string {
+    if (!pathOrKey) return 'map-bgm';
+    if (!pathOrKey.includes('/')) return pathOrKey; // assume already a key
+    const last = pathOrKey.substring(pathOrKey.lastIndexOf('/') + 1);
+    const dot = last.lastIndexOf('.');
+    return dot > 0 ? last.substring(0, dot) : last;
   }
 }
 export default ArenaScene;

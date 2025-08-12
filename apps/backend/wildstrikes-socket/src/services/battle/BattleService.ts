@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { RoomService } from './RoomService';
+import type { WebMapConfig } from './maps';
 import { PlayerContext } from '../../models/battle/PlayerContext';
 import { AttackData } from '../../models/battle/AttackData';
 
@@ -26,7 +27,7 @@ export class BattleService {
         const currentTime = Date.now();
         
         // Get map configuration from room service
-        const mapConfig = this.roomService.getRoomMapConfig(roomId);
+        const mapConfig = this.roomService.getRoomMapConfig(roomId) as WebMapConfig | undefined;
         this.roomService.updateGameState(roomId, 'active');
 
         const state: BattleState = {
@@ -37,8 +38,8 @@ export class BattleService {
                 [p1]: { 
                     socketId: p1, 
                     position: { 
-                        x: mapConfig?.spawnPoints.player1.x || 0, 
-                        y: mapConfig?.spawnPoints.player1.y || 0, 
+                        x: mapConfig?.mapSpawnPoints.player1.x || 0, 
+                        y: mapConfig?.mapSpawnPoints.player1.y || 0, 
                         facing: 'right' 
                     },
                     animation: 'idle',
@@ -55,8 +56,8 @@ export class BattleService {
                 [p2]: { 
                     socketId: p2, 
                     position: { 
-                        x: mapConfig?.spawnPoints.player2.x || 0, 
-                        y: mapConfig?.spawnPoints.player2.y || 0, 
+                        x: mapConfig?.mapSpawnPoints.player2.x || 0, 
+                        y: mapConfig?.mapSpawnPoints.player2.y || 0, 
                         facing: 'right' 
                     },
                     animation: 'idle',
