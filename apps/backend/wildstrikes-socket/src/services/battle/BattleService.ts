@@ -112,7 +112,7 @@ export class BattleService {
         
         const battle = this.battles.get(roomId);
         if (!battle || battle.gameState !== 'active') {
-            console.log(`[BATTLE SERVICE] Battle not active for room ${roomId}`);
+            // Silently ignore inputs when battle is not active to avoid log spam after end
             return;
         }
 
@@ -323,6 +323,24 @@ export class BattleService {
         });
     }
 
+    // Respawn helper to reset a dead player with remaining lives
+    respawnPlayer(roomId: string, playerId: string, spawnPos?: {x: number, y: number}) {
+        const battle = this.battles.get(roomId);
+        if (!battle) return;
+        const player = battle.players[playerId];
+        if (!player) return;
+        if (player.isAlive === false && player.playerStats.lives > 0) {
+            // Reset player server-side
+            player.isAlive = true;
+            player.state = 'idle';
+            player.position.x = spawnPos?.x ?? player.position.x;
+            player.position.y = spawnPos?.y ?? player.position.y;
+            player.playerStats.damagePercentage = 0;
+            player.velocityX = 0; player.velocityY = 0;
+            this.broadcastPlayerContexts(roomId);
+        }
+    }
+
     // Handle player disconnect
     handlePlayerDisconnect(roomId: string, playerId: string) {
         const battle = this.battles.get(roomId);
@@ -377,6 +395,16 @@ export class BattleService {
             return;
         }
 
+        // Ignore attacks from or against dead players
+        if (attacker.isAlive === false || attacker.state === 'dead') {
+            // Attacker cannot attack while dead
+            return;
+        }
+        if (opponent.isAlive === false || opponent.state === 'dead') {
+            // Defender is dead or in respawn window; ignore
+            return;
+        }
+
         // ✅ Validate client's attack position against server position
         const positionValid = this.validateAttackPosition(attacker.position, attackData.position, attackData.timestamp);
         
@@ -398,7 +426,7 @@ export class BattleService {
 
         if (isHit) {
             // Apply damage using AttackData values
-            this.applyDamage(opponent, attackData);
+            const wasKnockout = this.applyDamage(roomId, opponent, attackData, attacker.socketId);
             console.log(`[BATTLE SERVICE] Player ${attacker.socketId} hit player ${opponent.socketId} for ${attackData.damage} damage.`);
             this.io.to(roomId).emit("server:attackHit", {
                 attackerId: playerId,
@@ -420,6 +448,10 @@ export class BattleService {
                 },
                 timestamp: Date.now()
             });
+            if (wasKnockout) {
+                // Match ended via knockout; event emitted in applyDamage
+                return;
+            }
         } else {
             console.log(`[BATTLE SERVICE] Player ${attacker.socketId} missed the attack on player ${opponent.socketId}.`);
             // ✅ Broadcast MISS with server-validated data
@@ -487,7 +519,7 @@ export class BattleService {
         return distance <= maxRange && verticalDistance <= VERTICAL_TOLERANCE;
     }
 
-    private applyDamage(defender: PlayerContext, attackData: AttackData): void {
+    private applyDamage(roomId: string, defender: PlayerContext, attackData: AttackData, attackerId?: string): boolean {
         // Add damage to damage percentage (this is our new health system)
         defender.playerStats.damagePercentage += attackData.damage;
         
@@ -500,13 +532,30 @@ export class BattleService {
         if (defender.playerStats.damagePercentage >= 100) {
             defender.playerStats.lives -= 1;
             defender.playerStats.damagePercentage = 0; // Reset damage percentage
+            defender.state = 'dead';
             console.log(`[BATTLE SERVICE] Player ${defender.socketId} has lost a life. Remaining lives: ${defender.playerStats.lives}`);
+            // Broadcast death state immediately so all clients show death anim and disable hits
+            this.broadcastPlayerContexts(roomId);
 
             if (defender.playerStats.lives <= 0) {
                 defender.isAlive = false;
                 console.log(`[BATTLE SERVICE] Player ${defender.socketId} has been knocked out.`);
+                // Declare winner and end battle
+                const winnerId = attackerId || Object.keys(this.battles.get(roomId)?.players || {}).find(id => id !== defender.socketId);
+                if (winnerId) {
+                    this.endBattle(roomId, winnerId, defender.socketId, 'ko');
+                }
+                return true;
+            } else {
+                // Schedule server-authoritative respawn with short delay
+                setTimeout(() => {
+                    try {
+                        this.respawnPlayer(roomId, defender.socketId);
+                    } catch {}
+                }, 1200);
             }
         }
+        return false;
     }
 
     private serialize(battle: BattleState) {
@@ -526,5 +575,38 @@ export class BattleService {
                 }
             })),
         };
+    }
+
+    private endBattle(roomId: string, winnerId: string, loserId: string, reason: 'ko' | 'opponent-disconnected' | 'timeout' = 'ko') {
+        const battle = this.battles.get(roomId);
+        if (!battle) return;
+        battle.gameState = 'ended';
+        battle.winner = winnerId;
+        // Clear interval
+        const interval = this.physicsIntervals.get(roomId);
+        if (interval) { clearInterval(interval); this.physicsIntervals.delete(roomId); }
+        // Notify clients with final result
+        this.io.to(roomId).emit('server:battleEnd', {
+            roomId,
+            reason,
+            winnerId,
+            loserId,
+            finalState: this.serialize(battle),
+            timestamp: Date.now()
+        });
+
+        // Schedule cleanup of battle state to avoid lingering rooms
+        setTimeout(() => {
+            this.battles.delete(roomId);
+            // Also clean Socket.IO room membership to avoid stale joins
+            try {
+                const sockets = this.io.sockets.adapter.rooms.get(roomId);
+                if (sockets) {
+                    for (const socketId of sockets) {
+                        this.io.sockets.sockets.get(socketId)?.leave(roomId);
+                    }
+                }
+            } catch {}
+        }, 2000);
     }
 }

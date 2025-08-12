@@ -8,3 +8,5 @@ export { JumpingState } from "./JumpingState";
 export { DashingState } from "./DashingState";
 export { AttackingLightState } from "./AttackingLightState";
 export { AttackingHeavyState } from "./AttackingHeavyState";
+export { HitState } from './HitState';
+export { DeadState } from './DeadState';

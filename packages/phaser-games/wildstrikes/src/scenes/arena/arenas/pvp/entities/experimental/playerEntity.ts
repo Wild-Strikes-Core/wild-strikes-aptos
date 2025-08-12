@@ -16,6 +16,8 @@ import { AttackingLightState } from './states/player/AttackingLightState';
 import { AttackingHeavyState } from './states/player/AttackingHeavyState';
 import { CrouchingState } from './states/player/CrouchingState';
 import { CrouchWalkingState } from './states/player/CrouchWalkingState';
+import { HitState } from './states/player/HitState';
+import { DeadState } from './states/player/DeadState';
 
 export class PlayerEntity extends GameEntity {
   constructor(
@@ -59,6 +61,8 @@ export class PlayerEntity extends GameEntity {
       attackingHeavy: (deps: any, goto: any) => new AttackingHeavyState(deps, goto),
       crouching: (deps: any, goto: any) => new CrouchingState(deps, goto),
       crouchWalking: (deps: any, goto: any) => new CrouchWalkingState(deps, goto),
+      hit: (deps: any, goto: any) => new HitState(deps, goto),
+      dead: (deps: any, goto: any) => new DeadState(deps, goto),
     };
 
     this.addComponent('state', new StateComponent(this, { inputEnabled, singlePlayerMode, states, initial: 'idle' }));

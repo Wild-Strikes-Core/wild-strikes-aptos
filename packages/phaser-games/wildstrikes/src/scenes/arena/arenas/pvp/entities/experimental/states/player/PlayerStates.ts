@@ -8,4 +8,5 @@ export enum PlayerStates {
     AttackingLight = 'attackingLight',
     AttackingHeavy = 'attackingHeavy',
     Hit = 'hit',
+    Dead = 'dead',
 }

@@ -37,6 +37,12 @@ export class MatchmakingService {
         this.roomService.leaveRoom(socketId);
     }
 
+    // Called when a battle ends to clear match mapping for both players
+    clearMatch(p1: string, p2: string) {
+        delete this.matches[p1];
+        delete this.matches[p2];
+    }
+
     private attemptMatch() {
         // Check if there are at least 2 players in queue
         const entries = Array.from(this.queue.entries());

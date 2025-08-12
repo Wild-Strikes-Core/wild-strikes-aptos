@@ -100,6 +100,14 @@ export class BattleNetworkManager {
                 this.onAttackMissedCallback(data);
             }
         });
+
+        // ✅ Listen for server-declared battle end
+        this.socket.on('server:battleEnd', (data: any) => {
+            console.log('[BATTLE NETWORK] 🏁 Battle ended:', data);
+            if (this.onBattleEndCallback) {
+                this.onBattleEndCallback(data);
+            }
+        });
     }
 
     // Send player context to server for validation
@@ -118,6 +126,7 @@ export class BattleNetworkManager {
     private onPlayerContextsReceivedCallback?: (data: any) => void;
     private onAttackHitCallback?: (data: any) => void;
     private onAttackMissedCallback?: (data: any) => void;
+    private onBattleEndCallback?: (data: any) => void;
 
     // Methods
     public onBattleStart(callback: (data: any) => void): void {
@@ -134,6 +143,10 @@ export class BattleNetworkManager {
 
     public onAttackMissed(callback: (data: any) => void): void {
         this.onAttackMissedCallback = callback;
+    }
+
+    public onBattleEnd(callback: (data: any) => void): void {
+        this.onBattleEndCallback = callback;
     }
 
     public destroy(): void {

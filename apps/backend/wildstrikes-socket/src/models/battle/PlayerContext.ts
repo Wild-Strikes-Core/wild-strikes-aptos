@@ -23,7 +23,7 @@ export interface PlayerContext {
   };
   state: 'idle' | 'sprinting' | 'crouching'
   | 'crouchWalking' | 'jumping' | 'dashing'
-  | 'attackingLight' | 'attackingHeavy';
+  | 'attackingLight' | 'attackingHeavy' | 'hit' | 'dead';
   playerStats: {
     damagePercentage: number;
     lives: number;
