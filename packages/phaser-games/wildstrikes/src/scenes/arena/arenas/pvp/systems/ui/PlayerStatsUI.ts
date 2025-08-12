@@ -1,3 +1,5 @@
+import * as Phaser from 'phaser';
+
 interface PlayerStats {
     damagePercentage: number;
     lives: number;
@@ -18,6 +20,7 @@ export class PlayerStatsUI {
     private velocityText: Phaser.GameObjects.Text;
     private animationText: Phaser.GameObjects.Text;
     private backgroundRect: Phaser.GameObjects.Rectangle;
+    private popupsGroup: Phaser.GameObjects.Container;
 
     constructor(scene: Phaser.Scene, playerSprite: Phaser.Physics.Arcade.Sprite) {
         this.scene = scene;
@@ -28,20 +31,22 @@ export class PlayerStatsUI {
     private createUI(): void {
         // Create a container to hold all stats elements
         this.statsContainer = this.scene.add.container(0, 0);
-        this.statsContainer.setDepth(1000); // High depth to ensure it's on top
+        this.statsContainer.setDepth(12000); // ensure on top of sprites and effects
+        this.statsContainer.setScrollFactor(1, 1);
 
         // Create background rectangle for better readability
         this.backgroundRect = this.scene.add.rectangle(0, 0, 220, 120, 0x000000, 0.85);
         this.backgroundRect.setStrokeStyle(3, 0xffffff, 0.9);
+        this.backgroundRect.setScrollFactor(1, 1);
         
-        // Create text objects with larger fonts to combat pixelation
+        // Create text objects with higher resolution to avoid pixelation
         const textStyle = {
             fontFamily: 'Arial, sans-serif',
-            fontSize: '16px',
+            fontSize: '18px',
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 2,
-            resolution: 1 // Keep at 1 since pixelArt is enabled
+            resolution: 2
         };
 
         this.damageText = this.scene.add.text(-100, -40, 'DMG: 0%', {
@@ -75,6 +80,8 @@ export class PlayerStatsUI {
         });
 
         // Add all elements to the container
+        this.popupsGroup = this.scene.add.container(0, 0);
+
         this.statsContainer.add([
             this.backgroundRect,
             this.damageText,
@@ -82,7 +89,8 @@ export class PlayerStatsUI {
             this.knockbackText,
             this.positionText,
             this.velocityText,
-            this.animationText
+            this.animationText,
+            this.popupsGroup
         ]);
 
         this.updatePosition();
@@ -149,12 +157,38 @@ export class PlayerStatsUI {
             this.playerSprite.x,
             this.playerSprite.y + offsetY
         );
+        this.popupsGroup.setPosition(this.statsContainer.x, this.statsContainer.y);
     }
 
     public setVisible(visible: boolean): void {
         if (this.statsContainer) {
             this.statsContainer.setVisible(visible);
         }
+    }
+
+    public showDamagePopup(amount: number, color: string = '#ff4444'): void {
+        if (!this.scene || !this.popupsGroup) return;
+
+        const text = this.scene.add.text(0, -90, `${Math.round(amount)}`, {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '24px',
+            fontStyle: 'bold',
+            color,
+            stroke: '#000000',
+            strokeThickness: 3,
+            resolution: 2,
+        }).setOrigin(0.5, 1);
+
+        this.popupsGroup.add(text);
+
+        this.scene.tweens.add({
+            targets: text,
+            y: '-=30',
+            alpha: { from: 1, to: 0 },
+            duration: 800,
+            ease: 'Cubic.easeOut',
+            onComplete: () => text.destroy(),
+        });
     }
 
     public destroy(): void {

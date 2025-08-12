@@ -1,10 +1,11 @@
 import * as Phaser from 'phaser';
-import { EntityFactory } from "../entities/experimental/core/EntityFactory";
-import { PlayerEntity } from "../entities/experimental/playerEntity";
+import { EntityFactory } from "../entities/core/EntityFactory";
+import { PlayerEntity } from "../entities/playerEntity";
 import { AssetLoader } from "../../../../../AssetLoader";
 import { BattleNetworkManager } from "../systems/network/BattleNetworkManager";
-import { BattleConfig, DEFAULT_CAMERA_CONFIG } from "../config/BattleConfig";
-import { HitboxComponent } from "../entities/experimental/components/HitboxComponent";
+import { BattleConfig } from "../config/BattleConfig";
+import { HitboxComponent } from "../entities/components/HitboxComponent";
+import { PlayerOverlayManager } from "../systems/ui/PlayerOverlayManager";
 
 import { TiledMapRenderer } from '../../utils/TiledMapRenderer';
 
@@ -16,6 +17,7 @@ export class ArenaScene extends Phaser.Scene {
   private networkManager: BattleNetworkManager;
   private battleConfig: BattleConfig;
   private lastKnownStats: Record<string, { damagePercentage: number; lives: number }> = {};
+  private overlayManager?: PlayerOverlayManager;
 
   constructor() {
     super({ key: 'Arena' });
@@ -58,7 +60,7 @@ export class ArenaScene extends Phaser.Scene {
     if (this.battleConfig?.mapConfig?.tiledKey) {
       this.load.tilemapTiledJSON('test-map', this.battleConfig.mapConfig.tiledKey);
     } else {
-      this.load.tilemapTiledJSON('test-map', '/assets/arena-maps/PH/test-map.json');
+      this.load.tilemapTiledJSON('test-map', '/arena-maps/PH/test-map.json');
     }
   }
 
@@ -69,7 +71,7 @@ export class ArenaScene extends Phaser.Scene {
       : null;
     const rawMapData = this.cache.tilemap.get('test-map');
   
-    const renderer = new TiledMapRenderer(this, { baseImagePath: '/assets/arena-maps/PH' });
+    const renderer = new TiledMapRenderer(this, { baseImagePath: '/arena-maps/PH' });
     const imagesToLoad = renderer.collectImages(rawMapData.data.layers);
   
     const finalize = () => {
@@ -92,6 +94,7 @@ export class ArenaScene extends Phaser.Scene {
   update() {
     this.localPlayer?.update();
     this.opponentPlayer?.update();
+    this.overlayManager?.update();
   }
 
   private processLayer(
@@ -262,6 +265,29 @@ export class ArenaScene extends Phaser.Scene {
 
     // Hitbox collisions
     this.setupPlayerHitboxCollisions();
+
+    // Initialize overlays
+    if (this.localPlayer?.sprite && this.opponentPlayer?.sprite) {
+      this.overlayManager = new PlayerOverlayManager({
+        scene: this,
+        localPlayerId: this.battleConfig.localPlayerId,
+        opponentPlayerId: this.battleConfig.opponentId,
+        localSprite: this.localPlayer.sprite,
+        opponentSprite: this.opponentPlayer.sprite,
+      });
+
+      // Seed overlays with any known stats
+      const localStats = this.lastKnownStats[this.battleConfig.localPlayerId] || { damagePercentage: 0, lives: 3 };
+      const oppStats = this.lastKnownStats[this.battleConfig.opponentId] || { damagePercentage: 0, lives: 3 };
+      this.overlayManager.updateStatsForPlayer(this.battleConfig.localPlayerId, {
+        damagePercentage: localStats.damagePercentage,
+        lives: localStats.lives,
+      });
+      this.overlayManager.updateStatsForPlayer(this.battleConfig.opponentId, {
+        damagePercentage: oppStats.damagePercentage,
+        lives: oppStats.lives,
+      });
+    }
   }
 
   private setupPlayerHitboxCollisions(): void {
@@ -283,6 +309,10 @@ export class ArenaScene extends Phaser.Scene {
         players.forEach((p: any) => {
           if (p?.socketId && p?.playerStats) {
             this.lastKnownStats[p.socketId] = p.playerStats;
+            this.overlayManager?.updateStatsForPlayer(p.socketId, {
+              damagePercentage: p.playerStats.damagePercentage,
+              lives: p.playerStats.lives,
+            });
           }
         });
       } catch {}
@@ -299,10 +329,29 @@ export class ArenaScene extends Phaser.Scene {
               // Keep opponent's stats current for any HUD needs
               const net = this.opponentPlayer?.getComponent<any>('network');
               try { net?.setStats(playerContext.playerStats); } catch {}
+              this.overlayManager?.updateStatsForPlayer(playerContext.socketId, {
+                damagePercentage: playerContext.playerStats.damagePercentage,
+                lives: playerContext.playerStats.lives,
+                position: playerContext.position ? { x: playerContext.position.x, y: playerContext.position.y } : undefined,
+                velocity: { x: playerContext.velocityX || 0, y: playerContext.velocityY || 0 },
+                animation: playerContext.state,
+              });
             }
             if (playerContext.isAlive === false) {
               // Opponent permanently dead
               this.handlePlayerDeath(playerContext.socketId, 0);
+            }
+          } else if (playerContext.socketId === this.battleConfig.localPlayerId) {
+            // Update local overlay stats from server context (do not override local transform)
+            if (playerContext.playerStats) {
+              this.lastKnownStats[playerContext.socketId] = playerContext.playerStats;
+              this.overlayManager?.updateStatsForPlayer(playerContext.socketId, {
+                damagePercentage: playerContext.playerStats.damagePercentage,
+                lives: playerContext.playerStats.lives,
+                position: playerContext.position ? { x: playerContext.position.x, y: playerContext.position.y } : undefined,
+                velocity: { x: playerContext.velocityX || 0, y: playerContext.velocityY || 0 },
+                animation: playerContext.state,
+              });
             }
           }
         });
@@ -323,12 +372,31 @@ export class ArenaScene extends Phaser.Scene {
         const knockedOut = lifeLost || (newStats.damagePercentage === 0 && (prev && prev.damagePercentage > 0));
         if (lifeLost || knockedOut) {
           this.handlePlayerDeath(defenderId, newStats.lives);
+        } else {
+          // If damage crossed threshold (e.g. 90 -> 110) but lives not decremented yet, pre-play death anim
+          const prevDamage = prev?.damagePercentage ?? 0;
+          const crossedThreshold = prevDamage < 100 && newStats.damagePercentage >= 100;
+          if (crossedThreshold) {
+            const entity = defenderId === this.battleConfig.localPlayerId ? this.localPlayer : this.opponentPlayer;
+            const stateComp = entity?.getComponent<any>('state');
+            try { stateComp?.transitionTo('dead'); } catch {}
+          }
         }
 
         // Update local player's stats for outbound messages
         const entity = defenderId === this.battleConfig.localPlayerId ? this.localPlayer : this.opponentPlayer;
         const net = entity?.getComponent<any>('network');
         try { net?.setStats({ damagePercentage: newStats.damagePercentage, lives: newStats.lives }); } catch {}
+
+        // Update overlays for defender
+        this.overlayManager?.updateStatsForPlayer(defenderId, {
+          damagePercentage: newStats.damagePercentage,
+          lives: newStats.lives,
+          knockback: attackData?.knockback,
+        });
+        if (typeof attackData?.damage === 'number') {
+          this.overlayManager?.showDamage(defenderId, attackData.damage);
+        }
       }
     });
 
@@ -376,9 +444,10 @@ export class ArenaScene extends Phaser.Scene {
     const spriteComp = entity.getComponent<any>('sprite');
     const stateComp = entity.getComponent<any>('state');
     if (spriteComp && ctx.state) {
-      // Do not override local 'hit' or 'dead' reaction animations
+      // Allow server 'dead' to override local 'hit', but keep blocking other overrides while hit
       const currentStateKey = typeof stateComp?.getStateKey === 'function' ? stateComp.getStateKey() : undefined;
-      const blockOverride = currentStateKey === 'hit' || currentStateKey === 'dead';
+      const nextIsDead = ctx.state === 'dead';
+      const blockOverride = (currentStateKey === 'hit' && !nextIsDead) || currentStateKey === 'dead';
       if (!blockOverride) {
         try { spriteComp.play(this.mapStateToAnimationKey(ctx.state)); } catch {}
         try { spriteComp.setState(ctx.state); } catch {}

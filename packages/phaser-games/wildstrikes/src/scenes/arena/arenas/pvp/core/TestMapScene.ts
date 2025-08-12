@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { EntityFactory } from "../entities/experimental/core/EntityFactory";
-import { PlayerEntity } from "../entities/experimental/playerEntity";
+import { EntityFactory } from "../entities/core/EntityFactory";
+import { PlayerEntity } from "../entities/playerEntity";
 
 import { AssetLoader } from "../../../../../AssetLoader";
 
