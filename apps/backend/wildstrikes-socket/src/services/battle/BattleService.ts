@@ -4,6 +4,10 @@ import type { WebMapConfig } from './maps';
 import { PlayerContext } from '../../models/battle/PlayerContext';
 import { AttackData } from '../../models/battle/AttackData';
 
+/**
+ * In-memory representation of a live battle.
+ * Stored per room. Tracks player contexts, lifecycle state, and winner.
+ */
 type BattleState = {
     roomId: string;
     players: Record<string, PlayerContext>;
@@ -12,6 +16,17 @@ type BattleState = {
     startTime: number;
 };
 
+/**
+ * BattleService
+ *
+ * Server-side orchestrator for PvP battles. Responsibilities:
+ * - Initialize a battle for a room with spawn positions and base stats
+ * - Receive and validate client inputs; update authoritative player contexts
+ * - Run lightweight broadcast loop to sync clients at ~20Hz
+ * - Validate attacks, compute directional hit detection, apply damage/KO
+ * - Emit battle lifecycle events (start, context updates, hits/misses, end)
+ * - Handle disconnects and cleanup of timers/room state
+ */
 export class BattleService {
     private battles: Map<string, BattleState> = new Map();
     private physicsIntervals: Map<string, NodeJS.Timeout> = new Map();
@@ -22,6 +37,10 @@ export class BattleService {
 
     constructor(private io: Server, private roomService: RoomService) {}
 
+    /**
+     * Starts a new battle for the given room and two players.
+     * Seeds initial player contexts and begins the periodic broadcast loop.
+     */
     startBattle(roomId: string, p1: string, p2: string) {
         console.log(`[BATTLE SERVICE] Starting battle in room ${roomId} between ${p1} and ${p2}`);
         const currentTime = Date.now();
@@ -103,14 +122,19 @@ export class BattleService {
         this.physicsIntervals.set(roomId, interval);
     }
 
+    /** Gets the current battle state for a room, if any. */
     getBattleState(roomId: string): BattleState | undefined {
         return this.battles.get(roomId);
     }
 
     // Handle player input validation (server-authoritative)
+    /**
+     * Validates and applies a player's context update. The server is
+     * authoritative: it merges allowed fields and rebroadcasts the snapshot.
+     * Fields honored from the client: position, velocityX/Y, inputs, state,
+     * sequenceNumber, timestamp.
+     */
     validatePlayerInput(roomId: string, playerId: string, playerContext: any) {
-        //console.log(`[BATTLE SERVICE] Validating input for player ${playerId} in room ${roomId}:`, playerContext);
-        
         const battle = this.battles.get(roomId);
         if (!battle || battle.gameState !== 'active') {
             // Silently ignore inputs when battle is not active to avoid log spam after end
@@ -119,185 +143,31 @@ export class BattleService {
 
         const player = battle.players[playerId];
         if (!player || !player.isAlive) {
-            console.log(`[BATTLE SERVICE] Player ${playerId} not found or not alive in room ${roomId}`);
             return;
         }
 
-        const oldTimestamp = player.timestamp || Date.now();
         const newTimestamp = playerContext.timestamp || Date.now();
-
-        // In client-authoritative mode, trust the client's context directly and broadcast.
-        if (this.clientAuthoritativeMode) {
-            if (playerContext.position) {
-                player.position = { ...player.position, ...playerContext.position } as any;
-            }
-            if (playerContext.velocityX !== undefined) player.velocityX = playerContext.velocityX;
-            if (playerContext.velocityY !== undefined) player.velocityY = playerContext.velocityY;
-            if (playerContext.inputs) player.inputs = playerContext.inputs;
-            if (playerContext.state) player.state = playerContext.state;
-            player.sequenceNumber = playerContext.sequenceNumber || player.sequenceNumber || 0;
-            player.timestamp = newTimestamp;
-            this.broadcastPlayerContexts(roomId);
-            return;
-        }
-
-        // Server-side validation of input
-        // For now, we'll accept all inputs but log them for debugging
-        // console.log(`[BATTLE SERVICE] Input validation passed for player ${playerId}:`, {
-        //     inputs: playerContext.inputs,
-        //     currentPosition: player.position,
-        //     newPosition: playerContext.position,
-        //     sequenceNumber: playerContext.sequenceNumber,
-        //     timestamp: playerContext.timestamp
-        // });
-
-        // Update player state on server
-        player.inputs = playerContext.inputs;
-        player.sequenceNumber = playerContext.sequenceNumber || 0;
-
-        // Validate position (anti-teleport) - use old timestamp for delta calculation
-        // Validate position (anti-teleport) - use old timestamp for delta calculation
+        
         if (playerContext.position) {
-            const now = Date.now();
-            const lastValidation = this.lastValidationTime.get(playerId) || 0;
-            
-            // For dashing, only validate every 100ms instead of every frame
-            if (playerContext.state === 'dashing' && (now - lastValidation) < 100) {
-                player.position = playerContext.position; // Accept without validation
-            } else {
-                const deltaTime = newTimestamp - oldTimestamp;
-                const maxSpeed = playerContext.state === 'sprinting' ? 450 : 300;
-                
-                playerContext.position = this.validatePosition(
-                    playerContext.position, 
-                    player.position, 
-                    deltaTime, 
-                    maxSpeed,
-                    playerContext.state || player.state
-                );
-                
-                player.position = playerContext.position;
-                this.lastValidationTime.set(playerId, now);
-            }
-            
-            // Always update facing direction from client - don't validate this
-            if (playerContext.position.facing !== undefined) {
-                player.position.facing = playerContext.position.facing;
-            }
+            player.position = { ...player.position, ...playerContext.position } as any;
         }
-
-        // Now update the timestamp after position validation
+        if (playerContext.velocityX !== undefined) player.velocityX = playerContext.velocityX;
+        if (playerContext.velocityY !== undefined) player.velocityY = playerContext.velocityY;
+        if (playerContext.inputs) player.inputs = playerContext.inputs;
+        if (playerContext.state) player.state = playerContext.state;
+        player.sequenceNumber = playerContext.sequenceNumber || player.sequenceNumber || 0;
         player.timestamp = newTimestamp;
-
-        // Update state first so velocity validation uses the latest state
-        if (playerContext.state) {
-            player.state = playerContext.state;
-        }
-
-        // Update velocity if provided, capping sprint speed only when sprinting
-        if (playerContext.velocityX !== undefined) {
-            player.velocityX = this.validateSprintingSpeed(playerContext.velocityX, player.state);
-        }
-        if (playerContext.velocityY !== undefined) {
-            player.velocityY = playerContext.velocityY;
-        }
-
-        // Broadcast validated player contexts to all clients in the room
+        // Immediately rebroadcast after applying the new authoritative values
         this.broadcastPlayerContexts(roomId);
-    }
-
-    private validateSprintingSpeed(velocityX: number, playerState: string): number {
-        const MAX_SPRINT_SPEED = 450; // Ensures sprinting speed does not exceed this value
-
-        if (playerState === 'sprinting') {
-            if (Math.abs(velocityX) > MAX_SPRINT_SPEED) {
-                return Math.sign(velocityX) * MAX_SPRINT_SPEED;
-            }
-        }
-        return velocityX;
-    }
-
-    private validatePosition(newPosition: {x: number, y: number}, oldPosition: {x: number, y: number}, deltaTime: number, maxSpeed: number, playerState?: string): {x: number, y: number} {
-        // Handle edge cases
-        if (deltaTime <= 0 || deltaTime > 1000) { // More than 1 second indicates connection issues
-            console.log(`[BATTLE SERVICE] Invalid deltaTime: ${deltaTime}ms, accepting position`);
-            return newPosition;
-        }
-
-        // For dashing, be extremely lenient - only prevent obvious teleporting
-        if (playerState === 'dashing') {
-            const distance = Math.sqrt(
-                Math.pow(newPosition.x - oldPosition.x, 2) + 
-                Math.pow(newPosition.y - oldPosition.y, 2)
-            );
-            
-            // Only reject if it's an obvious teleport (much higher threshold)
-            const maxDashDistance = 500; // Very generous for dash combos
-            if (distance > maxDashDistance) {
-                console.log(`[BATTLE SERVICE] Extreme dash distance detected: ${distance} > ${maxDashDistance}`);
-                return oldPosition; // Keep old position instead of partial correction
-            }
-            
-            return newPosition; // Accept all normal dash movement
-        }
-
-        const distance = Math.sqrt(
-            Math.pow(newPosition.x - oldPosition.x, 2) + 
-            Math.pow(newPosition.y - oldPosition.y, 2)
-        );
-        
-        // Much more lenient validation for all states
-        let maxPossibleDistance: number;
-        let tolerance: number;
-        
-        switch (playerState) {
-            case 'jumping':
-                // Very lenient for jumping - allows for jump momentum
-                const jumpSpeed = 800; // Increased from 600
-                maxPossibleDistance = Math.max(maxSpeed, jumpSpeed) * (deltaTime / 1000);
-                tolerance = 5.0; // Much more lenient
-                break;
-                
-            case 'falling':
-            case 'idle': // Player might be falling while idle
-            case 'sprinting':
-                // Check if this is primarily vertical movement (falling/jumping)
-                const horizontalDistance = Math.abs(newPosition.x - oldPosition.x);
-                const verticalDistance = Math.abs(newPosition.y - oldPosition.y);
-                
-                if (verticalDistance > horizontalDistance) {
-                    // Primarily vertical movement - very lenient
-                    const fallSpeed = 1000; // Increased from 800
-                    maxPossibleDistance = fallSpeed * (deltaTime / 1000);
-                    tolerance = 4.0; // Very lenient
-                } else {
-                    // Horizontal movement - still lenient
-                    maxPossibleDistance = maxSpeed * (deltaTime / 1000);
-                    tolerance = 4.0; // Much more lenient
-                }
-                break;
-                
-            default:
-                // Default case - very lenient
-                maxPossibleDistance = maxSpeed * (deltaTime / 1000);
-                tolerance = 4.0; // Much more lenient
-                break;
-        }
-        
-        // Only prevent extreme teleportation
-        if (distance > maxPossibleDistance * tolerance) {
-            console.log(`[BATTLE SERVICE] Extreme movement detected for state '${playerState}': distance ${distance.toFixed(2)} > max ${(maxPossibleDistance * tolerance).toFixed(2)}`);
-            
-            // Only reject truly extreme movements (likely cheating)
-            if (distance > 1000) { // Only block movements > 1000 pixels
-                return oldPosition; // Keep old position
-            }
-        }
-        
-        return newPosition; // Accept most movement
+        return;
     }
 
     // Broadcast player contexts to all clients
+    /**
+     * Emits `server:broadcastPlayerContexts` to the room with an array of
+     * normalized player snapshots and a `serverTimestamp` for client-side
+     * reconciliation and latency measurement.
+     */
     private broadcastPlayerContexts(roomId: string) {
         const battle = this.battles.get(roomId);
         if (!battle) return;
@@ -325,6 +195,10 @@ export class BattleService {
     }
 
     // Respawn helper to reset a dead player with remaining lives
+    /**
+     * Restores a player to an alive state if they have remaining lives and
+     * rebroadcasts contexts. Optional spawn position can override current.
+     */
     respawnPlayer(roomId: string, playerId: string, spawnPos?: {x: number, y: number}) {
         const battle = this.battles.get(roomId);
         if (!battle) return;
@@ -343,6 +217,11 @@ export class BattleService {
     }
 
     // Handle player disconnect
+    /**
+     * Handles a player disconnect during a battle. If the game is active,
+     * declares the remaining player as the winner and emits the result. Also
+     * clears timers and schedules state cleanup for the room.
+     */
     handlePlayerDisconnect(roomId: string, playerId: string) {
         const battle = this.battles.get(roomId);
         if (!battle) return;
@@ -354,6 +233,7 @@ export class BattleService {
                 battle.gameState = 'ended';
                 battle.winner = remainingPlayerId;
                 
+                // Note: legacy event name for disconnect path
                 this.io.to(roomId).emit("battle-end", {
                     winner: remainingPlayerId,
                     reason: 'opponent-disconnected',
@@ -377,6 +257,11 @@ export class BattleService {
     }
 
 
+    /**
+     * Validates a client's attack event against server state and applies
+     * damage/KO logic. Emits `server:attackHit` or `server:attackMissed` with
+     * server-authoritative positions and updated stats.
+     */
     handlePlayerAttack(roomId: string, playerId: string, attackData: AttackData) {
         const battle = this.battles.get(roomId);
         if (!battle || battle.gameState !== 'active') {
@@ -426,9 +311,23 @@ export class BattleService {
         );
 
         if (isHit) {
+            const kbVector = this.computerKnocbackVector (
+                opponent.playerStats?.damagePercentage || 0,
+                attackData.knockback?.force || 0,
+                attackData.knockback?.angle || 0
+            );
+
+            opponent.velocityX = kbVector.vx;
+            opponent.velocityY = kbVector.vy;
+
             // Apply damage using AttackData values
             const wasKnockout = this.applyDamage(roomId, opponent, attackData, attacker.socketId);
             console.log(`[BATTLE SERVICE] Player ${attacker.socketId} hit player ${opponent.socketId} for ${attackData.damage} damage.`);
+            
+            if (!wasKnockout) {
+                opponent.state = 'hit';
+            }
+
             this.io.to(roomId).emit("server:attackHit", {
                 attackerId: playerId,
                 defenderId: opponent.socketId,
@@ -447,11 +346,11 @@ export class BattleService {
                     lives: opponent.playerStats.lives,
                     knockback: attackData.knockback // Include knockback in stats
                 },
+                knockbackVector: { vx: kbVector.vx, vy: kbVector.vy },
                 timestamp: Date.now()
             });
-            if (wasKnockout) {
-                // Match ended via knockout; event emitted in applyDamage
-                return;
+            if (!wasKnockout) {
+                this.broadcastPlayerContexts(roomId);
             }
         } else {
             console.log(`[BATTLE SERVICE] Player ${attacker.socketId} missed the attack on player ${opponent.socketId}.`);
@@ -469,7 +368,34 @@ export class BattleService {
             });
         }
     }
+
+    private computerKnocbackVector(
+        defenderDamagePercent: number, 
+        baseForce: number, 
+        angleDeg: number): {vx: number, vy: number} {
+
+        const FORCE_TO_VELOCITY = 24;
+        const MIN_UPWARD_DEG = 20;
+        const scale = 1 + (defenderDamagePercent / 100);
+        const force = (baseForce || 0) * scale * FORCE_TO_VELOCITY;
+
+        let rad = (angleDeg || 0) * Math.PI / 180;
+        const minSin = Math.sin(MIN_UPWARD_DEG * Math.PI / 180);
+        if (Math.abs(Math.sin(rad)) < minSin) {
+            const facingRight = Math.cos(rad) >= 0;
+            const adjustedDeg = facingRight ? MIN_UPWARD_DEG : (180 - MIN_UPWARD_DEG);
+            rad = adjustedDeg * Math.PI / 180;
+        }
+
+        const vx = Math.cos(rad) * force;
+        const vy = -Math.sin(rad) * force;
+        return { vx, vy };
+    }
     
+    /**
+     * Validates that the client's reported attack position is within a
+     * tolerance of the server position, with slack proportional to latency.
+     */
     private validateAttackPosition(
         serverPos: {x: number, y: number}, 
         clientPos: {x: number, y: number}, 
@@ -497,6 +423,11 @@ export class BattleService {
         return true;
     }
 
+    /**
+     * Computes simple directional hit detection:
+     * - Target must be within horizontal range and vertical tolerance
+     * - Attacker must face towards the target
+     */
     calculateDirectionalHitDetection(
     attackerPos: {x: number, y: number, facing: 'left' | 'right'}, 
     defenderPos: {x: number, y: number}, 
@@ -514,12 +445,16 @@ export class BattleService {
         }
         
         const distance = Math.abs(horizontalDistance);
-        const maxRange = attackType === 'light' ? 80 : 150;
-        const VERTICAL_TOLERANCE = 50;
+        const maxRange = attackType === 'light' ? 105 : 150;
+        const VERTICAL_TOLERANCE = attackType === 'light' ? 70 : 50;
         
         return distance <= maxRange && verticalDistance <= VERTICAL_TOLERANCE;
     }
 
+    /**
+     * Applies damage to the defender. Returns true if this hit caused a KO.
+     * Handles life decrement, death state, respawn scheduling, and KO end.
+     */
     private applyDamage(roomId: string, defender: PlayerContext, attackData: AttackData, attackerId?: string): boolean {
         // Add damage to damage percentage (this is our new health system)
         defender.playerStats.damagePercentage += attackData.damage;
@@ -534,12 +469,15 @@ export class BattleService {
             defender.playerStats.lives -= 1;
             defender.playerStats.damagePercentage = 0; // Reset damage percentage
             defender.state = 'dead';
+
+            // Enter a true dead state during the respawn window so inputs are ignored
+            defender.isAlive = false;
             console.log(`[BATTLE SERVICE] Player ${defender.socketId} has lost a life. Remaining lives: ${defender.playerStats.lives}`);
-            // Broadcast death state immediately so all clients show death anim and disable hits
+
+            // Broadcast immediately so all clients show death anim and disable interactions
             this.broadcastPlayerContexts(roomId);
 
             if (defender.playerStats.lives <= 0) {
-                defender.isAlive = false;
                 console.log(`[BATTLE SERVICE] Player ${defender.socketId} has been knocked out.`);
                 // Declare winner and end battle
                 const winnerId = attackerId || Object.keys(this.battles.get(roomId)?.players || {}).find(id => id !== defender.socketId);
@@ -553,12 +491,18 @@ export class BattleService {
                     try {
                         this.respawnPlayer(roomId, defender.socketId);
                     } catch {}
-                }, 1200);
+                }, 2000);
             }
+            // KO occurred (life lost). Even if not final, signal knockout to caller
+            return true;
         }
         return false;
     }
 
+    /**
+     * Produces a client-friendly snapshot of the battle for initial payloads
+     * and final results.
+     */
     private serialize(battle: BattleState) {
         return {
             roomId: battle.roomId,
@@ -578,6 +522,10 @@ export class BattleService {
         };
     }
 
+    /**
+     * Finalizes a battle, emits `server:battleEnd`, clears intervals, and
+     * schedules cleanup of room state and memberships.
+     */
     private endBattle(roomId: string, winnerId: string, loserId: string, reason: 'ko' | 'opponent-disconnected' | 'timeout' = 'ko') {
         const battle = this.battles.get(roomId);
         if (!battle) return;

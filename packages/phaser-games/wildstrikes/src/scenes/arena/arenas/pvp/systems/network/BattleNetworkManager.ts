@@ -5,6 +5,14 @@ interface BattleNetworkConfig {
     roomId: string;
 }
 
+/**
+ * BattleNetworkManager
+ *
+ * Thin wrapper around a socket connection that:
+ * - Emits battle lifecycle and player context messages
+ * - Subscribes to server-authoritative updates (contexts, hits, end)
+ * - Exposes ergonomic callback setters for the scene to react to events
+ */
 export class BattleNetworkManager {
     private socket: any;
     private localPlayerId: string;
@@ -38,6 +46,10 @@ export class BattleNetworkManager {
         }, 100);
     }
 
+    /**
+     * Binds all server → client socket subscriptions used during a battle.
+     * Logs key events for easier debugging of the network flow.
+     */
     private setupEventListeners(): void {
         console.log('[BATTLE NETWORK] Setting up event listeners...');
         
@@ -129,32 +141,48 @@ export class BattleNetworkManager {
     private onBattleEndCallback?: (data: any) => void;
 
     // Methods
+    /** Register a handler for the initial battle payload. */
     public onBattleStart(callback: (data: any) => void): void {
         this.onBattleStartCallback = callback;
     }
 
+    /** Register a handler for periodic server context snapshots. */
     public onPlayerContextsReceived(callback: (data: any) => void): void {
         this.onPlayerContextsReceivedCallback = callback;
     }
     
+    /** Register a handler for confirmed attack hits. */
     public onAttackHit(callback: (data: any) => void): void {
         this.onAttackHitCallback = callback;
     }
 
+    /** Register a handler for validated attack misses. */
     public onAttackMissed(callback: (data: any) => void): void {
         this.onAttackMissedCallback = callback;
     }
 
+    /** Register a handler for the battle end event. */
     public onBattleEnd(callback: (data: any) => void): void {
         this.onBattleEndCallback = callback;
     }
 
+    /**
+     * Unsubscribes all battle-related socket events. Safe to call multiple
+     * times; does not close the socket transport, only removes listeners.
+     */
     public destroy(): void {
         if (this.socket) {
             this.socket.off('server:start-battle');
             this.socket.off('server:playerReconciliation');
             this.socket.off('server:remotePlayerHasMoved');
             this.socket.off('server:broadcastPlayerContexts');
+            this.socket.off('server:attackHit');
+            this.socket.off('server:attackMissed');
+            this.socket.off('server:battleEnd');
+            this.socket.off('server:playerDeath');
+            this.socket.off('server:playerRespawn');
+            this.socket.off('server:playerRevive');
+            this.socket.off('server:playerRevive');
         }
     }
 }

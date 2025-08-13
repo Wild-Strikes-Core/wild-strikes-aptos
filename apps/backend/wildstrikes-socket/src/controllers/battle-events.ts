@@ -2,7 +2,12 @@ import { Server, Socket } from "socket.io";
 import { BattleService } from "../services/battle/BattleService";
 import { MatchmakingService } from "../services/battle/MatchMakingService";
 
+/**
+ * Registers per-socket battle event handlers. Ensures socket is joined to the
+ * correct room for each event and forwards messages to the BattleService.
+ */
 export function registerBattleEvents(io: Server, socket: Socket, matchmaking: MatchmakingService, battleService: BattleService) {
+    // Client → server periodic context update (movement, inputs, state)
     socket.on("player:moved", (playerContext) => {
         const playerId = socket.id;
         const mappedRoomId = matchmaking.getPlayerRoom(playerId);
@@ -23,6 +28,7 @@ export function registerBattleEvents(io: Server, socket: Socket, matchmaking: Ma
         }
     });
 
+    // Client → server attack attempt. Server validates and broadcasts result.
     socket.on("player:attacked", (attackData) => {
         const roomId = (socket as any).roomId;
         const playerId = socket.id;
@@ -33,6 +39,5 @@ export function registerBattleEvents(io: Server, socket: Socket, matchmaking: Ma
         } else {
             console.log(`[BATTLE EVENTS] Missing roomId (${roomId}) or playerId (${playerId}) for player:attacked event`);
         }
-    
     });
 }

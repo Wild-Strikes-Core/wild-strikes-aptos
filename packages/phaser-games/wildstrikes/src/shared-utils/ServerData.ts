@@ -1,3 +1,7 @@
+/**
+ * Represents the state of a player in a battle.
+ * Used for both client-side prediction and server-side authoritative updates.
+ */
 export interface PlayerContext {
   socketId: string;
   position : {
@@ -22,7 +26,7 @@ export interface PlayerContext {
   };
   state: 'idle' | 'sprinting' | 'crouching'
   | 'crouchWalking' | 'jumping' | 'dashing'
-  | 'attackingLight' | 'attackingHeavy';
+  | 'attackingLight' | 'attackingHeavy' | 'hit' | 'dead';
   playerStats: {
     damagePercentage: number;
     lives: number;
@@ -31,7 +35,6 @@ export interface PlayerContext {
   sequenceNumber?: number;
   timestamp?: number;
 }
-
 
 export interface AttackData {
   playerId: string;
