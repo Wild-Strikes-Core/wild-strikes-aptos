@@ -3,9 +3,9 @@ import { EntityComponent } from './EntityComponent';
 
 export class MovementComponent implements EntityComponent {
   private entity: GameEntity;
-  private runSpeed = 450;
-  private dashSpeed = 2400;
-  private jumpPower = -1300;
+  private runSpeed = 500;
+  private dashSpeed = 1350;
+  private jumpPower = -1600;
 
   constructor(entity: GameEntity, opts?: { runSpeed?: number; dashSpeed?: number; jumpPower?: number }) {
     this.entity = entity;
@@ -19,7 +19,8 @@ export class MovementComponent implements EntityComponent {
   }
 
   isOnGround(): boolean {
-    const b = this.body(); return !!b && !!b.touching.down;
+    const b = this.body();
+    return !!b && (b.blocked.down || b.touching.down);
   }
 
   moveLeft(): void { this.entity.sprite.setVelocityX(-this.runSpeed); }

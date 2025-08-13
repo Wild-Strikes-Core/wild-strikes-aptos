@@ -70,12 +70,34 @@ export class SpriteComponent implements EntityComponent {
     s.setOrigin(0.5, 1);
     if (s.body) {
       const b = s.body as Phaser.Physics.Arcade.Body;
-      b.setGravityY(10000);
+      // Set strong downward gravity for fast, responsive jumps and falls
+      b.setGravityY(8000);
+
+      // Set the collision box size for the player sprite (width: 30, height: 40)
       b.setSize(30, 40);
+
+      // Offset the collision box to align with the sprite's feet and body
       b.setOffset(45, 40);
+
+      // Prevent the player from leaving the world bounds
       b.setCollideWorldBounds(true);
+
+      // Add a small bounce when landing on the ground
       b.setBounce(0.1);
+
+      // Apply horizontal drag to slow down movement when not pressing a direction
       b.setDragX(200);
+
+      // --- Other useful Arcade Physics body properties you could add: ---
+
+      // b.setFriction(x, y); // Set friction for ground and wall sliding
+      // b.setMaxVelocity(1000, 2000); // Limit max horizontal and vertical speed
+      // b.setAllowGravity(true); // Enable/disable gravity for special states
+      // b.setImmovable(false); // Make the body immovable (for platforms, etc)
+      // b.setVelocity(0, 0); // Directly set velocity (for knockback, etc)
+      // b.setMass(1); // Set mass for physics calculations
+      // b.setDamping(true); // Enable damping for smoother stop
+      // b.setAngularVelocity(0); // For rotation, if needed
     }
     this.play('player_idle');
   }
@@ -86,7 +108,7 @@ export class SpriteComponent implements EntityComponent {
     if (opts?.stopCurrent && s.anims.currentAnim) {
       s.anims.stop();
       s.off('animationcomplete');
-      this.entity.scene.time.delayedCall(10, () => s.play({ key, repeat: opts.repeat ?? 0, frameRate: opts.frameRate }));
+      this.entity.scene.time.delayedCall(10, () => s.anims.play(key));
     } else {
       s.anims.play(key, true);
     }

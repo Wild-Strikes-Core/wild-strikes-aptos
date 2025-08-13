@@ -327,6 +327,11 @@ export class ArenaScene extends Phaser.Scene {
               //   animation: playerContext.state,
               // });
             }
+          // If server reports local player is not alive, force local death handling
+          if (playerContext.isAlive === false) {
+            const remainingLives = playerContext.playerStats?.lives ?? 0;
+            this.handlePlayerDeath(playerContext.socketId, remainingLives);
+          }
           }
         });
       }
@@ -476,7 +481,14 @@ export class ArenaScene extends Phaser.Scene {
       defenderId === this.battleConfig.localPlayerId ? this.localPlayer :
       defenderId === this.battleConfig.opponentId ? this.opponentPlayer : undefined;
     const stateComp = entity?.getComponent<any>('state');
-    try { stateComp?.transitionTo('hit'); } catch {}
+    // If this entity is already processing death, do not override with 'hit'
+    const deathProcessing = entity?.sprite?.getData('deathProcessing') === true;
+    const currentStateKey = typeof stateComp?.getStateKey === 'function' ? stateComp.getStateKey() : undefined;
+    if (!deathProcessing && currentStateKey !== 'dead') {
+      try { stateComp?.transitionTo('hit'); } catch {}
+    } else {
+      return; // Do not process knockback further for a dead entity
+    }
 
     if (!entity || !entity.sprite) return;
     const body = entity.sprite.body as Phaser.Physics.Arcade.Body | undefined;
@@ -533,7 +545,13 @@ export class ArenaScene extends Phaser.Scene {
     if (!entity) return;
 
     const stateComp = entity.getComponent<any>('state');
+    // Guard against duplicate death handling while respawn is pending
+    const alreadyProcessing = entity.sprite.getData('deathProcessing') === true;
+    if (alreadyProcessing) return;
+    try { entity.sprite.setData('deathProcessing', true); } catch {}
     try { stateComp?.transitionTo('dead'); } catch {}
+    // Ensure death animation plays even if state transition hook is skipped
+    try { entity.getComponent<any>('sprite')?.play('player_death_static', { stopCurrent: true }); } catch {}
 
     // Disable input for local player during death
     const inputComp = entity.getComponent<any>('input');
@@ -572,6 +590,8 @@ export class ArenaScene extends Phaser.Scene {
     try { entity.sprite.clearTint(); } catch {}
     const inputComp = entity.getComponent<any>('input');
     try { if (isLocal) inputComp?.setEnabled(true); } catch {}
+    // Clear death-processing guard so future deaths can be processed
+    try { entity.sprite.setData('deathProcessing', false); } catch {}
 
     // Back to idle
     const stateComp = entity.getComponent<any>('state');
