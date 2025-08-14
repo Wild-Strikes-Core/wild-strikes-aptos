@@ -10,6 +10,7 @@ export default class Start extends Phaser.Scene {
     private BACKGROUND_LAYER: Phaser.GameObjects.Layer;
     private PLAY_BUTTON: Phaser.GameObjects.Image;
     private MAIN_LOGO: Phaser.GameObjects.Image;
+    private BG_HILL: Phaser.GameObjects.Image;
     constructor() {
         super("StartMenu");
     }
@@ -38,33 +39,58 @@ export default class Start extends Phaser.Scene {
     // Write your code here
 
     create() {
-        // Add the main background image first (behind all other elements)
-        // Make it responsive to cover the full screen
+        this.editorCreate();
+
+        this.startBackgroundMusic();
+
+        const { width, height } = this.cameras.main;
+
         const bg = this.add.image(0, 0, "2G_bg");
         bg.setOrigin(0, 0);
         bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-        bg.setDepth(-1000); // Ensure background is behind everything
+        bg.setDepth(-1000); 
 
-        this.editorCreate();
+        if (this.textures.exists("2g_bgStars")) {
+            const starLayer = this.add.image(0, 0, "2g_bgStars");
+            starLayer.setOrigin(0, 0);
+            starLayer.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+            starLayer.setDepth(-900);
+            this.tweens.add({
+                targets: starLayer,
+                alpha: { from: 0.2, to: 1 }, 
+                duration: 1500, 
+                yoyo: true,
+                repeat: -1,
+                ease: "Sine.easeInOut",
+            });
+        } else {
+            console.warn(
+                "Star texture '2g_bgStars' not found. Stars will not be displayed."
+            );
+        }
+
+        if (this.textures.exists('2G_bgHill')) {
+           this.BG_HILL = this.add.image(this.cameras.main.centerX, this.cameras.main.height, '2G_bgHill').setOrigin(0.5, 1).setDepth(-800);
+        } else {
+            console.warn("Hill texture '2G_bgHill' not found. Hill will not be displayed.");
+        }
 
         this.cameras.main.fadeIn(180, 0, 0, 0);
 
-        // Check if texture exists before creating clouds (defensive coding)
         if (this.textures.exists("2G_bgClouds_2")) {
-            // Create background clouds that move
-            // First cloud in the back
             const movingClouds1 = new bgClouds(this, 500, 300);
+            movingClouds1.setScale(2.2);
             this.add.existing(movingClouds1);
-            movingClouds1.setDepth(-500); // Set depth to be above background but below UI
+            movingClouds1.setDepth(-500);
 
-            // Second cloud a bit lower
             const movingClouds2 = new bgClouds(this, 1200, 450);
+            movingClouds2.setScale(2.2);
             this.add.existing(movingClouds2);
-            movingClouds2.speed = 30; // Slower speed for parallax effect
+            movingClouds2.speed = 30; 
             movingClouds2.setDepth(-400);
 
-            // Third cloud
             const movingClouds3 = new bgClouds(this, 900, 200);
+            movingClouds3.setScale(2.2);
             this.add.existing(movingClouds3);
             movingClouds3.speed = 40;
             movingClouds3.setDepth(-300);
@@ -76,18 +102,18 @@ export default class Start extends Phaser.Scene {
 
         this.PLAY_BUTTON.setInteractive({ cursor: "pointer" });
 
-        // Create a continuous pulsing/floating animation for the play button
-        // to draw attention to it
         this.createPlayButtonIdleAnimation(this.PLAY_BUTTON);
 
-        // Handle button interactions
         this.PLAY_BUTTON.on("pointerdown", () => {
-            // Stop the idle animation for a clean click effect
+            
+            this.playClickSound();
+
             this.tweens.killTweensOf(this.PLAY_BUTTON);
 
-            // Play an explosive click effect
+             this.sound.stopByKey('landing-menu-music');
+
             this.createClickEffect(this.PLAY_BUTTON, () => {
-                // Fade out camera
+
                 this.cameras.main.fadeOut(180, 0, 0, 0);
                 this.cameras.main.once("camerafadeoutcomplete", () => {
                     this.scene.start("Home");
@@ -105,19 +131,16 @@ export default class Start extends Phaser.Scene {
                 ease: "Sine.easeOut",
             });
 
-            // Add a shimmering effect with tint
+
             this.createShimmerEffect(this.PLAY_BUTTON);
         });
 
         this.PLAY_BUTTON.on("pointerout", () => {
-            // Clear all tweens and effects
             this.PLAY_BUTTON.clearTint();
-
-            // Smooth transition back to normal size
             this.tweens.add({
                 targets: this.PLAY_BUTTON,
-                scaleX: 0.86, // Original scale
-                scaleY: 0.86, // Original scale
+                scaleX: 0.86,
+                scaleY: 0.86, 
                 duration: 300,
                 ease: "Sine.easeOut",
             });
@@ -126,22 +149,19 @@ export default class Start extends Phaser.Scene {
         this.createLogoIdleAnimation(this.MAIN_LOGO);
     }
 
-    // Creates a subtle floating/pulsing idle animation
+
     createPlayButtonIdleAnimation(button: Phaser.GameObjects.Image) {
-        // Store the original position
         const originalY = button.y;
 
-        // Create a subtle floating effect
         this.tweens.add({
             targets: button,
-            y: originalY - 15, // Float up and down by 15px
+            y: originalY - 15,
             duration: 1800,
             yoyo: true,
             repeat: -1,
             ease: "Sine.easeInOut",
         });
 
-        // Add a subtle pulsing effect
         this.tweens.add({
             targets: button,
             scaleX: button.scaleX * 1.05,
@@ -150,10 +170,9 @@ export default class Start extends Phaser.Scene {
             yoyo: true,
             repeat: -1,
             ease: "Sine.easeInOut",
-            delay: 400, // Offset from the float animation for more organic movement
+            delay: 400, 
         });
 
-        // Add a subtle glow effect by periodically changing alpha
         this.tweens.add({
             targets: button,
             alpha: 0.8,
@@ -161,11 +180,11 @@ export default class Start extends Phaser.Scene {
             yoyo: true,
             repeat: -1,
             ease: "Sine.easeInOut",
-            delay: 600, // Further offset
+            delay: 600, 
         });
     }
 
-    // Creates a shimmering effect using tint transitions
+
     createShimmerEffect(button: Phaser.GameObjects.Image) {
         // Array of highlight colors to cycle through
         const colors = [0xffff66, 0xffffff, 0xffe066, 0xffffcc];
@@ -241,6 +260,16 @@ export default class Start extends Phaser.Scene {
             repeat: -1,
             ease: "Sine.easeInOut",
         });
+    }
+
+     private startBackgroundMusic(): void {
+        this.sound.stopByKey('landing-menu-music');
+        this.sound.play('landing-menu-music', { loop: true, volume: 0.3 });
+    }
+
+    private playClickSound(): void {
+    // Plays a sound asset named 'click-sound'
+    this.sound.play('click-menu');
     }
 
     update() {}
