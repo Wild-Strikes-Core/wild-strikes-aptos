@@ -83,6 +83,13 @@ export class TiledMapRenderer {
         const scrollFactorX = layer.parallaxx !== undefined ? layer.parallaxx : parentScrollFactorX;
         const scrollFactorY = layer.parallaxy !== undefined ? layer.parallaxy : parentScrollFactorY;
         tileLayer.setScrollFactor(scrollFactorX, scrollFactorY);
+        // Allow a simple boolean property to force render above player sprites
+        if (layer.properties) {
+          const props: Record<string, any> = {};
+          for (const p of layer.properties) props[p.name] = p.value;
+          const abovePlayers = props['abovePlayers'] === true || props['abovePlayers'] === 'true' || props['abovePlayers'] === 1;
+          if (abovePlayers) tileLayer.setDepth(10000); // players are 9999
+        }
       }
       return;
     }
@@ -117,8 +124,8 @@ export class TiledMapRenderer {
 
       let img: Phaser.GameObjects.Image | Phaser.GameObjects.TileSprite;
       if (isRepeating) {
-        const tileWidth = isRepeatingX ? map.widthInPixels * 2 : layer.imagewidth;
-        const tileHeight = isRepeatingY ? map.heightInPixels * 2 : layer.imageheight;
+        const tileWidth = isRepeatingX ? map.widthInPixels * 4 : layer.imagewidth;
+        const tileHeight = isRepeatingY ? map.heightInPixels * 4 : layer.imageheight;
         img = this.scene.add
           .tileSprite(layer.offsetx || 0, layer.offsety || 0, tileWidth, tileHeight, imageKey)
           .setOrigin(0, 0);
@@ -140,32 +147,47 @@ export class TiledMapRenderer {
       img.setDepth(parentDepth + groupDepthOffset);
 
       if (layer.properties) {
-        for (const prop of layer.properties) {
-          if (prop.name === 'platform' && prop.value === true) {
-            const texture = this.scene.textures.get(imageKey);
-            const imageWidth = texture.source[0].width;
-            const imageHeight = texture.source[0].height;
+        const props: Record<string, any> = {};
+        for (const p of layer.properties) props[p.name] = p.value;
 
-            if (isRepeatingX) {
-              const numRepeats = Math.ceil(map.widthInPixels / imageWidth) + 2;
-              const startX = layer.offsetx || 0;
-              for (let i = 0; i < numRepeats; i++) {
-                const platformX = startX + i * imageWidth;
-                const platform = platformGroup
-                  .create(platformX, (img as any).y, imageKey)
-                  .setOrigin(0, 0)
-                  .setDisplaySize(imageWidth, imageHeight)
-                  .refreshBody();
-                platform.setVisible(false);
-              }
-            } else {
-              const platform = platformGroup
-                .create((img as any).x, (img as any).y, imageKey)
+        // If requested, force this visual layer above players
+        const abovePlayers = props['abovePlayers'] === true || props['abovePlayers'] === 'true' || props['abovePlayers'] === 1;
+        if (abovePlayers) img.setDepth(10000); // players are 9999
+
+        // Build platform colliders
+        const isPlatform = props['platform'] === true || props['platform'] === 'true' || props['platform'] === 1;
+        if (isPlatform) {
+          const texture = this.scene.textures.get(imageKey);
+          const imageWidth = texture.source[0].width;
+          const nativeHeight = texture.source[0].height;
+          const imgHeight = (img as any).height ?? nativeHeight;
+
+          // If platformThickness is not provided, fall back to the image/display height (previous behavior).
+          const hasThicknessProp = props['platformThickness'] !== undefined && props['platformThickness'] !== null;
+          const thickness = hasThicknessProp ? Number(props['platformThickness']) : imgHeight;
+
+          // Place the platform so its bottom aligns with the image's bottom
+          const topY = (img as any).y + imgHeight - thickness;
+
+          if (isRepeatingX) {
+            const numRepeats = Math.ceil(map.widthInPixels / imageWidth) + 12;
+            const startX = layer.offsetx || 0;
+            for (let i = 0; i < numRepeats; i++) {
+              const platformX = startX + i * imageWidth;
+              platformGroup
+                .create(platformX, topY, imageKey)
                 .setOrigin(0, 0)
-                .setDisplaySize(imageWidth, imageHeight)
-                .refreshBody();
-              platform.setVisible(false);
+                .setDisplaySize(imageWidth, thickness)
+                .refreshBody()
+                .setVisible(false);
             }
+          } else {
+            platformGroup
+              .create((img as any).x, topY, imageKey)
+              .setOrigin(0, 0)
+              .setDisplaySize(imageWidth, thickness)
+              .refreshBody()
+              .setVisible(false);
           }
         }
       }
@@ -173,12 +195,20 @@ export class TiledMapRenderer {
     }
 
     if (layer.type === 'objectgroup' && Array.isArray(layer.objects)) {
+      // Support abovePlayers on the whole object layer
+      let z = parentDepth + groupDepthOffset;
+      if (layer.properties) {
+        const props: Record<string, any> = {};
+        for (const p of layer.properties) props[p.name] = p.value;
+        const abovePlayers = props['abovePlayers'] === true || props['abovePlayers'] === 'true' || props['abovePlayers'] === 1;
+        if (abovePlayers) z = 10000; // players are 9999
+      }
       layer.objects.forEach((obj: any) => {
         if (obj.image) {
           const objImageKey = obj.image.replace('.png', '');
-          this.scene.add.image(obj.x, obj.y, objImageKey).setOrigin(0, 0);
+          this.scene.add.image(obj.x, obj.y, objImageKey).setOrigin(0, 0).setDepth(z);
         } else {
-          this.scene.add.rectangle(obj.x, obj.y, obj.width, obj.height, 0xff0000).setOrigin(0, 0);
+          this.scene.add.rectangle(obj.x, obj.y, obj.width, obj.height, 0xff0000).setOrigin(0, 0).setDepth(z);
         }
       });
     }

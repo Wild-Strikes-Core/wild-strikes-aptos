@@ -26,6 +26,9 @@ export class InputComponent implements EntityComponent {
       left: 'A', right: 'D', up: 'W', jump: 'SPACE', dash: 'Q', crouch: 'CTRL'
     }) as any;
 
+    // Ensure browser defaults for keys we use are prevented while still letting Phaser handle them
+    scene.input.keyboard.addCapture(['SPACE', 'D']);
+
     scene.input.keyboard.on('keydown', (e: KeyboardEvent) => {
       if (e.code === 'Space' && !e.repeat) this.jumpJustPressed = true;
     });

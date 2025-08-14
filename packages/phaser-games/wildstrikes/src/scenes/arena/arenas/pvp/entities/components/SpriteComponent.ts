@@ -5,6 +5,9 @@ import { CHARACTER_MAPS, CharacterMap, AnimConfig, DEFAULT_MAP } from '../player
 export class SpriteComponent implements EntityComponent {
   private entity: GameEntity;
   private map: CharacterMap;
+  private animPrefix: string;
+  private animKeyMap: Record<string, string> = {};
+  private static readonly TARGET_DISPLAY_HEIGHT = 240; // px on-screen
 
   // Minimal animation mapping (migrated from old manager)
   private static readonly MAP: Record<string, AnimConfig> = DEFAULT_MAP;
@@ -13,6 +16,7 @@ export class SpriteComponent implements EntityComponent {
     this.entity = entity;
     const byKey = opts?.characterKey ? CHARACTER_MAPS[opts.characterKey] : undefined;
     this.map = opts?.mapOverride || byKey || SpriteComponent.MAP;
+    this.animPrefix = opts?.characterKey ? `${opts.characterKey}_` : '';
     this.ensureAnimations();
     this.entity.sprite.setData('currentState', 'idle');
   }
@@ -21,14 +25,24 @@ export class SpriteComponent implements EntityComponent {
     const scene = this.entity.scene;
     const map = this.map || SpriteComponent.MAP;
     Object.entries(map).forEach(([key, cfg]) => {
-      if (!scene.anims.exists(key)) {
+      const createdKey = `${this.animPrefix}${key}`;
+      this.animKeyMap[key] = createdKey;
+      if (!scene.anims.exists(createdKey)) {
         const data = scene.cache.json.get(cfg.data);
-        if (!data) return;
-        const frames = data.anims[0].frames.length;
+        if (!data || !data.anims || !data.anims[0] || !Array.isArray(data.anims[0].frames)) return;
+        // Prefer JSON-declared frame count; fallback to spritesheet frame count if JSON has zero
+        let jsonFrames = data.anims[0].frames.length || 0;
+        let sheetFrames = 0;
+        try {
+          const tex = scene.textures.get(cfg.texture);
+          sheetFrames = tex?.frameTotal ?? 0;
+        } catch {}
+        const frames = Math.max(jsonFrames, sheetFrames);
+        if (frames <= 0) return; // skip invalid animations to avoid Phaser's duration error
         const repeat0 = (key.includes('attack') || key.includes('hit') || key.includes('death')) ? 0 : (data.anims[0].repeat || 0);
         try {
           scene.anims.create({
-            key,
+            key: createdKey,
             frames: scene.anims.generateFrameNumbers(cfg.texture, { start: 0, end: frames - 1 }),
             frameRate: data.anims[0].frameRate || 10,
             repeat: repeat0,
@@ -43,7 +57,11 @@ export class SpriteComponent implements EntityComponent {
     const s = this.entity.sprite;
     s.setDepth(1);
     s.setInteractive({ hitArea: new Phaser.Geom.Rectangle(0, 0, 120, 80), hitAreaCallback: Phaser.Geom.Rectangle.Contains });
-    s.setScale(3);
+
+    // Normalize visual size across characters regardless of spritesheet pixel dims
+    const frameHeight = s.height || s.displayHeight || 80;
+    const normalizedScale = SpriteComponent.TARGET_DISPLAY_HEIGHT / frameHeight;
+    s.setScale(normalizedScale);
     s.setOrigin(0.5, 1);
     if (s.body) {
       const b = s.body as Phaser.Physics.Arcade.Body;
@@ -82,12 +100,13 @@ export class SpriteComponent implements EntityComponent {
   play(key: string, opts?: { frameRate?: number; repeat?: number; stopCurrent?: boolean }): void {
     const s = this.entity.sprite;
     if (!s || !s.active) return;
+    const actualKey = this.animKeyMap[key] || key;
     if (opts?.stopCurrent && s.anims.currentAnim) {
       s.anims.stop();
       s.off('animationcomplete');
-      this.entity.scene.time.delayedCall(10, () => s.anims.play(key));
+      this.entity.scene.time.delayedCall(10, () => s.anims.play(actualKey));
     } else {
-      s.anims.play(key, true);
+      s.anims.play(actualKey, true);
     }
   }
 

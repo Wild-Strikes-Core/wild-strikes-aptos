@@ -232,7 +232,7 @@ export default class MatchFound extends Phaser.Scene {
                     p2SpawnPosition: this.p2SpawnPosition,
                     roomId: this.roomId,
                     localCharacterKey: 'knight',
-                    opponentCharacterKey: 'knight',
+                    opponentCharacterKey: 'minotaur',
                 });
             });
         });

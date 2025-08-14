@@ -230,6 +230,8 @@ export class ArenaScene extends Phaser.Scene {
       // Slightly above the player center
       this.cameras.main.setFollowOffset(10, 160);
       this.cameras.main.setDeadzone(130, 130);
+      // Ensure a comfortable zoom independent of sprite sizes
+      try { this.cameras.main.setZoom(1.6); } catch {}
     }
 
     // Hitbox collisions

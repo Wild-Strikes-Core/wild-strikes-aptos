@@ -45,7 +45,9 @@ export interface AssetEntry {
   
     // ---------- CHARACTERS ---------- //
     { key: 'knight', url: '/arena-characters/knight/knight-asset-pack.json', type: 'pack', group: 'chars' },
-    { key: 'lumber', url: '/arena-characters/lumber/lumber-asset-pack.json', type: 'pack', group: 'chars' },
+    { key: 'minotaur', url: '/arena-characters/minotaur/minotaur-asset-pack.json', type: 'pack', group: 'chars' },
+
+
     { key: 'player-hurt', url: '/assets/game/characters/audio/hurt.wav', type: 'audio', group: 'chars' },
     { key: 'player-jump', url: '/assets/game/characters/audio/jump.wav', type: 'audio', group: 'chars' },
     { key: 'player-dash', url: '/assets/game/characters/audio/power_up.wav', type: 'audio', group: 'chars' },

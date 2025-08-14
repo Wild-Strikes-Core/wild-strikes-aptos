@@ -20,6 +20,20 @@ export const DEFAULT_MAP: CharacterMap = {
 export const CHARACTER_MAPS: Record<string, CharacterMap> = {
   default: DEFAULT_MAP,
   knight: DEFAULT_MAP,
+  minotaur: {
+    // Until more anims exist for minotaur, map all to idle
+    player_idle: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_run: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_jump: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_dash: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_fall: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_attack_light: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_attack_heavy: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_crouch_idle: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_crouch_walk: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+    player_hit: { texture: 'minotaur_Hit', data: 'minotaur_Hit_1' },
+    player_death_static: { texture: 'minotaur_Idle', data: 'minotaur_Idle_1' },
+  }
 };
 
 
