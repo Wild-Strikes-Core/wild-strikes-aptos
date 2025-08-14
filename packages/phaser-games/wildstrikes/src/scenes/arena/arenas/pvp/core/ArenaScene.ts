@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { EntityFactory } from "../entities/core/EntityFactory";
-import { PlayerEntity } from "../entities/playerEntity";
+import { PlayerEntity } from "../entities/player/playerEntity";
 import { AssetLoader } from "../../../../../AssetLoader";
 import { BattleNetworkManager } from "../systems/network/BattleNetworkManager";
 import { BattleConfig } from "../config/BattleConfig";
@@ -56,6 +56,8 @@ export class ArenaScene extends Phaser.Scene {
     p1SpawnPosition?: { x: number; y: number };
     p2SpawnPosition?: { x: number; y: number };
     roomId?: string;
+    localCharacterKey?: string;
+    opponentCharacterKey?: string;
   }) {
     // Map incoming payload into BattleConfig
     this.battleConfig = {
@@ -67,6 +69,9 @@ export class ArenaScene extends Phaser.Scene {
       localSpawnPosition: data?.p1SpawnPosition || { x: 600, y: 200 },
       opponentSpawnPosition: data?.p2SpawnPosition || { x: 1200, y: 200 },
       roomId: data?.roomId || ''
+      ,
+      localCharacterKey: data?.localCharacterKey,
+      opponentCharacterKey: data?.opponentCharacterKey
     };
 
     this.networkManager = new BattleNetworkManager({
@@ -193,6 +198,7 @@ export class ArenaScene extends Phaser.Scene {
         playerId: this.battleConfig.localPlayerId,
         roomId: this.battleConfig.roomId,
         followCamera: false,
+        characterKey: this.battleConfig.localCharacterKey,
       }
     );
     // Ensure local player renders above background layers
@@ -207,6 +213,7 @@ export class ArenaScene extends Phaser.Scene {
         inputEnabled: false,
         singlePlayerMode: false,
         followCamera: false,
+        characterKey: this.battleConfig.opponentCharacterKey,
       }
     );
     // Ensure opponent also renders above background layers

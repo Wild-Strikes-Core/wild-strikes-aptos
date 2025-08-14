@@ -2,7 +2,7 @@
     "section1": {
         "files": [
             {
-                "url": "assets/Sprites/placeholderCharacter/_Attack.png",
+                "url": "/arena-characters/knight/_Attack.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -15,17 +15,17 @@
                 "key": "_Attack"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Attack.json",
+                "url": "/arena-characters/knight/animations/_Attack.json",
                 "type": "animation",
                 "key": "_Attack_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Attack2.json",
+                "url": "/arena-characters/knight/animations/_Attack2.json",
                 "type": "animation",
                 "key": "_Attack_2"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Attack2.png",
+                "url": "/arena-characters/knight/_Attack2.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -38,97 +38,7 @@
                 "key": "_Attack2"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Attack2NoMovement.png",
-                "frameConfig": {
-                    "frameWidth": 120,
-                    "frameHeight": 80,
-                    "startFrame": 0,
-                    "endFrame": -1,
-                    "spacing": 0,
-                    "margin": 0
-                },
-                "type": "spritesheet",
-                "key": "_Attack2NoMovement"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Attack2NoMovement.json",
-                "type": "animation",
-                "key": "_Attack2NoMovement_1"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/_AttackCombo2hit.png",
-                "frameConfig": {
-                    "frameWidth": 120,
-                    "frameHeight": 80,
-                    "startFrame": 0,
-                    "endFrame": -1,
-                    "spacing": 0,
-                    "margin": 0
-                },
-                "type": "spritesheet",
-                "key": "_AttackCombo2hit"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/animations/_AttackCombo2hit.json",
-                "type": "animation",
-                "key": "_AttackCombo2hit_1"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/_AttackComboNoMovement.png",
-                "frameConfig": {
-                    "frameWidth": 120,
-                    "frameHeight": 80,
-                    "startFrame": 0,
-                    "endFrame": -1,
-                    "spacing": 0,
-                    "margin": 0
-                },
-                "type": "spritesheet",
-                "key": "_AttackComboNoMovement"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/animations/_AttackComboNoMovement.json",
-                "type": "animation",
-                "key": "_AttackComboNoMovement_1"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/_AttackNoMovement.png",
-                "frameConfig": {
-                    "frameWidth": 120,
-                    "frameHeight": 80,
-                    "startFrame": 0,
-                    "endFrame": -1,
-                    "spacing": 0,
-                    "margin": 0
-                },
-                "type": "spritesheet",
-                "key": "_AttackNoMovement"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/animations/_AttackNoMovement.json",
-                "type": "animation",
-                "key": "_AttackNoMovement_1"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/_CrouchAttack.png",
-                "frameConfig": {
-                    "frameWidth": 120,
-                    "frameHeight": 80,
-                    "startFrame": 0,
-                    "endFrame": -1,
-                    "spacing": 0,
-                    "margin": 0
-                },
-                "type": "spritesheet",
-                "key": "_CrouchAttack"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/animations/_CrouchAttack.json",
-                "type": "animation",
-                "key": "_CrouchAttack_1"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/_CrouchFull.png",
+                "url": "/arena-characters/knight/_CrouchFull.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -141,12 +51,12 @@
                 "key": "_CrouchFull"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_CrouchFull.json",
+                "url": "/arena-characters/knight/animations/_CrouchFull.json",
                 "type": "animation",
                 "key": "_CrouchFull_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_CrouchWalk.png",
+                "url": "/arena-characters/knight/_CrouchWalk.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -159,12 +69,12 @@
                 "key": "_CrouchWalk"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_CrouchWalk.json",
+                "url": "/arena-characters/knight/animations/_CrouchWalk.json",
                 "type": "animation",
                 "key": "_CrouchWalk_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Dash.png",
+                "url": "/arena-characters/knight/_Dash.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -177,12 +87,12 @@
                 "key": "_Dash"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Dash.json",
+                "url": "/arena-characters/knight/animations/_Dash.json",
                 "type": "animation",
                 "key": "_Dash_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Death.png",
+                "url": "/arena-characters/knight/_Death.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -195,7 +105,7 @@
                 "key": "_Death"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_DeathNoMovement.png",
+                "url": "/arena-characters/knight/_DeathNoMovement.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -208,12 +118,12 @@
                 "key": "_DeathNoMovement"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_DeathNoMovement.json",
+                "url": "/arena-characters/knight/animations/_DeathNoMovement.json",
                 "type": "animation",
                 "key": "_DeathNoMovement_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Fall.png",
+                "url": "/arena-characters/knight/_Fall.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -226,12 +136,12 @@
                 "key": "_Fall"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Fall.json",
+                "url": "/arena-characters/knight/animations/_Fall.json",
                 "type": "animation",
                 "key": "_Fall_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Hit.png",
+                "url": "/arena-characters/knight/_Hit.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -244,12 +154,12 @@
                 "key": "_Hit"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Hit.json",
+                "url": "/arena-characters/knight/animations/_Hit.json",
                 "type": "animation",
                 "key": "_Hit_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Idle.png",
+                "url": "/arena-characters/knight/_Idle.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -262,12 +172,12 @@
                 "key": "_Idle"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Idle.json",
+                "url": "/arena-characters/knight/animations/_Idle.json",
                 "type": "animation",
                 "key": "_Idle_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Jump.png",
+                "url": "/arena-characters/knight/_Jump.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -280,30 +190,12 @@
                 "key": "_Jump"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Jump.json",
+                "url": "/arena-characters/knight/animations/_Jump.json",
                 "type": "animation",
                 "key": "_Jump_1"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/_Roll.png",
-                "frameConfig": {
-                    "frameWidth": 120,
-                    "frameHeight": 80,
-                    "startFrame": 0,
-                    "endFrame": -1,
-                    "spacing": 0,
-                    "margin": 0
-                },
-                "type": "spritesheet",
-                "key": "_Roll"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Roll.json",
-                "type": "animation",
-                "key": "_Roll_1"
-            },
-            {
-                "url": "assets/Sprites/placeholderCharacter/_Run.png",
+                "url": "/arena-characters/knight/_Run.png",
                 "frameConfig": {
                     "frameWidth": 120,
                     "frameHeight": 80,
@@ -316,7 +208,7 @@
                 "key": "_Run"
             },
             {
-                "url": "assets/Sprites/placeholderCharacter/animations/_Run.json",
+                "url": "/arena-characters/knight/animations/_Run.json",
                 "type": "animation",
                 "key": "_Run_1"
             }

@@ -1,23 +1,23 @@
-import { GameEntity } from './core/GameEntity';
-import { CameraComponent } from './components/CameraComponent';
-import { HitboxComponent } from './components/HitboxComponent';
-import { InputComponent } from './components/InputComponent';
-import { NetworkComponent } from './components/NetworkComponent';
-import { SpriteComponent } from './components/SpriteComponent';
-import { MovementComponent } from './components/MovementComponent';
-import { StateComponent } from './components/StateComponent';
+import { GameEntity } from '../core/GameEntity';
+import { CameraComponent } from '../components/CameraComponent';
+import { HitboxComponent } from '../components/HitboxComponent';
+import { InputComponent } from '../components/InputComponent';
+import { NetworkComponent } from '../components/NetworkComponent';
+import { SpriteComponent } from '../components/SpriteComponent';
+import { MovementComponent } from '../components/MovementComponent';
+import { StateComponent } from '../components/StateComponent';
 
 // Player states
-import { IdleState } from './states/player/IdleState';
-import { SprintingState } from './states/player/SprintingState';
-import { JumpingState } from './states/player/JumpingState';
-import { DashingState } from './states/player/DashingState';
-import { AttackingLightState } from './states/player/AttackingLightState';
-import { AttackingHeavyState } from './states/player/AttackingHeavyState';
-import { CrouchingState } from './states/player/CrouchingState';
-import { CrouchWalkingState } from './states/player/CrouchWalkingState';
-import { HitState } from './states/player/HitState';
-import { DeadState } from './states/player/DeadState';
+import { IdleState } from '../states/player/IdleState';
+import { SprintingState } from '../states/player/SprintingState';
+import { JumpingState } from '../states/player/JumpingState';
+import { DashingState } from '../states/player/DashingState';
+import { AttackingLightState } from '../states/player/AttackingLightState';
+import { AttackingHeavyState } from '../states/player/AttackingHeavyState';
+import { CrouchingState } from '../states/player/CrouchingState';
+import { CrouchWalkingState } from '../states/player/CrouchWalkingState';
+import { HitState } from '../states/player/HitState';
+import { DeadState } from '../states/player/DeadState';
 
 export class PlayerEntity extends GameEntity {
   constructor(
@@ -30,13 +30,15 @@ export class PlayerEntity extends GameEntity {
       playerId?: string;
       roomId?: string;
       followCamera?: boolean;
+      characterKey?: string;
+      spriteMap?: Record<string, { texture: string; data: string }>;
     } = {}
   ) {
     super(id, scene, sprite);
     const inputEnabled = options.inputEnabled ?? true;
     const singlePlayerMode = options.singlePlayerMode ?? false;
 
-    const spriteComp = new SpriteComponent(this);
+    const spriteComp = new SpriteComponent(this, { characterKey: options.characterKey, mapOverride: options.spriteMap as any });
     spriteComp.setDefaults();
     this.addComponent('sprite', spriteComp);
 

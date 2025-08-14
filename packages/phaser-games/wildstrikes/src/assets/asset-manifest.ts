@@ -42,13 +42,10 @@ export interface AssetEntry {
     { key: 'player-sprint', url: '/assets/game/gameplay/maps/Footstep.wav', type: 'audio', group: 'gameplay-audio' },
     // { key: 'player-hit', url: '/assets/game/gameplay/maps/player-hit.mp3', type: 'audio', group: 'gameplay-audio' },
     { key: 'game-over', url: '/assets/game/gameplay/maps/game-over.mp3', type: 'audio', group: 'gameplay-audio' },
-    { key: 'PH-BG', url: '/assets/game/gameplay/maps/PH-BG.mp3', type: 'audio', group: 'gameplay-audio' },
-    { key: 'JPN-BG', url: '/assets/game/gameplay/maps/JPN-BG.mp3', type: 'audio', group: 'gameplay-audio' },
-    { key: 'FRN-BG', url: '/assets/game/gameplay/maps/FRN-BG.mp3', type: 'audio', group: 'gameplay-audio' },
   
     // ---------- CHARACTERS ---------- //
-    { key: 'sprite_heroP1', url: '/assets/game/characters/heroes/Hero_P1-pack.json', type: 'pack', group: 'chars' },
-    { key: 'placeholderChar', url: '/assets/game/characters/placeholder/placeholderCharacter/placeholderCharacter-sprite-asset-pack.json', type: 'pack', group: 'chars' },
+    { key: 'knight', url: '/arena-characters/knight/knight-asset-pack.json', type: 'pack', group: 'chars' },
+    { key: 'lumber', url: '/arena-characters/lumber/lumber-asset-pack.json', type: 'pack', group: 'chars' },
     { key: 'player-hurt', url: '/assets/game/characters/audio/hurt.wav', type: 'audio', group: 'chars' },
     { key: 'player-jump', url: '/assets/game/characters/audio/jump.wav', type: 'audio', group: 'chars' },
     { key: 'player-dash', url: '/assets/game/characters/audio/power_up.wav', type: 'audio', group: 'chars' },

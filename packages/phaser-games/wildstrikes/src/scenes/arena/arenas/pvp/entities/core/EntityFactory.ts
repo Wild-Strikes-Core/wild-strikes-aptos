@@ -1,4 +1,4 @@
-import { PlayerEntity } from '../playerEntity';
+import { PlayerEntity } from '../player/playerEntity';
 
 export class EntityFactory {
   static createPlayer(
@@ -6,9 +6,10 @@ export class EntityFactory {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    options?: { inputEnabled?: boolean; singlePlayerMode?: boolean; playerId?: string; roomId?: string; followCamera?: boolean }
+    options?: { inputEnabled?: boolean; singlePlayerMode?: boolean; playerId?: string; roomId?: string; followCamera?: boolean; characterKey?: string; spriteMap?: Record<string, { texture: string; data: string }> }
   ): PlayerEntity {
-    const sprite = scene.physics.add.sprite(x, y, '_Idle') as Phaser.Physics.Arcade.Sprite;
+    const initialTexture = options?.spriteMap?.player_idle?.texture || '_Idle';
+    const sprite = scene.physics.add.sprite(x, y, initialTexture) as Phaser.Physics.Arcade.Sprite;
     return new PlayerEntity(id, scene, sprite, options);
   }
 }
