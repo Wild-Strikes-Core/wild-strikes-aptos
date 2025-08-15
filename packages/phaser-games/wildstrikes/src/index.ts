@@ -6,8 +6,8 @@ import MatchmakingScene from './scenes/menu/MatchmakingScene';
 import MatchFoundScene from './scenes/menu/MatchFoundScene';
 import VictoryScene from './scenes/arena/arenas/pvp/core/VictoryScene';
 import DefeatScene from './scenes/arena/arenas/pvp/core/DefeatScene';
-import ArenaScene from './scenes/arena/arenas/pvp/core/ArenaScene';
 import StartMenuScene from './scenes/menu/StartMenuScene';
+import ArenaScene from './scenes/arena/arenas/pvp/core/ArenaScene';
 
 class WildstrikesGame extends Phaser.Game {
   constructor(container: HTMLElement) {
@@ -24,9 +24,9 @@ class WildstrikesGame extends Phaser.Game {
         HomeScene,
         MatchmakingScene,
         MatchFoundScene,
-        ArenaScene,
         VictoryScene,
         DefeatScene,
+        ArenaScene,
       ],
       transparent: true,
       physics: {

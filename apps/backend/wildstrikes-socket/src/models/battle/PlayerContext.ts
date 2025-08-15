@@ -1,0 +1,34 @@
+
+export interface PlayerContext {
+  socketId: string;
+  position : {
+    x: number;
+    y: number;
+    facing: 'left' | 'right';
+  }
+  velocityX?: number; 
+  velocityY?: number;
+  animation?: string;
+  isAttacking?: boolean;
+  isDashing?: boolean;
+  isMoving?: boolean;
+  inputs: {
+      left: boolean;
+      right: boolean;
+      jump: boolean;
+      crouch: boolean;
+      dash: boolean;
+      lightAttack: boolean;
+      heavyAttack: boolean;
+  };
+  state: 'idle' | 'sprinting' | 'crouching'
+  | 'crouchWalking' | 'jumping' | 'dashing'
+  | 'attackingLight' | 'attackingHeavy' | 'hit' | 'dead';
+  playerStats: {
+    damagePercentage: number;
+    lives: number;
+  }
+  isAlive?: boolean;
+  sequenceNumber?: number;
+  timestamp?: number;
+}
