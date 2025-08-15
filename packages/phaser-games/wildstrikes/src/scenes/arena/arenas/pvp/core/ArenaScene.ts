@@ -226,12 +226,12 @@ export class ArenaScene extends Phaser.Scene {
     // Camera follow
     const sprite = this.localPlayer?.sprite;
     if (sprite) {
-      this.cameras.main.startFollow(sprite);
+      this.cameras.main.startFollow(sprite, false, 0.8, 0.8);
       // Slightly above the player center
       this.cameras.main.setFollowOffset(10, 160);
       this.cameras.main.setDeadzone(130, 130);
       // Ensure a comfortable zoom independent of sprite sizes
-      try { this.cameras.main.setZoom(1.6); } catch {}
+      try { this.cameras.main.setZoom(1.8); } catch {}
     }
 
     // Hitbox collisions

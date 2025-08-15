@@ -1,3 +1,4 @@
+// StateComponent.ts
 import { EntityComponent } from './EntityComponent';
 import { GameEntity } from '../core/GameEntity';
 import { InputComponent } from './InputComponent';
@@ -72,19 +73,30 @@ export class StateComponent implements EntityComponent {
 
   getStateKey(): string { return this.currentKey; }
 
-  update(): void {
+  // NOTE: do NOT call input.resetJustPressed() here — the InputComponent manages per-frame flags.
+  update(now?: number, dt?: number): void {
+    // State machine consumes the *already-updated* input snapshot. Make sure PlayerEntity updates input first.
     this.current.update();
 
-    // Always capture + reset after state update so per-state logic can read one-shot inputs first
+    // Send network snapshot using the new Input API
     if (this.deps.inputEnabled) {
-      const inputs = this.deps.input.capture();
-      if (inputs) {
-        if (this.deps.network) {
-          this.deps.network.sendPlayerMoved(inputs, this.currentKey, 'TICK');
+      const input = this.deps.input as any;
+      if (typeof input.getSnapshot === 'function') {
+        const snapshot = input.getSnapshot();
+        if (this.deps.network && snapshot) {
+          // snapshot is a map action -> { pressed, justPressed, justReleased }
+          this.deps.network.sendPlayerMoved(snapshot, this.currentKey, 'TICK');
         }
-        this.deps.input.resetJustPressed();
+      } else {
+        // Defensive: if InputComponent doesn't expose getSnapshot, throw / log so you can fix it
+        console.warn('StateComponent: InputComponent has no getSnapshot(). Ensure input uses the new API.');
       }
     }
+
+    // Clear per-frame flags once states have consumed them
+    try {
+      (this.deps.input as any).endFrame?.();
+    } catch {}
   }
 
   destroy(): void { this.current.exit(); }

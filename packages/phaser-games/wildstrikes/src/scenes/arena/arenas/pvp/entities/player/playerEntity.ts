@@ -8,16 +8,18 @@ import { MovementComponent } from '../components/MovementComponent';
 import { StateComponent } from '../components/StateComponent';
 
 // Player states
-import { IdleState } from '../states/player/IdleState';
-import { SprintingState } from '../states/player/SprintingState';
-import { JumpingState } from '../states/player/JumpingState';
-import { DashingState } from '../states/player/DashingState';
-import { AttackingLightState } from '../states/player/AttackingLightState';
-import { AttackingHeavyState } from '../states/player/AttackingHeavyState';
-import { CrouchingState } from '../states/player/CrouchingState';
-import { CrouchWalkingState } from '../states/player/CrouchWalkingState';
-import { HitState } from '../states/player/HitState';
-import { DeadState } from '../states/player/DeadState';
+import { 
+  IdleState,
+  SprintingState,
+  JumpingState,
+  DashingState,
+  AttackingLightState,
+  AttackingHeavyState,
+  CrouchingState,
+  CrouchWalkingState,
+  HitState,
+  DeadState,
+} from '../states/player';
 
 export class PlayerEntity extends GameEntity {
   constructor(
@@ -38,20 +40,42 @@ export class PlayerEntity extends GameEntity {
     const inputEnabled = options.inputEnabled ?? true;
     const singlePlayerMode = options.singlePlayerMode ?? false;
 
+
+
+    const defaultBindings = {
+      left: { keys: ['A', 'ArrowLeft'] },
+      right: { keys: ['D', 'ArrowRight'] },
+      jump: { keys: ['W', 'SPACE'] },
+      crouch: { keys: ['CTRL', 'ArrowDown'] },
+      dash: { keys: ['Q'] },
+      lightAttack: { pointerButtons: [0] }, // left click
+      heavyAttack: { pointerButtons: [2] }, // right click
+    };
+
+    // Initialize sprite component, passing in the character key and sprite map
     const spriteComp = new SpriteComponent(this, { characterKey: options.characterKey, mapOverride: options.spriteMap as any });
     spriteComp.setDefaults();
-    this.addComponent('sprite', spriteComp);
 
-    this.addComponent('input', new InputComponent(this, inputEnabled));
+    const inputComp = new InputComponent(this, inputEnabled, defaultBindings as any);
+    this.addComponent('input', inputComp);
+
+    // Add network component if playerId and roomId are provided
+    const net = options.playerId && options.roomId ? new NetworkComponent(this, { playerId: options.playerId, roomId: options.roomId }) : null;
+    if (net) {
+      this.addComponent('network', net);
+    }
+  
+    // Add camera component if followCamera is true
+    const cam = new CameraComponent(this);
+    if (options.followCamera) {
+      cam.follow(0, 0, 0.1, 0.1);
+    }
+
+    // Add components to the entity
+    this.addComponent('sprite', spriteComp);
     this.addComponent('movement', new MovementComponent(this));
     this.addComponent('hitbox', new HitboxComponent(this, singlePlayerMode));
-
-    const net = options.playerId && options.roomId ? new NetworkComponent(this, { playerId: options.playerId, roomId: options.roomId }) : null;
-    if (net) this.addComponent('network', net);
-
-    const cam = new CameraComponent(this);
     this.addComponent('camera', cam);
-    if (options.followCamera) cam.follow(0, 0, 0.1, 0.1);
 
     // Provide states from @states/
     const states = {
@@ -68,6 +92,34 @@ export class PlayerEntity extends GameEntity {
     };
 
     this.addComponent('state', new StateComponent(this, { inputEnabled, singlePlayerMode, states, initial: 'idle' }));
+
+    // wire up actions to handlers
+    inputComp.setHandlers('jump', {
+      onDown: () => {
+        // call whatever your state machine method is:
+        const state = this.getComponent('state') as any;
+        state?.goto?.('jumping'); // adapt to your StateComponent API
+      }
+    });
+    inputComp.setHandlers('lightAttack', {
+      onDown: () => {
+        const state = this.getComponent('state') as any;
+        // only attempt transition if local player and input enabled
+        if (inputEnabled) state?.goto?.('attackingLight');
+      }
+    });
+    inputComp.setHandlers('left', {
+      onHold: (duration) => {
+        // you can poll InputComponent.getActionState('left') from movement component instead of a handler
+        // or do movement directly here:
+        const movement = this.getComponent('movement') as any;
+        movement?.moveLeft?.();
+      },
+      onUp: () => {
+        const movement = this.getComponent('movement') as any;
+        movement?.stopHorizontal?.();
+      }
+    });
     this.sprite.setData('id', id);
   }
 }

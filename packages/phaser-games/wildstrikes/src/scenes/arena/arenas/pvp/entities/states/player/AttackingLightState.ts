@@ -30,11 +30,14 @@ export class AttackingLightState implements IEntityState {
   }
   private onComplete(): void {
     if (!this.deps.inputEnabled) { this.goto('idle'); return; }
-    const keys = this.deps.input.getKeys();
+    const input = this.deps.input as any;
+    const left = input.getActionState ? input.getActionState('left') : null;
+    const right = input.getActionState ? input.getActionState('right') : null;
+    const crouch = input.getActionState ? input.getActionState('crouch') : null;
     const onGround = this.deps.movement.isOnGround();
     if (!onGround) this.goto('jumping');
-    else if (keys.crouch?.isDown) this.goto(keys.left?.isDown || keys.right?.isDown ? 'crouchWalking' : 'crouching');
-    else if (keys.left?.isDown || keys.right?.isDown) this.goto('sprinting');
+    else if (crouch?.pressed) this.goto((left?.pressed || right?.pressed) ? 'crouchWalking' : 'crouching');
+    else if (left?.pressed || right?.pressed) this.goto('sprinting');
     else this.goto('idle');
   }
   update(): void {}

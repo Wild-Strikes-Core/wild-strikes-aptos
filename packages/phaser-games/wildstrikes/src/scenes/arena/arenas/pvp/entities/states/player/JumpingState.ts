@@ -14,10 +14,18 @@ export class JumpingState implements IEntityState {
     this.deps.sprite.play('player_jump');
   }
   update(): void {
-    const keys = this.deps.input.getKeys();
+    const input = this.deps.input as any;
+    const left = input.getActionState ? input.getActionState('left') : null;
+    const right = input.getActionState ? input.getActionState('right') : null;
+    const crouch = input.getActionState ? input.getActionState('crouch') : null;
+    const jump = input.getActionState ? input.getActionState('jump') : null;
+    const dash = input.getActionState ? input.getActionState('dash') : null;
+    const light = input.getActionState ? input.getActionState('lightAttack') : null;
+    const heavy = input.getActionState ? input.getActionState('heavyAttack') : null;
+
     if (this.deps.inputEnabled) {
-      if (keys.left?.isDown) { this.deps.movement.moveLeft(); this.deps.sprite.flipX(true); }
-      else if (keys.right?.isDown) { this.deps.movement.moveRight(); this.deps.sprite.flipX(false); }
+      if (left?.pressed) { this.deps.movement.moveLeft(); this.deps.sprite.flipX(true); }
+      else if (right?.pressed) { this.deps.movement.moveRight(); this.deps.sprite.flipX(false); }
     }
 
     const body = this.deps.entity.sprite.body as Phaser.Physics.Arcade.Body;
@@ -26,24 +34,23 @@ export class JumpingState implements IEntityState {
     const onGround = this.deps.movement.isOnGround();
     if (onGround) {
       this.jumpCount = 0; // reset on landing
-      if (keys.crouch?.isDown) this.goto('crouching');
-      else if (keys.left?.isDown || keys.right?.isDown) this.goto('sprinting');
+      if (crouch?.pressed) this.goto('crouching');
+      else if (left?.pressed || right?.pressed) this.goto('sprinting');
       else this.goto('idle');
       return;
     }
 
-    if (this.deps.inputEnabled && keys.dash?.isDown) { this.goto('dashing'); return; }
+    if (this.deps.inputEnabled && dash?.justPressed) { this.goto('dashing'); return; }
 
-    const inputs = this.deps.input.capture();
     // Allow mid-air double jump on just-pressed jump input
-    if (this.deps.inputEnabled && inputs?.jump && this.jumpCount < this.jumpLimit) {
+    if (this.deps.inputEnabled && (jump?.justPressed ?? false) && this.jumpCount < this.jumpLimit) {
       this.deps.movement.jump();
       this.jumpCount++;
       this.deps.sprite.play('player_jump');
       return;
     }
-    if (inputs?.lightAttack) { this.goto('attackingLight'); return; }
-    if (inputs?.heavyAttack) { this.goto('attackingHeavy'); return; }
+    if (light?.justPressed) { this.goto('attackingLight'); return; }
+    if (heavy?.justPressed) { this.goto('attackingHeavy'); return; }
   }
   exit(): void {}
 }
