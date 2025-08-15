@@ -23,7 +23,9 @@ export interface AssetEntry {
     { key: 'leadMENU', url: '/assets/game/ui/leadMENU-asset-pack.json', type: 'pack', group: 'ui' },
   
     // ---------- UI AUDIO (Individual Audio Files) ---------- //
-    { key: 'game-menu-music', url: '/assets/game/ui/menu/game-menu.mp3', type: 'audio', group: 'ui-audio' },
+    { key: 'home-menu-music', url: '/assets/game/ui/menu/home-menu-NOSTALGIA.mp3', type: 'audio', group: 'ui-audio' },
+    { key: 'hover-sound', url: '/assets/game/ui/menu/hover-sound.mp3', type: 'audio', group: 'ui-audio' },
+    { key: 'landing-menu-music', url: '/assets/game/ui/menu/landing-menu-AriaStrikes.mp3', type: 'audio', group: 'ui-audio' },
     { key: 'click-menu', url: '/assets/game/ui/menu/click-menu.mp3', type: 'audio', group: 'ui-audio' },
     { key: 'victory', url: '/assets/game/ui/results/victory.mp3', type: 'audio', group: 'ui-audio' },
     { key: 'defeat', url: '/assets/game/ui/results/defeat.mp3', type: 'audio', group: 'ui-audio' },
@@ -54,5 +56,7 @@ export interface AssetEntry {
 
     // ---------- ENVIRONMENT ---------- //
     { key: '2G_bgClouds_2', url: '/assets/game/ui/landing/Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview.png', type: 'image', group: 'environment' },
-    { key: '2G_bg', url: '/assets/game/ui/menu/2G_bg.png', type: 'image', group: 'environment' },
+    { key: '2G_bg', url: '/assets/game/ui/menu/2G_mainBg.png', type: 'image', group: 'environment' }, //2G_mainBg.png dapat gamitin, but its missing the land asset so temporarily keep the original//
+    { key: '2G_bgHill', url: '/assets/game/ui/menu/2G_bgHill.png', type: 'image', group: 'environment' }, 
+    { key: '2g_bgStars', url: '/assets/game/ui/menu/2G_bgStars.png', type: 'image', group: 'environment' }, 
   ];
