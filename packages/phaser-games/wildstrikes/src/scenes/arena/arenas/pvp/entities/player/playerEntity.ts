@@ -108,18 +108,7 @@ export class PlayerEntity extends GameEntity {
         if (inputEnabled) state?.goto?.('attackingLight');
       }
     });
-    inputComp.setHandlers('left', {
-      onHold: (duration) => {
-        // you can poll InputComponent.getActionState('left') from movement component instead of a handler
-        // or do movement directly here:
-        const movement = this.getComponent('movement') as any;
-        movement?.moveLeft?.();
-      },
-      onUp: () => {
-        const movement = this.getComponent('movement') as any;
-        movement?.stopHorizontal?.();
-      }
-    });
+    // Movement is handled by states; no direct movement handlers here
     this.sprite.setData('id', id);
   }
 }

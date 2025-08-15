@@ -7,7 +7,8 @@ export class DashingState implements IEntityState {
   private cooldownTimer: Phaser.Time.TimerEvent | null = null;
   constructor(private deps: StateDeps, private goto: (key: string) => void) {}
   enter(): void {
-    if (this.deps.inputEnabled && this.isOnCooldown) { this.onFinish(); return; }
+    // If on cooldown, ignore the dash attempt without resetting the cooldown timer
+    if (this.deps.inputEnabled && this.isOnCooldown) { this.goNextByInput(); return; }
 
     this.deps.movement.dash();
     this.deps.sprite.play('player_dash');
@@ -23,6 +24,12 @@ export class DashingState implements IEntityState {
       });
     }
 
+    this.goNextByInput();
+  }
+  update(): void {}
+  exit(): void {}
+
+  private goNextByInput(): void {
     const input = this.deps.input as any;
     const left = input.getActionState ? input.getActionState('left') : null;
     const right = input.getActionState ? input.getActionState('right') : null;
@@ -34,6 +41,4 @@ export class DashingState implements IEntityState {
     else if (left?.pressed || right?.pressed) this.goto('sprinting');
     else this.goto('idle');
   }
-  update(): void {}
-  exit(): void {}
 }
