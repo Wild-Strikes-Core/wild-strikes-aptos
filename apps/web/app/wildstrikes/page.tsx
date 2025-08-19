@@ -1,6 +1,6 @@
 'use client';
 
-import WildstrikesCanvas from '@/app/components/WildstrikesCanvas';
+import WildstrikesCanvas from '../components/WildstrikesCanvas';
 
 export default function WildstrikesPage() {
   return (

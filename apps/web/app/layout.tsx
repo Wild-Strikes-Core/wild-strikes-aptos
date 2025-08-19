@@ -25,6 +25,9 @@ export const metadata: Metadata = {
   },
 };
 
+import { WalletProvider } from './providers/WalletProvider';
+import ClientWalletDebugger from './components/ClientWalletDebugger';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,7 +36,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <WalletProvider>
+          {children}
+          {/* Wallet Debugger only shows in development */}
+          <ClientWalletDebugger />
+        </WalletProvider>
       </body>
     </html>
   );

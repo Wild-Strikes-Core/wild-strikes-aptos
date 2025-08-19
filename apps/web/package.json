@@ -1,4 +1,4 @@
-  {
+{
   "name": "web",
   "version": "0.1.0",
   "private": true,
@@ -11,24 +11,28 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "@aptos-connect/wallet-adapter-plugin": "^2.5.1",
+    "@aptos-labs/ts-sdk": "^4.0.0",
+    "@aptos-labs/wallet-adapter-react": "^7.0.4",
+    "@phaser-games/wildstrikes": "workspace:*",
     "next": "15.4.1",
+    "petra-plugin-wallet-adapter": "^0.4.5",
     "phaser": "^3.60.0",
-    "@phaser-games/wildstrikes": "workspace:*"
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "15.4.1",
-    "@eslint/eslintrc": "^3",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
     "typescript-eslint": "^8"
   }
 }
