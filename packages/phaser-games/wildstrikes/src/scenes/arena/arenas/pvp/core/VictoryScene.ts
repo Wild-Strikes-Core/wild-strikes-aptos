@@ -1,115 +1,37 @@
-// You can write more code here
-
 /* START OF COMPILED CODE */
 
 /* START-USER-IMPORTS */
-
-// Define constant keys for victory assets to avoid naming confusion
-const VICTORY_ASSETS = {
-    VICTORY_TEXT: "victory_text", // Previously "1 (1)"
-    ELO_BANNER: "elo_banner",     // Previously "1"
-    PLATFORM: "victory_platform", // Previously "1 (2)"
-    WLD_DISPLAY: "wld_display",   // Previously "1 (3)"
-};
-
+// You can add other imports here if needed
 /* END-USER-IMPORTS */
 
 export default class Victory extends Phaser.Scene {
     constructor() {
         super("Victory");
-
-        /* START-USER-CTR-CODE */
-        // Write your code here.
-        /* END-USER-CTR-CODE */
     }
 
     editorCreate(): void {
-        // bgClouds
-        const topClouds = this.add.tileSprite(
-            976,
-            288,
-            1029,
-            242,
-            "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview"
-        );
-        topClouds.scaleX = 2;
-        topClouds.scaleY = 2;
-
-        // bgClouds_1
-        const bottomClouds = this.add.tileSprite(
-            1008,
-            1072,
-            1029,
-            242,
-            "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview"
-        );
-        bottomClouds.scaleX = 2;
-        bottomClouds.scaleY = 2;
-
-        // platform_1 - Always use our constant keys to avoid conflicts
-        const leftPlatform = this.add.image(512, 1136, VICTORY_ASSETS.PLATFORM);
-
-        // platform_2
-        const middlePlatform = this.add.image(960, 1136, VICTORY_ASSETS.PLATFORM);
-
-        // platform_3
-        const rightPlatform = this.add.image(1392, 1136, VICTORY_ASSETS.PLATFORM);
-
-        // eloBanner
-        const eloBanner = this.add.image(960, 848, VICTORY_ASSETS.ELO_BANNER);
-
-        // victoryText - Always use our constant key to avoid confusion with "1" vs "1 (1)" 
-        const victoryText = this.add.image(960, 128, VICTORY_ASSETS.VICTORY_TEXT);
-
-        // WLD
-        const wldDisplay = this.add.image(960, 416, VICTORY_ASSETS.WLD_DISPLAY);
-
-        this.topClouds = topClouds;
-        this.bottomClouds = bottomClouds;
-        this.leftPlatform = leftPlatform;
-        this.middlePlatform = middlePlatform;
-        this.rightPlatform = rightPlatform;
-        this.eloBanner = eloBanner;
-        this.victoryText = victoryText;
-        this.wldDisplay = wldDisplay;
-
         this.events.emit("scene-awake");
     }
 
     private topClouds!: Phaser.GameObjects.TileSprite;
     private bottomClouds!: Phaser.GameObjects.TileSprite;
-    private leftPlatform!: Phaser.GameObjects.Image;
-    private middlePlatform!: Phaser.GameObjects.Image;
-    private rightPlatform!: Phaser.GameObjects.Image;
+    private rankIcon!: Phaser.GameObjects.Image;
+    private shards: Phaser.GameObjects.Image[] = [];
+
     private eloBanner!: Phaser.GameObjects.Image;
-    private victoryText!: Phaser.GameObjects.Image;
-    private wldDisplay!: Phaser.GameObjects.Image;
+    private victoryText!: Phaser.GameObjects.Text;
 
     /* START-USER-CODE */
 
-    // Write your code here
-    
     preload() {
         console.log("Victory scene preload() called");
         
-        // First, check if any of these textures are already loaded to avoid conflicts
-        try {
-            if (!this.textures.exists(VICTORY_ASSETS.VICTORY_TEXT)) {
-                // Load correct victory text from Victory folder (not Defeat folder)
-                this.load.image(VICTORY_ASSETS.VICTORY_TEXT, 'assets/11 - Victory/1 (1).png');
-            }
-            if (!this.textures.exists(VICTORY_ASSETS.ELO_BANNER)) {
-                this.load.image(VICTORY_ASSETS.ELO_BANNER, 'assets/11 - Victory/1.png');
-            }
-            if (!this.textures.exists(VICTORY_ASSETS.PLATFORM)) {
-                this.load.image(VICTORY_ASSETS.PLATFORM, 'assets/11 - Victory/1 (2).png');
-            }
-            if (!this.textures.exists(VICTORY_ASSETS.WLD_DISPLAY)) {
-                this.load.image(VICTORY_ASSETS.WLD_DISPLAY, 'assets/11 - Victory/1 (3).png');
-            }
-        } catch (error) {
-            console.error("Error in Victory preload:", error);
-        }
+        // Load all the necessary assets with manual keys
+        this.load.image('2G_bg', 'assets/2G_bg.png');
+        this.load.image('Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview', 'assets/game/ui/landing/Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview.png');
+        this.load.image('rank_icon', 'assets/New Assets/Rank/rank6.png');
+        this.load.image('Full-Shards', 'assets/New Assets/Shards/full-shards.png');
+        this.load.image('elo_banner', 'assets/11 - Victory/1.png');
         
         console.log("Victory scene preload() completed");
     }
@@ -117,69 +39,51 @@ export default class Victory extends Phaser.Scene {
     create() {
         console.log("=== Victory scene create() called ===");
         
-        // Play victory sound when the scene starts
-        try {
-            this.sound.play("victory", { volume: 0.8 });
-        } catch (error) {
-            console.warn("Error playing victory sound:", error);
+        const bg = this.add.image(0, 0, "2G_bg").setOrigin(0, 0);
+        bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        bg.setDepth(-1000);
+
+        this.topClouds = this.add.tileSprite(976, 288, 1029, 242, "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview")
+            .setScale(2).setDepth(-950);
+
+        this.bottomClouds = this.add.tileSprite(1008, 1072, 1029, 242, "Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview")
+            .setScale(2).setDepth(-950);
+
+        const { centerX, centerY } = this.cameras.main;
+
+        this.victoryText = this.add.text(centerX, 128, "VICTORY!", {
+            fontFamily: '"VT323"',
+            fontSize: "180px",
+            color: '#ffffff',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 10,
+        }).setOrigin(0.5).setDepth(15);
+        
+        this.rankIcon = this.add.image(centerX, centerY - 100, 'rank_icon')
+            .setDepth(10)
+            .setScale(3);
+        
+        const bannerY = this.rankIcon.y + (this.rankIcon.displayHeight / 2) + 140; 
+
+        this.eloBanner = this.add.image(centerX, bannerY, 'elo_banner')
+            .setDepth(12);
+
+        const shardCount = 3;
+        const spacing = 150;
+        const startX = this.eloBanner.x - (spacing * (shardCount - 1)) / 2;
+
+        for (let i = 0; i < shardCount; i++) {
+            const shard = this.add.image(startX + i * spacing, this.eloBanner.y - 40, 'Full-Shards').setDepth(13);
+            this.shards.push(shard);
         }
 
-        // Add the main background image first (behind all other elements)
-        // Make it responsive to cover the full screen
-        try {
-            const bg = this.add.image(0, 0, "2G_bg");
-            bg.setOrigin(0, 0);
-            bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-            bg.setDepth(-1000); // Ensure background is behind everything
-        } catch (error) {
-            console.warn("Error creating background:", error);
-        }
+        this.eloBanner.setAlpha(0);
+        this.victoryText.setAlpha(0);
+        this.rankIcon.setAlpha(0);
+        this.shards.forEach(shard => shard.setAlpha(0));
 
-        // Create the scene elements using our editor function
-        try {
-            this.editorCreate();
-        } catch (error) {
-            console.error("Error in editorCreate:", error);
-            // If editorCreate fails, create basic victory text
-            const victoryText = this.add.text(
-                this.cameras.main.width / 2,
-                this.cameras.main.height / 2,
-                "VICTORY!",
-                {
-                    fontSize: "120px",
-                    color: "#00ff00",
-                    fontFamily: "Arial",
-                    stroke: "#000000",
-                    strokeThickness: 8
-                }
-            );
-            victoryText.setOrigin(0.5);
-        }
-
-        // Verify that victory text has the correct texture
-        // If not, force it to use our explicitly loaded victory text texture
-        if (this.victoryText && this.victoryText.texture.key !== VICTORY_ASSETS.VICTORY_TEXT) {
-            console.warn("Victory text using incorrect texture. Fixing...");
-            try {
-                this.victoryText.setTexture(VICTORY_ASSETS.VICTORY_TEXT);
-            } catch (error) {
-                console.warn("Could not set victory texture:", error);
-            }
-        }
-
-        // Set initial alpha values to 0 for fade-in animations (only if elements exist)
-        try {
-            if (this.eloBanner) this.eloBanner.setAlpha(0);
-            if (this.leftPlatform) this.leftPlatform.setAlpha(0);
-            if (this.middlePlatform) this.middlePlatform.setAlpha(0);
-            if (this.rightPlatform) this.rightPlatform.setAlpha(0);
-            if (this.victoryText) this.victoryText.setAlpha(0);
-            if (this.wldDisplay) this.wldDisplay.setAlpha(0);
-        } catch (error) {
-            console.warn("Error setting alpha values:", error);
-        }
-
-        // Set up shutdown event listener to stop music when scene closes
+        this.sound.play("victory", { volume: 0.8 });
         this.events.on("shutdown", this.onShutdown, this);
 
         this.startAnimationSequence();
@@ -188,104 +92,62 @@ export default class Victory extends Phaser.Scene {
     }
 
     private onShutdown(): void {
-        try {
-            this.sound.stopByKey("victory");
-        } catch (error) {
-            console.warn("Error stopping victory sound on shutdown:", error);
-        }
+        this.sound.stopByKey("victory");
     }
 
     update() {
-        [this.topClouds, this.bottomClouds].forEach(
-            (cloud) => (cloud.tilePositionX += 1)
-        );
+        this.topClouds.tilePositionX += 1;
+        this.bottomClouds.tilePositionX += 1;
     }
 
     startAnimationSequence() {
         console.log("Starting animation sequence...");
 
-        // Platforms rise animation
         this.tweens.add({
-            targets: this.leftPlatform,
-            y: 608,
+            targets: this.rankIcon,
             alpha: 1,
-            duration: 2000,
-            ease: "Power2",
-            onComplete: () => console.log("Platform 1 animation complete."),
+            y: { from: this.rankIcon.y - 200, to: this.rankIcon.y },
+            duration: 1500,
+            ease: 'Power2',
         });
-
-        // Delay platform 2 movement
-        this.time.delayedCall(500, () => {
-            this.tweens.add({
-                targets: this.middlePlatform,
-                y: 560,
-                alpha: 1,
-                duration: 2000,
-                ease: "Power2",
-                onComplete: () => console.log("Platform 2 animation complete."),
-            });
-        });
-
-        // Delay platform 3 movement
-        this.time.delayedCall(1000, () => {
-            this.tweens.add({
-                targets: this.rightPlatform,
-                y: 608,
-                alpha: 1,
-                duration: 2000,
-                ease: "Power2",
-                onComplete: () => console.log("Platform 3 animation complete."),
-            });
-        });
-
-        // Victory text fade-in animation
-        this.tweens.add({
-            targets: this.victoryText,
-            alpha: 1,
-            duration: 2000,
-            ease: "Linear",
-        });
-
-        // Elo banner fade-in animation
+    
         this.tweens.add({
             targets: this.eloBanner,
             alpha: 1,
-            duration: 2000,
+            y: { from: this.eloBanner.y + 200, to: this.eloBanner.y },
+            duration: 1500,
+            ease: 'Power2',
+            delay: 200,
+            onComplete: () => {
+                this.shards.forEach((shard, index) => {
+                    this.time.delayedCall(index * 200, () => {
+                        this.tweens.add({
+                            targets: shard,
+                            alpha: 1,
+                            y: shard.y - 20, 
+                            duration: 500,
+                            ease: 'Sine.easeInOut'
+                        });
+                    });
+                });
+            }
+        });
+        
+        this.tweens.add({
+            targets: this.victoryText,
+            alpha: 1,
+            duration: 1000,
             ease: "Linear",
         });
-
-        // Delay 8s before hiding platforms and showing WLD text
-        this.time.delayedCall(3000, () => {
-            console.log("Fading out platforms, showing WLD...");
-            this.tweens.add({
-                targets: [this.leftPlatform, this.middlePlatform, this.rightPlatform],
-                alpha: 0,
-                duration: 1000,
-                ease: "Linear",
-            });
-            this.tweens.add({
-                targets: this.wldDisplay,
-                alpha: 1,
-                duration: 1000,
-                ease: "Linear",
-            });
-        });
-
-        // Delay 18s before fading out scene and transitioning to MenuScene
+    
+        // Transition back to Home scene after a delay
         this.time.delayedCall(5000, () => {
             console.log("Fading out scene...");
-            
-            // Stop victory music before transitioning
-            try {
-                this.sound.stopByKey("victory");
-            } catch (error) {
-                console.warn("Error stopping victory sound:", error);
-            }
-            
-            this.cameras.main.fadeOut(2000, 0, 0, 0);
-            this.time.delayedCall(2000, () => {
-                console.log("Switching to MenuScene...");
-                this.scene.start("Home");
+            this.cameras.main.fadeOut(2000, 0, 0, 0, (camera, progress) => {
+                if (progress === 1) {
+                    console.log("Switching to Home scene...");
+                    this.scene.start("Home");
+                }
             });
         });
     }
@@ -293,6 +155,3 @@ export default class Victory extends Phaser.Scene {
 }
 
 /* END OF COMPILED CODE */
-
-// You can write more code here
-
