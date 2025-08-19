@@ -1,7 +1,6 @@
-// Client-side only MatchFound scene – all networking stripped
+import * as Phaser from 'phaser';
 
 export default class MatchFound extends Phaser.Scene {
-    // Scene element references (renamed for clarity)
     private leftPlayerCard!: Phaser.GameObjects.Image;
     private rightPlayerCard!: Phaser.GameObjects.Image;
     private leftPlayerName!: Phaser.GameObjects.Text;
@@ -10,6 +9,9 @@ export default class MatchFound extends Phaser.Scene {
     private enemyCharSprite!: Phaser.GameObjects.Image;
     private vsText!: Phaser.GameObjects.Text;
 
+    private BG_STARS!: Phaser.GameObjects.Image;
+    private BG_CLOUDS!: Phaser.GameObjects.Image;
+
     private yourData!: string[];
     private opponentData!: string[];
     private opponentId: string;
@@ -17,14 +19,16 @@ export default class MatchFound extends Phaser.Scene {
     private mapConfig!: any;
     private p1SpawnPosition!: { x: number; y: number };
     private p2SpawnPosition!: { x: number; y: number };
-
     private roomId: string;
 
     constructor() {
         super("MatchFound");
     }
 
-    init(data:{
+    /* ------------------------------------------------------------------
+     * Initialization from Matchmaking Scene
+     * ------------------------------------------------------------------ */
+    init(data: {
         opponentId: string,
         yourId: string,
         yourData: string[],
@@ -34,16 +38,6 @@ export default class MatchFound extends Phaser.Scene {
         p2SpawnPosition?: { x: number; y: number },
         roomId: string
     }) {
-        console.log("=== MATCH FOUND SCENE INIT ===");
-        console.log(`Your ID: ${data.yourId}`);
-        console.log(`Opponent ID: ${data.opponentId}`);
-        console.log(`Your Data:`, data.yourData);
-        console.log(`Opponent Data:`, data.opponentData);
-        console.log(`P1 Spawn: (${data.p1SpawnPosition?.x}, ${data.p1SpawnPosition?.y})`);
-        console.log(`P2 Spawn: (${data.p2SpawnPosition?.x}, ${data.p2SpawnPosition?.y})`);
-        console.log(`Map Config:`, data.mapConfig);
-        console.log("================================");
-
         this.yourData = data.yourData;
         this.yourId = data.yourId;
         this.opponentId = data.opponentId;
@@ -52,211 +46,175 @@ export default class MatchFound extends Phaser.Scene {
         this.p1SpawnPosition = data.p1SpawnPosition;
         this.p2SpawnPosition = data.p2SpawnPosition;
         this.roomId = data.roomId;
-    } 
-
-    create(): void {
-        // Full-screen background
-        const bg = this.add.image(0, 0, "2G_bg");
-        bg.setOrigin(0, 0);
-        bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-        bg.setDepth(-1000);
-
-        this.editorCreate();
-
-        // Static placeholder names for polishing
-        this.leftPlayerName.setText("Player 1");
-        this.rightPlayerName.setText("Player 2");
-
-        // Set up initial states & animate entrance
-        this.setupInitialStates();
-        this.animateSceneEntrance();
-
-        // Automatically transition to Arena after animations
-        this.time.delayedCall(3500, () => this.transitionToBattle());
     }
 
     /* ------------------------------------------------------------------
-     * Original editor-generated nodes
+     * Scene Creation
+     * ------------------------------------------------------------------ */
+    create(): void {
+        const { width, height, centerX } = this.cameras.main;
+        
+        this.add.image(0, 0, "2G_bg").setOrigin(0, 0).setDisplaySize(width, height).setDepth(-1000);
+
+        if (this.textures.exists("2g_bgStars")) {
+            this.BG_STARS = this.add.image(0, 0, "2g_bgStars").setOrigin(0, 0).setDisplaySize(width, height).setDepth(-900);
+            this.tweens.add({
+                targets: this.BG_STARS,
+                alpha: { from: 0.2, to: 1 },
+                duration: 1500,
+                yoyo: true,
+                repeat: -1,
+                ease: "Sine.easeInOut",
+            });
+        }
+        
+        const cloudsTexture = this.textures.get("M_bgClouds");
+        const cloudsOriginalWidth = cloudsTexture.source[0].width;
+        const cloudsOriginalHeight = cloudsTexture.source[0].height;
+        const cloudsScaleRatio = width / cloudsOriginalWidth;
+        const cloudsNewHeight = cloudsOriginalHeight * cloudsScaleRatio;
+
+        this.BG_CLOUDS = this.add.image(centerX, height + cloudsNewHeight / 2, "M_bgClouds")
+            .setOrigin(0.5, 1)
+            .setDisplaySize(width, cloudsNewHeight)
+            .setDepth(-800);
+
+        this.createUI();
+
+        this.animateSceneEntrance();
+
+        this.time.delayedCall(4500, () => this.transitionToBattle());
+    }
+
+    /* ------------------------------------------------------------------
+     * UI Creation and Animations
      * ------------------------------------------------------------------ */
 
-    private editorCreate(): void {
-        // Left player card
-        this.leftPlayerCard = this.add.image(146, 216, "M_playerCard");
+    private createUI(): void {
+        this.leftPlayerCard = this.add.image(146, 216, "M_playerCard").setAlpha(0);
 
-        // Left player name
         this.leftPlayerName = this.add.text(18, 184, this.yourData[0], {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
             fontStyle: "bold",
-        });
+        }).setAlpha(0);
 
-        // Right player card
-        this.rightPlayerCard = this.add.image(1761, 216, "M_playerCard");
+        this.rightPlayerCard = this.add.image(1761, 216, "M_playerCard").setAlpha(0);
 
-        // Right player name
         this.rightPlayerName = this.add.text(1521, 184, this.opponentData[0], {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
             fontStyle: "bold",
-        });
+        }).setAlpha(0);
 
-        // Player character sprite
-        this.playerCharSprite = this.add.image(447, 555, "M_charONE");
-        this.playerCharSprite.setScale(1.310153805177419);
+        this.playerCharSprite = this.add.image(447, 555, this.yourData[1]).setScale(1.310153805177419).setAlpha(0);
 
-        // Enemy character sprite
-        this.enemyCharSprite = this.add.image(1359, 555, "M_charONE");
-        this.enemyCharSprite.setScale(1.310153805177419);
-        this.enemyCharSprite.setFlipX(true);
+        this.enemyCharSprite = this.add.image(1359, 555, this.opponentData[1]).setScale(1.310153805177419).setFlipX(true).setAlpha(0);
 
-        // VS text
         this.vsText = this.add.text(834, 486, "V.S", {
             align: "center",
             fontFamily: "Arial",
             fontSize: "128px",
             fontStyle: "bold",
-        });
-
-        this.events.emit("scene-awake");
-    }
-
-    /* ------------------------------------------------------------------
-     * Helper functions (trimmed from original code)
-     * ------------------------------------------------------------------ */
-
-    private setupInitialStates(): void {
-        // Hide player names initially
-        this.leftPlayerName.setAlpha(0);
-        this.rightPlayerName.setAlpha(0);
-
-        // Move player cards off-screen
-        this.leftPlayerCard.x = -300;
-        this.rightPlayerCard.x = this.cameras.main.width + 300;
-
-        // Character sprites start invisible & small
-        this.playerCharSprite.setAlpha(0).setScale(0.5);
-        this.enemyCharSprite.setAlpha(0).setScale(0.5);
-
-        // VS text starts invisible & oversized
-        this.vsText.setAlpha(0).setScale(2);
+        }).setAlpha(0);
     }
 
     private animateSceneEntrance(): void {
-        // Camera flash to start
-        this.cameras.main.flash(300, 0, 0, 0);
+        const { width, height, centerX } = this.cameras.main;
 
-        // Slide-in player cards
         this.tweens.add({
-            targets: this.leftPlayerCard,
-            x: 146,
-            duration: 600,
-            ease: "Back.out(1.5)",
-            onComplete: () => this.tweens.add({ targets: this.leftPlayerName, alpha: 1, duration: 300 }),
+            targets: this.BG_CLOUDS,
+            y: height,
+            duration: 800,
+            ease: 'Power2',
         });
-        this.tweens.add({
-            targets: this.rightPlayerCard,
-            x: 1761,
-            duration: 600,
-            ease: "Back.out(1.5)",
-            onComplete: () => this.tweens.add({ targets: this.rightPlayerName, alpha: 1, duration: 300 }),
-        });
-
-        // Character sprites
-        this.time.delayedCall(800, () => {
+        
+        this.time.delayedCall(500, () => {
             this.tweens.add({
-                targets: this.playerCharSprite,
+                targets: [this.leftPlayerCard, this.leftPlayerName],
                 alpha: 1,
-                scaleX: 1.31,
-                scaleY: 1.31,
-                x: "+=50",
-                duration: 500,
+                x: { from: -300, to: this.leftPlayerCard.x },
+                duration: 600,
                 ease: "Back.out(1.5)",
-                onComplete: () => {
-                    this.tweens.add({ targets: this.playerCharSprite, x: 447, duration: 150, ease: "Power1.out" });
-                    this.addIdleAnimation(this.playerCharSprite);
-                },
+            });
+            this.tweens.add({
+                targets: [this.rightPlayerCard, this.rightPlayerName],
+                alpha: 1,
+                x: { from: width + 300, to: this.rightPlayerCard.x },
+                duration: 600,
+                ease: "Back.out(1.5)",
             });
 
-            this.time.delayedCall(200, () => {
+            this.time.delayedCall(800, () => {
+                this.tweens.add({
+                    targets: this.playerCharSprite,
+                    alpha: 1,
+                    scale: 1.31,
+                    x: { from: 447 - 50, to: 447 },
+                    duration: 500,
+                    ease: "Back.out(1.5)",
+                    onComplete: () => this.addIdleAnimation(this.playerCharSprite)
+                });
                 this.tweens.add({
                     targets: this.enemyCharSprite,
                     alpha: 1,
-                    scaleX: 1.31,
-                    scaleY: 1.31,
-                    x: "-=50",
+                    scale: 1.31,
+                    x: { from: 1359 + 50, to: 1359 },
                     duration: 500,
                     ease: "Back.out(1.5)",
-                    onComplete: () => {
-                        this.tweens.add({ targets: this.enemyCharSprite, x: 1359, duration: 150, ease: "Power1.out" });
-                        this.addIdleAnimation(this.enemyCharSprite, true);
-                    },
+                    onComplete: () => this.addIdleAnimation(this.enemyCharSprite, true)
                 });
             });
-        });
 
-        // VS text & impact effect
-        this.time.delayedCall(1500, () => {
-            this.cameras.main.shake(200, 0.01);
-            const flashCircle = this.add.circle(834, 486, 100, 0xffff00, 0).setDepth(-1);
-            this.tweens.add({ targets: flashCircle, alpha: 0.7, scale: 2, duration: 300, yoyo: true, onComplete: () => flashCircle.destroy() });
-            this.tweens.add({ targets: this.vsText, alpha: 1, scale: 1, duration: 400, ease: "Back.out(1.7)" });
-            this.time.delayedCall(400, () => {
-                this.tweens.add({ targets: this.vsText, scale: 1.1, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-            });
-        });
-    }
-
-    private transitionToBattle(): void {
-        console.log("=== TRANSITIONING TO ARENA ===");
-        console.log(`Passing data to Arena scene:`);
-        console.log(`- Your ID: ${this.yourId}`);
-        console.log(`- Opponent ID: ${this.opponentId}`);
-        console.log(`- P1 Spawn: (${this.p1SpawnPosition?.x}, ${this.p1SpawnPosition?.y})`);
-        console.log(`- P2 Spawn: (${this.p2SpawnPosition?.x}, ${this.p2SpawnPosition?.y})`);
-        console.log(`- Map Config:`, this.mapConfig);
-        console.log("================================");
-
-        this.cameras.main.flash(300, 255, 255, 255);
-        this.cameras.main.once("cameraflashcomplete", () => {
-            this.cameras.main.fadeOut(400);
-            this.cameras.main.once("camerafadeoutcomplete", () => {
-                this.scene.start('Arena', {
-                    mapConfig: this.mapConfig,
-                    yourData: this.yourData,
-                    opponentData: this.opponentData,
-                    opponentId: this.opponentId,
-                    yourId: this.yourId,
-                    p1SpawnPosition: this.p1SpawnPosition,
-                    p2SpawnPosition: this.p2SpawnPosition,
-                    roomId: this.roomId
+            this.time.delayedCall(1500, () => {
+                this.cameras.main.shake(200, 0.01);
+                const flashCircle = this.add.circle(centerX, 486 + 12, 100, 0xffff00, 0).setDepth(-1);
+                this.tweens.add({ targets: flashCircle, alpha: 0.7, scale: 2, duration: 300, yoyo: true, onComplete: () => flashCircle.destroy() });
+                this.tweens.add({ targets: this.vsText, alpha: 1, scale: 1, duration: 400, ease: "Back.out(1.7)" });
+                this.time.delayedCall(400, () => {
+                    this.tweens.add({ targets: this.vsText, scale: 1.1, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
                 });
             });
         });
     }
-
+    
 
     private addIdleAnimation(charSprite: Phaser.GameObjects.Image, isEnemy = false): void {
         const originalY = charSprite.y;
         this.tweens.add({
             targets: charSprite,
-            y: originalY - 10,
+            y: originalY - 50,
+            duration: 1500,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        });
+        const lean = isEnemy ? -8 : 8;
+        this.tweens.add({
+            targets: charSprite,
+            angle: lean,
             duration: 1200,
             yoyo: true,
             repeat: -1,
             ease: "Sine.easeInOut",
         });
-        const lean = isEnemy ? -0.03 : 0.03;
-        this.tweens.add({
-            targets: charSprite,
-            rotation: lean,
-            duration: 1800,
-            yoyo: true,
-            repeat: -1,
-            ease: "Sine.easeInOut",
-            delay: 300,
+    }
+
+    private transitionToBattle(): void {
+        this.cameras.main.fadeOut(400, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start('Arena', {
+                mapConfig: this.mapConfig,
+                yourData: this.yourData,
+                opponentData: this.opponentData,
+                opponentId: this.opponentId,
+                yourId: this.yourId,
+                p1SpawnPosition: this.p1SpawnPosition,
+                p2SpawnPosition: this.p2SpawnPosition,
+                roomId: this.roomId
+            });
         });
     }
 }
-

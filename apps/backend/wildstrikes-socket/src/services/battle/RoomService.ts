@@ -1,26 +1,12 @@
 import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
-
-// Map configuration interface
-interface MapConfig {
-    id: string;
-    name: string;
-    theme: string;
-    spawnPoints: {
-        player1: { x: number; y: number };
-        player2: { x: number; y: number };
-    };
-    backgroundMusic?: string;
-    backgroundImage: string;
-    platforms?: Array<{ x: number; y: number; width: number; height: number }>;
-    obstacles?: Array<{ x: number; y: number; width: number; height: number; type: string }>;
-    mapBounds: { width: number; height: number };
-}
+// Use locally mirrored definitions to avoid tsconfig rootDir issues
+import { AVAILABLE_WEB_MAPS, WebMapConfig } from './maps';
 
 // Room data interface
 interface RoomData {
     players: Set<string>;
-    mapConfig: MapConfig;
+    mapConfig: WebMapConfig;
     createdAt: number;
     gameState: 'waiting' | 'active' | 'ended';
 }
@@ -28,84 +14,22 @@ interface RoomData {
 export class RoomService {
     private rooms: Map<string, RoomData> = new Map(); // roomId -> room data
     private playerRoomMap: Map<string, string> = new Map(); // socketId -> roomId mapping
-    private availableMaps: MapConfig[] = [];
+    private availableMaps: WebMapConfig[] = [];
 
     constructor(private io: Server) {
         this.initializeMaps();
     }
 
     private initializeMaps() {
-        // Define available battle maps - matching client-side MapManager
-        this.availableMaps = [
-            {
-                id: 'forest',
-                name: 'forest',
-                theme: 'nature',
-                spawnPoints: {
-                    player1: { x: 150, y: 400 },
-                    player2: { x: 650, y: 400 }
-                },
-                backgroundMusic: 'in-match',
-                backgroundImage: 'newMap',
-                platforms: [
-                    { x: 0, y: 500, width: 800, height: 20 } // main ground
-                ],
-                mapBounds: { width: 800, height: 600 }
-            },
-            {
-                id: 'philippines',
-                name: 'Philippines',
-                theme: 'tropical',
-                spawnPoints: {
-                    player1: { x: 150, y: 400 },
-                    player2: { x: 650, y: 400 }
-                },
-                backgroundMusic: 'PH-BG',
-                backgroundImage: 'Philippines',
-                platforms: [
-                    { x: 0, y: 500, width: 800, height: 20 } // main ground
-                ],
-                mapBounds: { width: 800, height: 600 }
-            },
-            {
-                id: 'japan',
-                name: 'Japan',
-                theme: 'eastern',
-                spawnPoints: {
-                    player1: { x: 150, y: 400 },
-                    player2: { x: 650, y: 400 }
-                },
-                backgroundMusic: 'JPN-BG',
-                backgroundImage: 'Japan',
-                platforms: [
-                    { x: 0, y: 500, width: 800, height: 20 } // main ground
-                ],
-                mapBounds: { width: 800, height: 600 }
-            },
-            {
-                id: 'france',
-                name: 'France',
-                theme: 'european',
-                spawnPoints: {
-                    player1: { x: 150, y: 400 },
-                    player2: { x: 650, y: 400 }
-                },
-                backgroundMusic: 'FRN-BG',
-                backgroundImage: 'France',
-                platforms: [
-                    { x: 0, y: 500, width: 800, height: 20 } // main ground
-                ],
-                mapBounds: { width: 800, height: 600 }
-            }
-        ];
-
-        console.log(`🗺️ Initialized ${this.availableMaps.length} battle maps`);
+        // Use the maps defined in the web app public arena-maps index
+        this.availableMaps = [...AVAILABLE_WEB_MAPS];
+        console.log(`🗺️ Initialized ${this.availableMaps.length} battle maps from shared index.ts`);
     }
 
-    private selectRandomMap(): MapConfig {
+    private selectRandomMap(): WebMapConfig {
         const randomIndex = Math.floor(Math.random() * this.availableMaps.length);
         const selectedMap = this.availableMaps[randomIndex];
-        console.log(`🎲 Selected random map: ${selectedMap.name} (${selectedMap.theme})`);
+        console.log(`🎲 Selected random map: ${selectedMap.name}`);
         return selectedMap;
     }
 
@@ -153,7 +77,7 @@ export class RoomService {
         return this.rooms.get(roomId);
     }
 
-    getRoomMapConfig(roomId: string): MapConfig | undefined {
+    getRoomMapConfig(roomId: string): WebMapConfig | undefined {
         const roomData = this.rooms.get(roomId);
         return roomData?.mapConfig;
     }
@@ -215,13 +139,13 @@ export class RoomService {
     }
 
     // Get all available maps
-    getAvailableMaps(): MapConfig[] {
+    getAvailableMaps(): WebMapConfig[] {
         return [...this.availableMaps];
     }
 
     // Get a specific map by ID
-    getMapById(mapId: string): MapConfig | undefined {
-        return this.availableMaps.find(map => map.id === mapId);
+    getMapById(mapName: string): WebMapConfig | undefined {
+        return this.availableMaps.find(map => map.name === mapName);
     }
 
     // Get room statistics

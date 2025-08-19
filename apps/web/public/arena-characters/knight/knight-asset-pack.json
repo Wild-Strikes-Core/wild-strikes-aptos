@@ -1,0 +1,225 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "/arena-characters/knight/_Attack.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Attack"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Attack.json",
+                "type": "animation",
+                "key": "_Attack_1"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Attack2.json",
+                "type": "animation",
+                "key": "_Attack_2"
+            },
+            {
+                "url": "/arena-characters/knight/_Attack2.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Attack2"
+            },
+            {
+                "url": "/arena-characters/knight/_CrouchFull.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_CrouchFull"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_CrouchFull.json",
+                "type": "animation",
+                "key": "_CrouchFull_1"
+            },
+            {
+                "url": "/arena-characters/knight/_CrouchWalk.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_CrouchWalk"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_CrouchWalk.json",
+                "type": "animation",
+                "key": "_CrouchWalk_1"
+            },
+            {
+                "url": "/arena-characters/knight/_Dash.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Dash"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Dash.json",
+                "type": "animation",
+                "key": "_Dash_1"
+            },
+            {
+                "url": "/arena-characters/knight/_Death.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Death"
+            },
+            {
+                "url": "/arena-characters/knight/_DeathNoMovement.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_DeathNoMovement"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_DeathNoMovement.json",
+                "type": "animation",
+                "key": "_DeathNoMovement_1"
+            },
+            {
+                "url": "/arena-characters/knight/_Fall.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Fall"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Fall.json",
+                "type": "animation",
+                "key": "_Fall_1"
+            },
+            {
+                "url": "/arena-characters/knight/_Hit.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Hit"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Hit.json",
+                "type": "animation",
+                "key": "_Hit_1"
+            },
+            {
+                "url": "/arena-characters/knight/_Idle.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Idle"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Idle.json",
+                "type": "animation",
+                "key": "_Idle_1"
+            },
+            {
+                "url": "/arena-characters/knight/_Jump.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Jump"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Jump.json",
+                "type": "animation",
+                "key": "_Jump_1"
+            },
+            {
+                "url": "/arena-characters/knight/_Run.png",
+                "frameConfig": {
+                    "frameWidth": 120,
+                    "frameHeight": 80,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "_Run"
+            },
+            {
+                "url": "/arena-characters/knight/animations/_Run.json",
+                "type": "animation",
+                "key": "_Run_1"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

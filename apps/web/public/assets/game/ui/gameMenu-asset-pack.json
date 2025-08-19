@@ -22,16 +22,6 @@
                 "key": "2G_btnArena"
             },
             {
-                "url": "assets/game/ui/menu/2G_btnInventory.png",
-                "type": "image",
-                "key": "2G_btnInventory"
-            },
-            {
-                "url": "assets/game/ui/menu/2G_btnLeaderboards.png",
-                "type": "image",
-                "key": "2G_btnLeaderboards"
-            },
-            {
                 "url": "assets/game/ui/menu/2G_btnsBackground.png",
                 "type": "image",
                 "key": "2G_btnsBackground"
@@ -67,6 +57,16 @@
                 "key": "2G_titleWARRIORS"
             },
             {
+                "url": "assets/game/ui/menu/2G_rank6.png",
+                "type": "image",
+                "key": "2G_rank6-LEGEND"
+            },
+            {
+                "url": "assets/game/ui/menu/2G_shardFULL.png",
+                "type": "image",
+                "key": "2G_shard-FULL"
+            },
+            {
                 "url": "assets/game/ui/menu/game-menu.mp3",
                 "type": "audio",
                 "key": "game-menu-music"
@@ -75,6 +75,36 @@
                 "url": "assets/game/ui/menu/click-menu.mp3",
                 "type": "audio",
                 "key": "click-menu"
+            },
+                  {
+                "url": "assets/game/ui/menu/2G_btnDaily.png",
+                "type": "image",
+                "key": "2G_btnDaily"
+            },
+            {
+                "url": "assets/game/ui/menu/2G_btnShop.png",
+                "type": "image",
+                "key": "2G_btnShop"
+            },
+            {
+                "url": "assets/game/ui/menu/2G_btnEvents.png",
+                "type": "image",
+                "key": "2G_btnEvents"
+            },
+            {
+                "url": "assets/game/ui/menu/2g_icoAvatar.png",
+                "type": "image",
+                "key": "2g_icoAvatar"
+            },
+            {
+                "url": "assets/game/ui/menu/2G_btnInventory.png",
+                "type": "image",
+                "key": "2G_btnInventory"
+            },
+            {
+                "url": "assets/game/ui/menu/2G_btnLeaderboards.png",
+                "type": "image",
+                "key": "2G_btnLeaderboards"
             }
         ]
     },
