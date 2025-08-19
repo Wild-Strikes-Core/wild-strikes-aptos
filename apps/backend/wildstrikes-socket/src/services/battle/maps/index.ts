@@ -12,26 +12,26 @@ export interface WebMapConfig {
 const basePath = '/arena-maps/';
 
 export const AVAILABLE_WEB_MAPS: WebMapConfig[] = [
-  // {
-  //   name: 'Philippines',
-  //   mapLocation: `${basePath}PH/map.json`,
-  //   mapKey: 'PH-map',
-  //   mapSpawnPoints: {
-  //     player1: { x: 100, y: 300 },
-  //     player2: { x: 700, y: 300 },
-  //   },
-  //   mapBackgroundMusic: `${basePath}PH/PH-BG.mp3`,
-  // },
-  // {
-  //   name: 'France',
-  //   mapLocation: `${basePath}FRN/map.json`,
-  //   mapKey: 'FRN-map',
-  //   mapSpawnPoints: {
-  //     player1: { x: 100, y: 300 },
-  //     player2: { x: 700, y: 300 },
-  //   },
-  //   mapBackgroundMusic: `${basePath}FRN/music/FRN-BG.mp3`,
-  // },
+  {
+    name: 'Philippines',
+    mapLocation: `${basePath}PH/map.json`,
+    mapKey: 'PH-map',
+    mapSpawnPoints: {
+      player1: { x: 100, y: 300 },
+      player2: { x: 700, y: 300 },
+    },
+    mapBackgroundMusic: `${basePath}PH/PH-BG.mp3`,
+  },
+  {
+    name: 'France',
+    mapLocation: `${basePath}FRN/map.json`,
+    mapKey: 'FRN-map',
+    mapSpawnPoints: {
+      player1: { x: 100, y: 300 },
+      player2: { x: 700, y: 300 },
+    },
+    mapBackgroundMusic: `${basePath}FRN/music/FRN-BG.mp3`,
+  },
   {
     name: 'Untitled Map 00',
     mapLocation: `${basePath}UNT_MAP_01/map.json`,
