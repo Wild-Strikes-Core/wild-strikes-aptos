@@ -179,6 +179,7 @@ export default class MatchFound extends Phaser.Scene {
             });
         });
     }
+    
 
     private addIdleAnimation(charSprite: Phaser.GameObjects.Image, isEnemy = false): void {
         const originalY = charSprite.y;

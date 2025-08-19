@@ -40,18 +40,20 @@ export interface AssetEntry {
     // ---------- GAMEPLAY AUDIO (Individual Audio Files) ---------- //
     { key: 'waiting-music', url: '/assets/game/gameplay/matchmaking/waiting-music.mp3', type: 'audio', group: 'gameplay-audio' },
     { key: 'in-match', url: '/assets/game/gameplay/maps/in-match.mp3', type: 'audio', group: 'gameplay-audio' },
-    { key: 'Attack', url: '/assets/game/gameplay/maps/Attack.wav', type: 'audio', group: 'gameplay-audio' },
-    { key: 'Footstep', url: '/assets/game/gameplay/maps/Footstep.wav', type: 'audio', group: 'gameplay-audio' },
-    { key: 'player-hit', url: '/assets/game/gameplay/maps/player-hit.mp3', type: 'audio', group: 'gameplay-audio' },
+    { key: 'player-attack', url: '/assets/game/gameplay/maps/Attack.wav', type: 'audio', group: 'gameplay-audio' },
+    { key: 'player-sprint', url: '/assets/game/gameplay/maps/Footstep.wav', type: 'audio', group: 'gameplay-audio' },
+    // { key: 'player-hit', url: '/assets/game/gameplay/maps/player-hit.mp3', type: 'audio', group: 'gameplay-audio' },
     { key: 'game-over', url: '/assets/game/gameplay/maps/game-over.mp3', type: 'audio', group: 'gameplay-audio' },
-    { key: 'PH-BG', url: '/assets/game/gameplay/maps/PH-BG.mp3', type: 'audio', group: 'gameplay-audio' },
-    { key: 'JPN-BG', url: '/assets/game/gameplay/maps/JPN-BG.mp3', type: 'audio', group: 'gameplay-audio' },
-    { key: 'FRN-BG', url: '/assets/game/gameplay/maps/FRN-BG.mp3', type: 'audio', group: 'gameplay-audio' },
   
     // ---------- CHARACTERS ---------- //
-    { key: 'sprite_heroP1', url: '/assets/game/characters/heroes/Hero_P1-pack.json', type: 'pack', group: 'chars' },
-    { key: 'placeholderChar', url: '/assets/game/characters/placeholder/placeholderCharacter/placeholderCharacter-sprite-asset-pack.json', type: 'pack', group: 'chars' },
-  
+    { key: 'knight', url: '/arena-characters/knight/knight-asset-pack.json', type: 'pack', group: 'chars' },
+    { key: 'minotaur', url: '/arena-characters/minotaur/minotaur-asset-pack.json', type: 'pack', group: 'chars' },
+
+
+    { key: 'player-hurt', url: '/assets/game/characters/audio/hurt.wav', type: 'audio', group: 'chars' },
+    { key: 'player-jump', url: '/assets/game/characters/audio/jump.wav', type: 'audio', group: 'chars' },
+    { key: 'player-dash', url: '/assets/game/characters/audio/power_up.wav', type: 'audio', group: 'chars' },
+
     // ---------- ENVIRONMENT ---------- //
     { key: '2G_bgClouds_2', url: '/assets/game/ui/landing/Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview.png', type: 'image', group: 'environment' },
     { key: '2G_bg', url: '/assets/game/ui/menu/2G_mainBg.png', type: 'image', group: 'environment' }, //2G_mainBg.png dapat gamitin, but its missing the land asset so temporarily keep the original//

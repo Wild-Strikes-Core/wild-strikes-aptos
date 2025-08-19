@@ -13,7 +13,7 @@ export default class Matchmaking extends Phaser.Scene {
     private loaderDots: string[] = [".", "..", "..."];
     private loaderIndex = 0;
 
-    private mapConfig!: string[];
+    private mapConfig!: any;
     private p1SpawnPosition!: { x: number; y: number };
     private p2SpawnPosition!: { x: number; y: number };
 
