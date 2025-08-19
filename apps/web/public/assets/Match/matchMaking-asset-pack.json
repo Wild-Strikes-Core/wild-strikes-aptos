@@ -12,6 +12,11 @@
                 "key": "M_charONE"
             },
             {
+                "url": "assets/Match/01 - Matchmaking/M_bgClouds.png",
+                "type": "image",
+                "key": "M_bgClouds"
+            },
+            {
                 "url": "assets/Match/01 - Matchmaking/M_charTHREE.png",
                 "type": "image",
                 "key": "M_charTHREE"

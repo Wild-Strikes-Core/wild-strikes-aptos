@@ -7,6 +7,11 @@
                 "key": "M_btnCancel"
             },
             {
+                "url": "assets/game/gameplay/matchmaking/M_bgClouds.png",
+                "type": "image",
+                "key": "M_bgClouds"
+            },
+            {
                 "url": "assets/game/gameplay/matchmaking/M_charONE.png",
                 "type": "image",
                 "key": "M_charONE"
