@@ -82,10 +82,10 @@ export class BootScene extends Phaser.Scene {
         const fontsApi = (document as any).fonts;
         if (fontsApi && fontsApi.load) {
             fontsApi.load('50px VT323').then(() => {
-                this.scene.start('StartMenu');
+                this.scene.start('Start');
             });
         } else {
-            this.scene.start('StartMenu');
+            this.scene.start('Start');
         }
     }
 
