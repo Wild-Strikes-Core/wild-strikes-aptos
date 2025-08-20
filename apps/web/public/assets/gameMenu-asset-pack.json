@@ -75,6 +75,11 @@
                 "url": "assets/02 - Game Menu/click-menu.mp3",
                 "type": "audio",
                 "key": "click-menu"
+            },
+            {
+                "url": "assets/02 - Game Menu/2G_Char_Knight.png",
+                "type": "image",
+                "key": "2G_btnTeam"
             }
         ]
     },

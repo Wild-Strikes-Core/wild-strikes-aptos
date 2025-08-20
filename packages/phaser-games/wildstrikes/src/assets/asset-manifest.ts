@@ -46,7 +46,7 @@ export interface AssetEntry {
     { key: 'game-over', url: '/assets/game/gameplay/maps/game-over.mp3', type: 'audio', group: 'gameplay-audio' },
   
     // ---------- CHARACTERS ---------- //
-    { key: 'knight', url: '/arena-characters/knight/knight-asset-pack.json', type: 'pack', group: 'chars' },
+    { key: '2G_Char_Knight', url: '/assets/game/ui/menu/2G_Char_Knight.png', type: 'image', group: 'environment' },
     { key: 'minotaur', url: '/arena-characters/minotaur/minotaur-asset-pack.json', type: 'pack', group: 'chars' },
 
 
@@ -58,5 +58,5 @@ export interface AssetEntry {
     { key: '2G_bgClouds_2', url: '/assets/game/ui/landing/Purple_Green_Pixel_Illustration_Game_Presentation__2_-removebg-preview.png', type: 'image', group: 'environment' },
     { key: '2G_bg', url: '/assets/game/ui/menu/2G_mainBg.png', type: 'image', group: 'environment' }, //2G_mainBg.png dapat gamitin, but its missing the land asset so temporarily keep the original//
     { key: '2G_bgHill', url: '/assets/game/ui/menu/2G_bgHill.png', type: 'image', group: 'environment' }, 
-    { key: '2g_bgStars', url: '/assets/game/ui/menu/2G_bgStars.png', type: 'image', group: 'environment' }, 
+    { key: '2g_bgStars', url: '/assets/game/ui/menu/2G_bgStars.png', type: 'image', group: 'environment' },
   ];
