@@ -24,6 +24,7 @@ export interface AssetEntry {
   
     // ---------- UI AUDIO (Individual Audio Files) ---------- //
     { key: 'home-menu-music', url: '/assets/game/ui/menu/home-menu-NOSTALGIA.mp3', type: 'audio', group: 'ui-audio' },
+    { key: 'commencing_battle', url: '/assets/game/ui/menu/commencing_battle.mp3', type: 'audio', group: 'ui-audio' },
     { key: 'hover-sound', url: '/assets/game/ui/menu/hover-sound.mp3', type: 'audio', group: 'ui-audio' },
     { key: 'landing-menu-music', url: '/assets/game/ui/menu/landing-menu-AriaStrikes.mp3', type: 'audio', group: 'ui-audio' },
     { key: 'click-menu', url: '/assets/game/ui/menu/click-menu.mp3', type: 'audio', group: 'ui-audio' },
