@@ -20,9 +20,20 @@ export default class MatchFound extends Phaser.Scene {
     private p1SpawnPosition!: { x: number; y: number };
     private p2SpawnPosition!: { x: number; y: number };
     private roomId: string;
+    
+    // Private variable to hold the audio object
+    private battleMusic!: Phaser.Sound.BaseSound;
 
     constructor() {
         super("MatchFound");
+    }
+
+    /* ------------------------------------------------------------------
+     * Preload all assets, including the new audio file
+     * ------------------------------------------------------------------ */
+    preload(): void {
+        // You'll need to specify the correct path to your audio file
+        this.load.audio('commencing_battle', 'assets/audio/commencing_battle.mp3'); 
     }
 
     /* ------------------------------------------------------------------
@@ -84,6 +95,26 @@ export default class MatchFound extends Phaser.Scene {
         this.animateSceneEntrance();
 
         this.time.delayedCall(4500, () => this.transitionToBattle());
+        
+        // Add a listener to stop the music when the scene shuts down
+        this.events.once("shutdown", this.onShutdown, this);
+        
+        // Play the audio if it exists in the cache.
+        if (this.sound.get("commencing_battle") || this.cache.audio.exists("commencing_battle")) {
+            this.battleMusic = this.sound.add("commencing_battle");
+            this.battleMusic.play();
+        } else {
+            console.warn("commencing_battle audio not found in cache. Make sure the path is correct in preload().");
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     * Handles scene shutdown events to stop audio
+     * ------------------------------------------------------------------ */
+    private onShutdown(): void {
+        if (this.battleMusic && this.battleMusic.isPlaying) {
+            this.battleMusic.stop();
+        }
     }
 
     /* ------------------------------------------------------------------
@@ -102,12 +133,13 @@ export default class MatchFound extends Phaser.Scene {
 
         this.rightPlayerCard = this.add.image(1761, 216, "M_playerCard").setAlpha(0);
 
-        this.rightPlayerName = this.add.text(1521, 184, this.opponentData[0], {
+        // Position the text at the same x-coordinate as the card, then set the origin to center it
+        this.rightPlayerName = this.add.text(this.rightPlayerCard.x - 250, 184, this.opponentData[0], {
             align: "center",
             fontFamily: "Arial",
             fontSize: "64px",
             fontStyle: "bold",
-        }).setAlpha(0);
+        }).setOrigin(0.5, 0).setAlpha(0);
 
         this.playerCharSprite = this.add.image(447, 555, this.yourData[1]).setScale(1.310153805177419).setAlpha(0);
 
@@ -213,7 +245,9 @@ export default class MatchFound extends Phaser.Scene {
                 yourId: this.yourId,
                 p1SpawnPosition: this.p1SpawnPosition,
                 p2SpawnPosition: this.p2SpawnPosition,
-                roomId: this.roomId
+                roomId: this.roomId,
+                localCharacterKey: 'knight',
+                opponentCharacterKey: 'knight',
             });
         });
     }
