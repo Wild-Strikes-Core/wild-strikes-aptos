@@ -23,8 +23,16 @@ export class MovementComponent implements EntityComponent {
     return !!b && (b.blocked.down || b.touching.down);
   }
 
-  moveLeft(): void { this.entity.sprite.setVelocityX(-this.runSpeed); }
-  moveRight(): void { this.entity.sprite.setVelocityX(this.runSpeed); }
+  moveLeft(): void { 
+    if (this.entity.sprite) {
+      this.entity.sprite.setVelocityX(-this.runSpeed);
+    }
+  }
+  moveRight(): void {
+    if (this.entity.sprite) {
+      this.entity.sprite.setVelocityX(this.runSpeed); 
+    } 
+  }
   stopHorizontal(): void { this.entity.sprite.setVelocityX(0); }
 
   jump(): void { this.entity.sprite.setVelocityY(this.jumpPower); }
