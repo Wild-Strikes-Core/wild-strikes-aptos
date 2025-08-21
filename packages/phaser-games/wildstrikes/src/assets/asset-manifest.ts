@@ -49,6 +49,7 @@ export interface AssetEntry {
     // ---------- CHARACTERS ---------- //
     { key: '2G_Char_Knight', url: '/assets/game/ui/menu/2G_Char_Knight.png', type: 'image', group: 'environment' },
     { key: 'minotaur', url: '/arena-characters/minotaur/minotaur-asset-pack.json', type: 'pack', group: 'chars' },
+    { key: 'knight', url: '/arena-characters/knight/knight-asset-pack.json', type: 'pack', group: 'chars' },
 
 
     { key: 'player-hurt', url: '/assets/game/characters/audio/hurt.wav', type: 'audio', group: 'chars' },
