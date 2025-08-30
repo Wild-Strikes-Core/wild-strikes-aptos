@@ -37,6 +37,14 @@ export interface AssetEntry {
     { key: 'tiles', url: '/assets/game/gameplay/maps/tiles-asset-pack.json', type: 'pack', group: 'gameplay' },
     { key: 'matchUI', url: '/assets/game/gameplay/match-skills-assets-pack.json', type: 'pack', group: 'gameplay' },
     { key: 'timerAnim', url: '/assets/game/gameplay/timerAnim.json', type: 'pack', group: 'gameplay' },
+    
+    // ---------- GAMEPLAY CALLOUTS ---------- //
+    { key: 'callout_strike',       url: '/assets/game/callouts/Strike.png',        type: 'image', group: 'gameplay' },
+    { key: 'callout_wildStrike',   url: '/assets/game/callouts/wildStrike.png',    type: 'image', group: 'gameplay' },
+    { key: 'callout_smashHit',     url: '/assets/game/callouts/smashHit.png',      type: 'image', group: 'gameplay' },
+    { key: 'callout_savage',       url: '/assets/game/callouts/savage.png',        type: 'image', group: 'gameplay' },
+    { key: 'callout_wildSlam',     url: '/assets/game/callouts/wildSlam.png',      type: 'image', group: 'gameplay' },
+    { key: 'callout_wild3',        url: '/assets/game/callouts/wild3.png',         type: 'image', group: 'gameplay' },
   
     // ---------- GAMEPLAY AUDIO (Individual Audio Files) ---------- //
     { key: 'waiting-music', url: '/assets/game/gameplay/matchmaking/waiting-music.mp3', type: 'audio', group: 'gameplay-audio' },

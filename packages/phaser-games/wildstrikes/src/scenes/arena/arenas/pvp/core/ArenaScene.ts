@@ -562,6 +562,8 @@ export class ArenaScene extends Phaser.Scene {
     // Ensure death animation plays even if state transition hook is skipped
     try { entity.getComponent<any>('sprite')?.play('player_death_static', { stopCurrent: true }); } catch {}
 
+    this.showCallout();
+
     // Disable input for local player during death
     const inputComp = entity.getComponent<any>('input');
     try { if (isLocal) inputComp?.setEnabled(false); } catch {}
@@ -618,6 +620,42 @@ export class ArenaScene extends Phaser.Scene {
     const last = pathOrKey.substring(pathOrKey.lastIndexOf('/') + 1);
     const dot = last.lastIndexOf('.');
     return dot > 0 ? last.substring(0, dot) : last;
+  }
+
+  private showCallout(): void {
+    const callouts = [
+      'callout_strike',
+      'callout_wildStrike',
+      'callout_smashHit',
+      'callout_savage',
+      'callout_wildSlam',
+      'callout_wild3',
+    ];
+    const key = Phaser.Utils.Array.GetRandom(callouts);
+    const cam = this.cameras.main;
+    const img = this.add.image(cam.width / 2, cam.height / 2, key)
+      .setScrollFactor(0)
+      .setOrigin(0.5)
+      .setDepth(100000)
+      .setScale(0.6)
+      .setAlpha(0);
+
+    this.tweens.add({
+      targets: img,
+      alpha: 1,
+      scale: 1,
+      duration: 220,
+      ease: 'Back.Out',
+      onComplete: () => {
+        this.tweens.add({
+          targets: img,
+          alpha: 0,
+          duration: 350,
+          delay: 650,
+          onComplete: () => img.destroy()
+        });
+      }
+    });
   }
 }
 export default ArenaScene;
