@@ -13,135 +13,92 @@ export class PlayerStatsUI {
     private scene: Phaser.Scene;
     private playerSprite: Phaser.Physics.Arcade.Sprite;
     private statsContainer: Phaser.GameObjects.Container;
-    private damageText: Phaser.GameObjects.Text;
-    private livesText: Phaser.GameObjects.Text;
-    private knockbackText: Phaser.GameObjects.Text;
-    private positionText: Phaser.GameObjects.Text;
-    private velocityText: Phaser.GameObjects.Text;
-    private animationText: Phaser.GameObjects.Text;
-    private backgroundRect: Phaser.GameObjects.Rectangle;
     private popupsGroup: Phaser.GameObjects.Container;
 
-    constructor(scene: Phaser.Scene, playerSprite: Phaser.Physics.Arcade.Sprite) {
+    // Health bar components
+    private healthBar: Phaser.GameObjects.Graphics;
+    private healthBarBg: Phaser.GameObjects.Graphics;
+    private healthBarBorder: Phaser.GameObjects.Graphics;
+
+    // Local player indicator
+    private playerIndicator?: Phaser.GameObjects.Graphics;
+    private isLocalPlayer: boolean;
+
+    constructor(scene: Phaser.Scene, playerSprite: Phaser.Physics.Arcade.Sprite, isLocalPlayer: boolean = false) {
         this.scene = scene;
         this.playerSprite = playerSprite;
+        this.isLocalPlayer = isLocalPlayer;
         this.createUI();
     }
 
     private createUI(): void {
-        // Create a container to hold all stats elements
         this.statsContainer = this.scene.add.container(0, 0);
-        this.statsContainer.setDepth(12000); // ensure on top of sprites and effects
+        this.statsContainer.setDepth(12000);
         this.statsContainer.setScrollFactor(1, 1);
 
-        // Create background rectangle for better readability
-        this.backgroundRect = this.scene.add.rectangle(0, 0, 220, 120, 0x000000, 0.85);
-        this.backgroundRect.setStrokeStyle(3, 0xffffff, 0.9);
-        this.backgroundRect.setScrollFactor(1, 1);
-        
-        // Create text objects with higher resolution to avoid pixelation
-        const textStyle = {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '18px',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2,
-            resolution: 2
-        };
+        const barWidth = 100;
+        const barHeight = 10;
+        const barX = -barWidth / 2;
+        const barY = -barHeight / 2;
 
-        this.damageText = this.scene.add.text(-100, -40, 'DMG: 0%', {
-            ...textStyle,
-            color: '#ff6600'
-        });
+        // Health bar background
+        this.healthBarBg = this.scene.add.graphics();
+        this.healthBarBg.fillStyle(0x333333, 1);
+        this.healthBarBg.fillRect(barX, barY, barWidth, barHeight);
 
-        this.livesText = this.scene.add.text(-100, -18, 'Lives: 3', {
-            ...textStyle,
-            color: '#ffffff'
-        });
+        // Health bar fill
+        this.healthBar = this.scene.add.graphics();
 
-        this.knockbackText = this.scene.add.text(-100, 4, 'KB: 0', {
-            ...textStyle,
-            color: '#ff9999'
-        });
+        // Health bar border
+        this.healthBarBorder = this.scene.add.graphics();
+        this.healthBarBorder.lineStyle(2, 0xffffff, 1);
+        this.healthBarBorder.strokeRect(barX, barY, barWidth, barHeight);
 
-        this.positionText = this.scene.add.text(-100, 26, 'Pos: 0, 0', {
-            ...textStyle,
-            color: '#00ffff'
-        });
-
-        this.velocityText = this.scene.add.text(-100, 48, 'Vel: 0, 0', {
-            ...textStyle,
-            color: '#ffff00'
-        });
-
-        this.animationText = this.scene.add.text(-100, 70, 'Anim: idle', {
-            ...textStyle,
-            color: '#ff00ff'
-        });
-
-        // Add all elements to the container
         this.popupsGroup = this.scene.add.container(0, 0);
 
         this.statsContainer.add([
-            this.backgroundRect,
-            this.damageText,
-            this.livesText,
-            this.knockbackText,
-            this.positionText,
-            this.velocityText,
-            this.animationText,
+            this.healthBarBg,
+            this.healthBar,
+            this.healthBarBorder,
             this.popupsGroup
         ]);
+
+        if (this.isLocalPlayer) {
+            this.playerIndicator = this.scene.add.graphics();
+            this.playerIndicator.setDepth(12001); // Render on top of all other sprites
+            const triangleSize = 10;
+            this.playerIndicator.fillStyle(0x00ff00, 0.8);
+            this.playerIndicator.beginPath();
+            this.playerIndicator.moveTo(0, 0);
+            this.playerIndicator.lineTo(-triangleSize, triangleSize);
+            this.playerIndicator.lineTo(triangleSize, triangleSize);
+            this.playerIndicator.closePath();
+            this.playerIndicator.fillPath();
+        }
 
         this.updatePosition();
     }
 
     public updateStats(stats: PlayerStats): void {
-        if (!this.damageText || !this.livesText || !this.knockbackText || !this.positionText || !this.velocityText || !this.animationText) return;
+        const maxDamage = 100; // Using 100 as the threshold for a full bar depletion.
+        const damage = Phaser.Math.Clamp(stats.damagePercentage, 0, maxDamage);
+        const healthPercentage = 1 - (damage / maxDamage);
+        const barWidth = 100;
+        const barHeight = 10;
+        const currentBarWidth = barWidth * healthPercentage;
 
-        // Update text content
-        this.damageText.setText(`DMG: ${stats.damagePercentage}%`);
-        this.livesText.setText(`Lives: ${stats.lives}`);
-        
-        // Update knockback if provided
-        if (stats.knockback) {
-            this.knockbackText.setText(`KB: ${Math.round(stats.knockback.force)}`);
-        } else {
-            this.knockbackText.setText('KB: 0');
-        }
-        
-        // Update position if provided
-        if (stats.position) {
-            this.positionText.setText(`Pos: ${Math.round(stats.position.x)}, ${Math.round(stats.position.y)}`);
-        }
-        
-        // Update velocity if provided
-        if (stats.velocity) {
-            this.velocityText.setText(`Vel: ${Math.round(stats.velocity.x)}, ${Math.round(stats.velocity.y)}`);
-        }
-        
-        // Update animation if provided
-        if (stats.animation) {
-            this.animationText.setText(`Anim: ${stats.animation}`);
+        this.healthBar.clear();
+
+        // Color changes from green to yellow to red
+        if (stats.damagePercentage >= 75) { // Critically low health (high damage)
+            this.healthBar.fillStyle(0xff0000, 1); // Red
+        } else if (stats.damagePercentage >= 50) { // Medium damage
+            this.healthBar.fillStyle(0xffff00, 1); // Yellow
+        } else { // Low damage
+            this.healthBar.fillStyle(0x00ff00, 1); // Green
         }
 
-        // Update damage text color based on damage percentage
-        if (stats.damagePercentage < 50) {
-            this.damageText.setColor('#00ff00'); // Green
-        } else if (stats.damagePercentage < 100) {
-            this.damageText.setColor('#ffff00'); // Yellow
-        } else {
-            this.damageText.setColor('#ff0000'); // Red
-        }
-
-        // Update knockback text color based on force
-        if (stats.knockback && stats.knockback.force > 0) {
-            this.knockbackText.setColor('#ff6666'); // Light red for active knockback
-        } else {
-            this.knockbackText.setColor('#999999'); // Gray for no knockback
-        }
-
-        console.log(`[PLAYER STATS UI] Updated stats - DMG: ${stats.damagePercentage}%, Lives: ${stats.lives}, KB: ${stats.knockback?.force || 0}, Pos: ${stats.position?.x || 0},${stats.position?.y || 0}, Vel: ${stats.velocity?.x || 0},${stats.velocity?.y || 0}, Anim: ${stats.animation || 'unknown'}`);
+        this.healthBar.fillRect(-barWidth / 2, -barHeight / 2, currentBarWidth, barHeight);
     }
 
     public update(): void {
@@ -151,25 +108,36 @@ export class PlayerStatsUI {
     private updatePosition(): void {
         if (!this.playerSprite || !this.statsContainer) return;
 
-        // Position the stats above the player's head
-        const offsetY = -110; // Distance above the player
+        // Position health bar above the sprite
+        const healthBarOffsetY = -(this.playerSprite.displayHeight / 2) - 20;
         this.statsContainer.setPosition(
             this.playerSprite.x,
-            this.playerSprite.y + offsetY
+            this.playerSprite.y + healthBarOffsetY
         );
-        this.popupsGroup.setPosition(this.statsContainer.x, this.statsContainer.y);
+
+        // Position indicator below the sprite
+        if (this.playerIndicator) {
+            const indicatorOffsetY = 20; // Fixed offset from the player sprite's center
+            this.playerIndicator.setPosition(
+                this.playerSprite.x,
+                this.playerSprite.y + indicatorOffsetY
+            );
+        }
     }
 
     public setVisible(visible: boolean): void {
         if (this.statsContainer) {
             this.statsContainer.setVisible(visible);
         }
+        if (this.playerIndicator) {
+            this.playerIndicator.setVisible(visible);
+        }
     }
 
     public showDamagePopup(amount: number, color: string = '#ff4444'): void {
         if (!this.scene || !this.popupsGroup) return;
 
-        const text = this.scene.add.text(0, -90, `${Math.round(amount)}`, {
+        const text = this.scene.add.text(0, -20, `${Math.round(amount)}`, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '24px',
             fontStyle: 'bold',
@@ -194,7 +162,11 @@ export class PlayerStatsUI {
     public destroy(): void {
         if (this.statsContainer) {
             this.statsContainer.destroy();
-            this.statsContainer = null;
+            (this as any).statsContainer = null;
+        }
+        if (this.playerIndicator) {
+            this.playerIndicator.destroy();
+            (this as any).playerIndicator = null;
         }
     }
 }

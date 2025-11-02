@@ -238,27 +238,27 @@ export class ArenaScene extends Phaser.Scene {
     this.setupPlayerHitboxCollisions();
 
     // Initialize overlays
-    // if (this.localPlayer?.sprite && this.opponentPlayer?.sprite) {
-    //   this.overlayManager = new PlayerOverlayManager({
-    //     scene: this,
-    //     localPlayerId: this.battleConfig.localPlayerId,
-    //     opponentPlayerId: this.battleConfig.opponentId,
-    //     localSprite: this.localPlayer.sprite,
-    //     opponentSprite: this.opponentPlayer.sprite,
-    //   });
+    if (this.localPlayer?.sprite && this.opponentPlayer?.sprite) {
+      this.overlayManager = new PlayerOverlayManager({
+        scene: this,
+        localPlayerId: this.battleConfig.localPlayerId,
+        opponentPlayerId: this.battleConfig.opponentId,
+        localSprite: this.localPlayer.sprite,
+        opponentSprite: this.opponentPlayer.sprite,
+      });
 
-    //   // Seed overlays with any known stats
-    //   const localStats = this.lastKnownStats[this.battleConfig.localPlayerId] || { damagePercentage: 0, lives: 3 };
-    //   const oppStats = this.lastKnownStats[this.battleConfig.opponentId] || { damagePercentage: 0, lives: 3 };
-    //   this.overlayManager.updateStatsForPlayer(this.battleConfig.localPlayerId, {
-    //     damagePercentage: localStats.damagePercentage,
-    //     lives: localStats.lives,
-    //   });
-    //   this.overlayManager.updateStatsForPlayer(this.battleConfig.opponentId, {
-    //     damagePercentage: oppStats.damagePercentage,
-    //     lives: oppStats.lives,
-    //   });
-    // }
+      // Seed overlays with any known stats
+      const localStats = this.lastKnownStats[this.battleConfig.localPlayerId] || { damagePercentage: 0, lives: 3 };
+      const oppStats = this.lastKnownStats[this.battleConfig.opponentId] || { damagePercentage: 0, lives: 3 };
+      this.overlayManager.updateStatsForPlayer(this.battleConfig.localPlayerId, {
+        damagePercentage: localStats.damagePercentage,
+        lives: localStats.lives,
+      });
+      this.overlayManager.updateStatsForPlayer(this.battleConfig.opponentId, {
+        damagePercentage: oppStats.damagePercentage,
+        lives: oppStats.lives,
+      });
+    }
   }
 
   /**
@@ -291,10 +291,10 @@ export class ArenaScene extends Phaser.Scene {
         players.forEach((p: any) => {
           if (p?.socketId && p?.playerStats) {
             this.lastKnownStats[p.socketId] = p.playerStats;
-            // this.overlayManager?.updateStatsForPlayer(p.socketId, {
-            //   damagePercentage: p.playerStats.damagePercentage,
-            //   lives: p.playerStats.lives,
-            // });
+            this.overlayManager?.updateStatsForPlayer(p.socketId, {
+              damagePercentage: p.playerStats.damagePercentage,
+              lives: p.playerStats.lives,
+            });
           }
         });
       } catch {}
@@ -311,13 +311,13 @@ export class ArenaScene extends Phaser.Scene {
               // Keep opponent's stats current for any HUD needs
               const net = this.opponentPlayer?.getComponent<any>('network');
               try { net?.setStats(playerContext.playerStats); } catch {}
-              // this.overlayManager?.updateStatsForPlayer(playerContext.socketId, {
-              //   damagePercentage: playerContext.playerStats.damagePercentage,
-              //   lives: playerContext.playerStats.lives,
-              //   position: playerContext.position ? { x: playerContext.position.x, y: playerContext.position.y } : undefined,
-              //   velocity: { x: playerContext.velocityX || 0, y: playerContext.velocityY || 0 },
-              //   animation: playerContext.state,
-              // });
+              this.overlayManager?.updateStatsForPlayer(playerContext.socketId, {
+                damagePercentage: playerContext.playerStats.damagePercentage,
+                lives: playerContext.playerStats.lives,
+                position: playerContext.position ? { x: playerContext.position.x, y: playerContext.position.y } : undefined,
+                velocity: { x: playerContext.velocityX || 0, y: playerContext.velocityY || 0 },
+                animation: playerContext.state,
+              });
             }
             if (playerContext.isAlive === false) {
               // Opponent dead this tick; pass remaining lives from server context
@@ -328,13 +328,13 @@ export class ArenaScene extends Phaser.Scene {
             // Update local overlay stats from server context (do not override local transform)
             if (playerContext.playerStats) {
               this.lastKnownStats[playerContext.socketId] = playerContext.playerStats;
-              // this.overlayManager?.updateStatsForPlayer(playerContext.socketId, {
-              //   damagePercentage: playerContext.playerStats.damagePercentage,
-              //   lives: playerContext.playerStats.lives,
-              //   position: playerContext.position ? { x: playerContext.position.x, y: playerContext.position.y } : undefined,
-              //   velocity: { x: playerContext.velocityX || 0, y: playerContext.velocityY || 0 },
-              //   animation: playerContext.state,
-              // });
+              this.overlayManager?.updateStatsForPlayer(playerContext.socketId, {
+                damagePercentage: playerContext.playerStats.damagePercentage,
+                lives: playerContext.playerStats.lives,
+                position: playerContext.position ? { x: playerContext.position.x, y: playerContext.position.y } : undefined,
+                velocity: { x: playerContext.velocityX || 0, y: playerContext.velocityY || 0 },
+                animation: playerContext.state,
+              });
             }
           // If server reports local player is not alive, force local death handling
           if (playerContext.isAlive === false) {
@@ -377,11 +377,11 @@ export class ArenaScene extends Phaser.Scene {
         try { net?.setStats({ damagePercentage: newStats.damagePercentage, lives: newStats.lives }); } catch {}
 
         // Update overlays for defender
-        // this.overlayManager?.updateStatsForPlayer(defenderId, {
-        //   damagePercentage: newStats.damagePercentage,
-        //   lives: newStats.lives,
-        //   knockback: attackData?.knockback,
-        // });
+        this.overlayManager?.updateStatsForPlayer(defenderId, {
+          damagePercentage: newStats.damagePercentage,
+          lives: newStats.lives,
+          knockback: attackData?.knockback,
+        });
         if (typeof attackData?.damage === 'number') {
           this.overlayManager?.showDamage(defenderId, attackData.damage);
         }

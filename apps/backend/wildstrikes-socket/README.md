@@ -54,7 +54,7 @@
 └── 🚀 index.ts         # Main Server Entry Point
 ```
 
-### ⭐ Key Components:
+### ⭐ Key Components
 
 <table align="center">
 <tr>
@@ -153,12 +153,14 @@ NODE_ENV=development
 ## 🔌 API Endpoints
 
 ### Health Check
+
 - `GET /` - Test page with matchmaking interface
 - `GET /debug` - Server status and debugging information
 
 ### Debug Information
 
 The `/debug` endpoint returns:
+
 ```json
 {
   "timestamp": "2024-01-01T00:00:00.000Z",
@@ -196,6 +198,7 @@ The `/debug` endpoint returns:
 ### Client → Server Events
 
 #### Matchmaking
+
 ```typescript
 // Join matchmaking queue
 socket.emit('matchmaking:find');
@@ -205,6 +208,7 @@ socket.emit('matchmaking:cancel');
 ```
 
 #### Game Events
+
 ```typescript
 // Send player movement
 socket.emit('player:move', {
@@ -241,6 +245,7 @@ socket.emit('player:leave');
 ### Server → Client Events
 
 #### Matchmaking
+
 ```typescript
 // Match found
 socket.on('matchmaking:found', (data: {
@@ -259,6 +264,7 @@ socket.on('match:start', (data: {
 ```
 
 #### Game Events
+
 ```typescript
 // Opponent position update
 socket.on('player:position', (data: {
@@ -294,6 +300,7 @@ socket.on('players:connected', (data: {
 ```
 
 #### Connection Events
+
 ```typescript
 // Opponent disconnected
 socket.on('player:disconnected', (data: {
@@ -358,6 +365,7 @@ Manages graceful disconnections and reconnections:
 - **`isPlayerDisconnected(playerId)`**: Checks if player is in reconnection window
 
 **Features:**
+
 - 30-second reconnection window
 - Event buffering during disconnection
 - Automatic cleanup of expired disconnections
@@ -373,6 +381,7 @@ Handles match completion scenarios:
 - **`handleBothPlayersDisconnected(io, roomId)`**: Handles both players disconnecting
 
 **Match End Reasons:**
+
 - `player_win`: Normal victory
 - `opponent_disconnected`: Opponent failed to reconnect
 - `player_left`: Player manually left
@@ -413,6 +422,7 @@ class GameRoom {
 ### Manual Testing
 
 1. **Start the server:**
+
    ```bash
    pnpm dev
    ```
@@ -548,18 +558,21 @@ node --inspect src/index.ts
 ## 📝 Development Guidelines
 
 ### Code Style
+
 - Use TypeScript strict mode
 - Follow ESLint configuration
 - Add JSDoc comments for public methods
 - Use meaningful variable and function names
 
 ### Error Handling
+
 - Always handle socket disconnections gracefully
 - Validate input data before processing
 - Log errors with context information
 - Implement proper cleanup for resources
 
 ### Testing Strategy
+
 - Test with multiple concurrent connections
 - Verify reconnection scenarios
 - Test edge cases (both players disconnecting)
@@ -576,4 +589,4 @@ node --inspect src/index.ts
 
 ## 📄 License
 
-This project is part of the Wild Strikes game development. 
+This project is part of the Wild Strikes game development.

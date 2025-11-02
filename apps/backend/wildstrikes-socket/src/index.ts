@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Server } from "socket.io";
 import { createServer } from "http";
 import express from "express";

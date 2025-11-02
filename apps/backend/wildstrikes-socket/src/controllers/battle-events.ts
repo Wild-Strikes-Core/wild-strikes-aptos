@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Server, Socket } from "socket.io";
 import { BattleService } from "../services/battle/BattleService";
 import { MatchmakingService } from "../services/battle/MatchMakingService";

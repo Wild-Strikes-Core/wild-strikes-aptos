@@ -33,8 +33,8 @@ export class PlayerOverlayManager {
     this.localSprite = params.localSprite;
     this.opponentSprite = params.opponentSprite;
 
-    this.localOverlay = new PlayerStatsUI(this.scene, this.localSprite);
-    this.opponentOverlay = new PlayerStatsUI(this.scene, this.opponentSprite);
+    this.localOverlay = new PlayerStatsUI(this.scene, this.localSprite, true);
+    this.opponentOverlay = new PlayerStatsUI(this.scene, this.opponentSprite, false);
   }
 
   public update(): void {
