@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { B3WalletProvider } from './providers/b3-provider';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <B3WalletProvider>{children}</B3WalletProvider>
       </body>
     </html>
   );

@@ -11,6 +11,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@b3dotfun/sdk": "^0.0.56",
     "@phaser-games/wildstrikes": "workspace:*",
     "next": "15.4.1",
     "phaser": "^3.60.0",

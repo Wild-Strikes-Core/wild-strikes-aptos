@@ -105,19 +105,12 @@ export default class Start extends Phaser.Scene {
         this.createPlayButtonIdleAnimation(this.PLAY_BUTTON);
 
         this.PLAY_BUTTON.on("pointerdown", () => {
-            
             this.playClickSound();
-
             this.tweens.killTweensOf(this.PLAY_BUTTON);
-
-             this.sound.stopByKey('landing-menu-music');
-
+            this.sound.stopByKey('landing-menu-music');
             this.createClickEffect(this.PLAY_BUTTON, () => {
-
-                this.cameras.main.fadeOut(180, 0, 0, 0);
-                this.cameras.main.once("camerafadeoutcomplete", () => {
-                    this.scene.start("Home");
-                });
+                const event = new CustomEvent('b3-connect-wallet');
+                window.dispatchEvent(event);
             });
         });
 
