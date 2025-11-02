@@ -11,12 +11,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@aptos-connect/wallet-adapter-plugin": "^2.5.1",
-    "@aptos-labs/ts-sdk": "^4.0.0",
-    "@aptos-labs/wallet-adapter-react": "^7.0.4",
     "@phaser-games/wildstrikes": "workspace:*",
     "next": "15.4.1",
-    "petra-plugin-wallet-adapter": "^0.4.5",
     "phaser": "^3.60.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"

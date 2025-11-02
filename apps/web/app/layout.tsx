@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Wild Strikes",
-  description: "Wild Strikes - Aptos Gaming Platform",
+  description: "Wild Strikes - Gaming Platform",
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
@@ -25,9 +25,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { WalletProvider } from './providers/WalletProvider';
-import ClientWalletDebugger from './components/ClientWalletDebugger';
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -36,11 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <WalletProvider>
-          {children}
-          {/* Wallet Debugger only shows in development */}
-          <ClientWalletDebugger />
-        </WalletProvider>
+        {children}
       </body>
     </html>
   );

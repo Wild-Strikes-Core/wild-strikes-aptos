@@ -8,7 +8,7 @@
       "@phaser-games/*": ["packages/phaser-games/*"],
       "@phaser-ui/*": ["packages/phaser-ui/*"],
       "@socket-client": ["packages/socket-client"],
-      "@aptos-wallet/*": ["packages/aptos-wallet/*"],
+      
       "@shared/*": ["packages/shared-utils/*"],
       "@scenes/*": ["packages/phaser-games/wildstrikes/src/scenes/*"],
     }
